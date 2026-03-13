@@ -188,14 +188,12 @@ The agent uses `git add -p` when:
 # The agent executes:
 git add -p service.go
 # Selects only the fix hunks
-MESSAGE="fix: fix error handling in service"
-python "${CLAUDE_PLUGIN_ROOT}/scripts/validate-commit.py" "$MESSAGE"
-git commit -m "$MESSAGE"
+python "<plugin-root>/scripts/validate-commit.py" "fix: fix error handling in service"
+git commit -m "fix: fix error handling in service"
 
 git add service.go  # Add the rest
-MESSAGE="feat: add result caching in service"
-python "${CLAUDE_PLUGIN_ROOT}/scripts/validate-commit.py" "$MESSAGE"
-git commit -m "$MESSAGE"
+python "<plugin-root>/scripts/validate-commit.py" "feat: add result caching in service"
+git commit -m "feat: add result caching in service"
 ```
 
 ## Git-Orchestrator Agent
@@ -294,9 +292,9 @@ Every commit message is validated by the `scripts/validate-commit.py` script bef
 
 ```bash
 # The agent runs before every commit:
-python "${CLAUDE_PLUGIN_ROOT}/scripts/validate-commit.py" "$MESSAGE"
+python "<plugin-root>/scripts/validate-commit.py" "type: description"
 # Only runs git commit if validation passes
-git commit -m "$MESSAGE"
+git commit -m "type: description"
 ```
 
 ### 3. Simple and Direct Messages
@@ -492,10 +490,15 @@ docs: update API documentation
 
 ## Versioning
 
-- **Current version:** 1.0.0
+- **Current version:** 1.0.1
 - **Versioning:** Semantic Versioning (MAJOR.MINOR.PATCH)
 
 ### Version History
+
+#### v1.0.1 - March 2026
+- **Portable plugin root resolution**: `/commit` command resolves `CLAUDE_PLUGIN_ROOT` and passes the absolute path to the agent, eliminating permission prompts for validator execution
+- **Fallback resolution**: Agent can resolve plugin root via `/commit --resolve-root` when invoked directly
+- **Agent files updated**: Replaced `${CLAUDE_PLUGIN_ROOT}` references with `<plugin-root>` placeholder resolved at runtime
 
 #### v1.0.0 - December 2025
 - **Initial release** with agent-based architecture
@@ -529,6 +532,6 @@ Property of Pragmabits.
 
 ---
 
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Updated:** December 2025
 **Status:** Active
