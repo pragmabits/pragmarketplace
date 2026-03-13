@@ -51,7 +51,8 @@ The Git plugin provides a **specialized agent** (commit-maker) that automaticall
 
 - **🤖 Intelligent Agent**: Deep analysis with commit-maker
 - **⚡ Strategic Commits**: Groups changes logically into small, focused commits
-- **🔪 Patch Mode**: Uses `git add -p` for surgical commits when needed
+- **🧰 Staging Tool**: Non-interactive `.pyz` tool for hunk-level staging via Dulwich
+- **🔪 Hunk Staging**: Uses non-interactive staging tool for surgical commits when needed
 - **📝 Standardized Messages**: Follows Conventional Commits without scope (`type: description`)
 - **✅ Mandatory Validation**: Runs `validate-commit.py` before every commit
 - **🧠 Pattern Learning**: Adapts to the project's history
@@ -171,9 +172,9 @@ Commit boundaries are determined by **semantic cohesion**, not by file count. A 
 - **Change type**: feat, fix, docs, refactor — different types often indicate separate commits
 - **Tests**: `*_test.go` — typically grouped with the implementation being tested
 
-**Patch Mode (`git add -p`):**
+**Hunk-Level Staging (staging tool):**
 
-The agent uses `git add -p` when:
+The agent uses the staging tool (`tools/git-staging.pyz`) when:
 - A file contains multiple independent changes
 - A file mixes refactoring and behavioral change
 - More than 3 distinct hunks may justify inspection
@@ -185,13 +186,18 @@ The agent uses `git add -p` when:
 # - New cache function (feat)
 # - Bug fix in error handling (fix)
 
-# The agent executes:
-git add -p service.go
-# Selects only the fix hunks
+# 1. Parse to identify hunks
+python "<plugin-root>/tools/git-staging.pyz" parse --repo .
+# Returns JSON with hunk indices for each file
+
+# 2. Stage only the fix hunks (e.g., hunk 0)
+python "<plugin-root>/tools/git-staging.pyz" stage --repo . --spec '{"service.go": [0]}'
+
 python "<plugin-root>/scripts/validate-commit.py" "fix: fix error handling in service"
 git commit -m "fix: fix error handling in service"
 
-git add service.go  # Add the rest
+# 3. Stage the rest
+git add service.go
 python "<plugin-root>/scripts/validate-commit.py" "feat: add result caching in service"
 git commit -m "feat: add result caching in service"
 ```
@@ -224,7 +230,7 @@ An agent is an **autonomous subprocess** of Claude that:
 
 **Intelligent Strategy:**
 - Groups changes by semantic cohesion (not by file count)
-- Automatically detects when to use `git add -p`
+- Automatically detects when to use hunk-level staging
 - Requires explicit partitioning justification for each commit
 - Separates pure refactoring from behavioral changes
 
@@ -421,7 +427,7 @@ docs: update deployment instructions
 
 **Process:**
 1. Agent detects multiple independent changes
-2. Uses `git add -p service.go` to select hunks
+2. Uses the staging tool to select specific hunks
 3. First commit with the fix
 4. Second commit with the feature
 
@@ -490,10 +496,16 @@ docs: update API documentation
 
 ## Versioning
 
-- **Current version:** 1.0.1
+- **Current version:** 1.1.0
 - **Versioning:** Semantic Versioning (MAJOR.MINOR.PATCH)
 
 ### Version History
+
+#### v1.1.0 - March 2026
+- **Non-interactive staging tool**: New `tools/git-staging.pyz` replaces `git add -p` with a Dulwich-based `.pyz` zipapp that provides hunk-level staging in non-interactive environments
+- **Three staging modes**: `parse` (read-only repo analysis with hunk indices), `stage` (selective hunk staging), `commit` (stage + commit in one step)
+- **Racy-git protection**: Index entries use smudged timestamps to force git to read blob content when staged content differs from working tree
+- **Agent updated**: All `git add -p` references replaced with staging tool usage; new "Staging tool" section documents the three modes and rules
 
 #### v1.0.1 - March 2026
 - **Portable plugin root resolution**: `/commit` command resolves `CLAUDE_PLUGIN_ROOT` and passes the absolute path to the agent, eliminating permission prompts for validator execution
@@ -532,6 +544,6 @@ Property of Pragmabits.
 
 ---
 
-**Version:** 1.0.1
-**Updated:** December 2025
+**Version:** 1.1.0
+**Updated:** March 2026
 **Status:** Active
