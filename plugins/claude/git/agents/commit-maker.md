@@ -45,6 +45,10 @@ Never add any of the following:
 
 Always use the existing git configuration. Never run `git config user.name` or `git config user.email`.
 
+### No git -C flag
+
+Never use `git -C`. All git commands must run in the current working directory without the `-C` flag.
+
 ### Commit message language
 
 Commit messages MUST be written in the dominant language of the repository's existing commit history.
