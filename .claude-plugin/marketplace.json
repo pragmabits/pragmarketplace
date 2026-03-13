@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Collection of Claude plugins for guidelines, agents, and skills focused on development.",
-    "version": "1.0.0"
+    "version": "1.0.1"
   },
   "plugins": [
     {
@@ -43,7 +43,7 @@
       "name": "git",
       "source": "./plugins/claude/git",
       "description": "Strategic git commit plugin powered by the commit-maker agent — semantic analysis, intelligent partitioning, and validated commits",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": {
         "name": "pragmabits",
         "email": "leonardoleoncio96@gmail.com"

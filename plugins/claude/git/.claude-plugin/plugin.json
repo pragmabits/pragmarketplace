@@ -1,6 +1,6 @@
 {
   "name": "git",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Strategic git commit plugin powered by the commit-maker agent — semantic analysis, intelligent partitioning, and validated commits",
   "author": {
     "name": "pragmabits",
