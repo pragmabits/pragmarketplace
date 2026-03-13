@@ -1,0 +1,4 @@
+# Vendored dependencies (only present during build)
+dulwich/
+*.dist-info/
+bin/
