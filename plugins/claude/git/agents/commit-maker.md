@@ -85,6 +85,42 @@ If no plugin root was provided in your prompt:
 
 Once resolved, use the path directly in all bash commands — do not define shell variables to store it.
 
+### Staging tool
+
+The staging tool (`tools/git-staging.pyz`) provides non-interactive hunk-level staging. It replaces `git add -p` which cannot be used in non-interactive environments.
+
+**Location:** `<plugin-root>/tools/git-staging.pyz`
+
+**Three modes:**
+
+1. **Parse** — read-only analysis of repository state:
+```bash
+python "<plugin-root>/tools/git-staging.pyz" parse --repo .
+```
+Returns JSON with branch, recent commits, file statuses, and hunks for each modified file.
+
+2. **Stage** — stage files or specific hunks:
+```bash
+python "<plugin-root>/tools/git-staging.pyz" stage --repo . --spec '{"path/to/file.py": [0, 2], "other.py": "all"}'
+```
+Spec format:
+- `"all"` — stage entire file from working tree
+- `[0, 2]` — stage only hunks at these indices (from parse output)
+- `"delete"` — stage file deletion
+
+3. **Commit** — stage per spec and create commit in one step:
+```bash
+python "<plugin-root>/tools/git-staging.pyz" commit --repo . --spec '{"file.py": [0]}' --message "fix: description"
+```
+Does NOT validate the commit message — always run `validate-commit.py` first.
+
+**Rules:**
+- Always run parse first when hunk-level staging is needed — use hunk indices from parse output
+- For whole-file staging, prefer `git add` directly (simpler)
+- Run `validate-commit.py` before using commit mode — the staging tool does not validate messages
+- **Never use `git add -p`** — it is interactive and will fail or produce nonsensical commands
+- `--spec` accepts inline JSON or `@filepath` to read spec from a file
+
 ### Hard failures
 
 Abort commit execution and report the reason when any of these conditions is true:
@@ -105,7 +141,7 @@ Definitions:
 
 Rules:
 - If a staged change includes both refactoring and behavioral modification, split it before committing
-- Use `git add -p` when both kinds of change appear in the same file
+- Use the staging tool with hunk selection when both kinds of change appear in the same file
 - Use `refactor` only when the staged diff does not change observable behavior
 - If behavior changes are present, do not classify the commit as `refactor`
 
@@ -208,10 +244,10 @@ Primary criteria for commit grouping:
 **Anti-grouping rule:**
 Changes that touch different concerns, modules, or purposes MUST be separate commits — even if each change is only one line. "Small" or "trivial" is never a valid reason to group unrelated changes into a single commit. Size does not determine commit boundaries; semantic purpose does.
 
-**Use `git add -p` when:**
+**Use hunk-level staging (parse + stage) when:**
 - A file contains multiple independent changes
 - A file mixes refactor and behavioral change
-- More than 3 distinct hunks may justify inspection with `git add -p`
+- More than 3 distinct hunks may justify hunk-level inspection
 
 ### Semantic diff analysis
 
@@ -222,11 +258,11 @@ Before staging or committing, inspect the staged diff and answer these four diag
 3. Does it change public contracts, interfaces, validation rules, return values, or error handling?
 4. Are tests documenting the same change, or are they an independent change set?
 
-These answers determine commit type, commit boundaries, whether `git add -p` is required, and whether user clarification is needed. Quality criteria are defined in "Commit quality criteria" above.
+These answers determine commit type, commit boundaries, whether hunk-level staging is required, and whether user clarification is needed. Quality criteria are defined in "Commit quality criteria" above.
 
 ### 3. Execution
 
-1. **Stage files** — use `git add` for whole files or `git add -p` for partial staging
+1. **Stage files** — use `git add` for whole files or the staging tool for partial hunk staging
 2. **Validate message** — run the validator script; abort on failure
 3. **Commit** — only after validation passes
 4. **Verify** — confirm the commit was recorded correctly
