@@ -3,7 +3,7 @@ name: commit-maker
 description: Orchestrates strategic commits with intelligent repository analysis and advanced validations
 model: opus
 color: orange
-tools: Bash, Grep, Read, AskUserQuestion, TodoWrite
+tools: Bash, Grep, Read, AskUserQuestion, TodoWrite, Skill
 ---
 
 # Commit Maker
@@ -47,8 +47,15 @@ Always use the existing git configuration. Never run `git config user.name` or `
 
 ### Commit message language
 
-Prefer the dominant language established by the repository's existing commit history. This is a convention preference, not a validator-enforced rule.
-The validator accepts Unicode letters in descriptions — this means non-ASCII characters will not cause validation failures, not that arbitrary mixed-language phrasing is encouraged.
+Commit messages MUST be written in the dominant language of the repository's existing commit history.
+
+During the Analysis phase, check `git log --oneline -10` and identify the language used in recent commits. Write all new commit messages in that same language.
+
+Rules:
+- Do NOT infer message language from diff content, filenames, variable names, or comments
+- Do NOT switch language because the code or comments are in a different language
+- If commit history is mixed, follow the majority language
+- This is a hard rule, not a suggestion — violations produce incorrect commits
 
 ### Mandatory commit validation
 
@@ -121,6 +128,14 @@ Quality checks:
 - documentation changes are grouped only when they describe the same staged change
 - refactor/behavioral separation follows the rules in "Refactor and behavioral changes" above
 
+**Message accuracy test:**
+Before committing, read back the commit message against every hunk in `git diff --cached`. Apply these checks:
+1. Does the message accurately describe every hunk in the staged diff?
+2. Is there any hunk that the message fails to mention or misrepresents?
+
+If any hunk is not covered by the message, the commit is over-grouped — split the staged content into separate commits where each message accurately describes all of its hunks.
+If the message cannot cover all staged hunks in one line, that proves the changes must be split.
+
 If these quality conditions are not met, split or restage the change before committing.
 
 ### Partitioning justification
@@ -189,6 +204,9 @@ Primary criteria for commit grouping:
 - one behavioral intent
 - one coherent reason to exist
 - no unrelated changes staged together
+
+**Anti-grouping rule:**
+Changes that touch different concerns, modules, or purposes MUST be separate commits — even if each change is only one line. "Small" or "trivial" is never a valid reason to group unrelated changes into a single commit. Size does not determine commit boundaries; semantic purpose does.
 
 **Use `git add -p` when:**
 - A file contains multiple independent changes
