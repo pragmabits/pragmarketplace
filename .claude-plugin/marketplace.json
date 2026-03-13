@@ -65,6 +65,30 @@
         "agent",
         "validation"
       ]
+    },
+    {
+      "name": "pragma-statusline",
+      "source": "./plugins/claude/pragma-statusline",
+      "description": "Install and configure a custom statusline for Claude Code via a slash command",
+      "version": "1.0.0",
+      "author": {
+        "name": "pragmabits",
+        "email": "leonardoleoncio96@gmail.com"
+      },
+      "homepage": "https://github.com/pragmabits/pragmarketplace",
+      "repository": "https://github.com/pragmabits/pragmarketplace",
+      "category": "tools",
+      "commands": "./command",
+      "keywords": [
+        "statusline",
+        "status",
+        "cli",
+        "claude-code",
+        "configuration",
+        "settings",
+        "customization",
+        "plugin"
+      ]
     }
   ]
 }
