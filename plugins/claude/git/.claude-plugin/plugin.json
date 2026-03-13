@@ -1,7 +1,7 @@
 {
   "name": "git",
   "version": "1.0.0",
-  "description": "Strategic git commit plugin powered by the git-orchestrator agent — semantic analysis, intelligent partitioning, and validated commits",
+  "description": "Strategic git commit plugin powered by the commit-maker agent — semantic analysis, intelligent partitioning, and validated commits",
   "author": {
     "name": "pragmabits",
     "email": "leonardoleoncio96@gmail.com"
@@ -22,6 +22,6 @@
   ],
   "commands": "./commands",
   "agents": [
-    "./agents/git-orchestrator.md"
+    "./agents/commit-maker.md"
   ]
 }

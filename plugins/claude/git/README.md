@@ -33,23 +33,23 @@ This plugin follows **ABSOLUTE and INVIOLABLE** rules for commit messages:
 
 ## Overview
 
-The Git plugin provides a **specialized agent** (git-orchestrator) that automatically analyzes the repository, detects patterns, validates quality, and creates small, focused, strategic commits following Conventional Commits. The commit message language follows the dominant language established by the repository's existing commit history.
+The Git plugin provides a **specialized agent** (commit-maker) that automatically analyzes the repository, detects patterns, validates quality, and creates small, focused, strategic commits following Conventional Commits. The commit message language follows the dominant language established by the repository's existing commit history.
 
 ### Architecture
 
 ```
-/commit (gateway) → git-orchestrator (all logic)
+/commit (gateway) → commit-maker (all logic)
 ```
 
 **How it works:**
 1. User runs `/commit`
-2. Command delegates to the git-orchestrator agent
+2. Command delegates to the commit-maker agent
 3. Agent analyzes, plans, validates, and executes commits
 4. User receives result
 
 ### Features
 
-- **🤖 Intelligent Agent**: Deep analysis with git-orchestrator
+- **🤖 Intelligent Agent**: Deep analysis with commit-maker
 - **⚡ Strategic Commits**: Groups changes logically into small, focused commits
 - **🔪 Patch Mode**: Uses `git add -p` for surgical commits when needed
 - **📝 Standardized Messages**: Follows Conventional Commits without scope (`type: description`)
@@ -86,7 +86,7 @@ Creates strategic, focused commits with standardized messages.
 
 **What happens when you use `/commit`:**
 
-1. **Command delegates** to the git-orchestrator agent automatically
+1. **Command delegates** to the commit-maker agent automatically
 2. **Agent analyzes** the repository (git status, diff, diff --cached, log)
 3. **Agent performs semantic diff analysis** to determine type and commit boundaries
 4. **Agent plans** partitioning strategy with explicit justification
@@ -499,7 +499,7 @@ docs: update API documentation
 
 #### v1.0.0 - December 2025
 - **Initial release** with agent-based architecture
-- git-orchestrator agent for commit analysis and execution
+- commit-maker agent for commit analysis and execution
 - `/commit` command as gateway delegating to the agent
 - Advanced quality validations
 - Project pattern learning

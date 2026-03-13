@@ -42,7 +42,7 @@
     {
       "name": "git",
       "source": "./plugins/claude/git",
-      "description": "Strategic git commit plugin powered by the git-orchestrator agent — semantic analysis, intelligent partitioning, and validated commits",
+      "description": "Strategic git commit plugin powered by the commit-maker agent — semantic analysis, intelligent partitioning, and validated commits",
       "version": "1.0.0",
       "author": {
         "name": "pragmabits",
@@ -52,7 +52,7 @@
       "repository": "https://github.com/pragmabits/pragmarketplace",
       "category": "tools",
       "commands": "./commands",
-      "agents": ["./agents/git-orchestrator.md"],
+      "agents": ["./agents/commit-maker.md"],
       "keywords": [
         "git",
         "commit",

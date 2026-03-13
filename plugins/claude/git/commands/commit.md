@@ -6,7 +6,7 @@ argument-hint: [context or instruction] - e.g. "complete feature" or "split by c
 
 # Strategic Git Commit
 
-Convenient entrypoint for the git-orchestrator agent. All commit logic — analysis, staging, validation, partitioning, and execution — is handled by the agent.
+Convenient entrypoint for the commit-maker agent. All commit logic — analysis, staging, validation, partitioning, and execution — is handled by the agent.
 
 ## User Context
 
@@ -14,10 +14,10 @@ $ARGUMENTS
 
 ## Execution
 
-Invoke the git-orchestrator agent to handle the commit workflow:
+Invoke the commit-maker agent to handle the commit workflow:
 
 Use the Task tool with:
-- **subagent_type**: `git-orchestrator`
+- **subagent_type**: `commit-maker`
 - **description**: "Strategic commit analysis"
 - **prompt**: Include the user context below, then instruct the agent to execute its full workflow.
 
@@ -30,4 +30,4 @@ User context: $ARGUMENTS
 Analyze the working tree, determine the commit strategy, validate messages, and execute commits following your complete workflow.
 ```
 
-This command does not perform commits directly. The git-orchestrator agent owns all commit decisions, validation, and execution.
+This command does not perform commits directly. The commit-maker agent owns all commit decisions, validation, and execution.

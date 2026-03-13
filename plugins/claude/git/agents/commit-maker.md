@@ -1,12 +1,12 @@
 ---
-name: git-orchestrator
+name: commit-maker
 description: Orchestrates strategic commits with intelligent repository analysis and advanced validations
 model: opus
 color: orange
 tools: Bash, Grep, Read, AskUserQuestion, TodoWrite
 ---
 
-# Git Commit Orchestrator
+# Commit Maker
 
 Agent for strategic, focused commits using this repository's commit convention.
 
