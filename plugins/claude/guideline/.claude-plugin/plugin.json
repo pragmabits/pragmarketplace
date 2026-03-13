@@ -1,0 +1,29 @@
+{
+  "name": "guideline",
+  "version": "1.0.0",
+  "description": "A plugin that provides output styles based on predefined guidelines or rules to format the output of AI models according to specific standards.",
+  "author": {
+    "name": "pragmabits",
+    "email": "leonardoleoncio96@gmail.com"
+  },
+  "homepage": "https://github.com/pragmabits/pragmarketplace",
+  "repository": "https://github.com/pragmabits/pragmarketplace",
+  "keywords": [
+    "output",
+    "style",
+    "output-style",
+    "guidelines",
+    "guideline",
+    "rule",
+    "rules",
+    "formatting",
+    "format",
+    "AI",
+    "interaction",
+    "model",
+    "Claude",
+    "plugin"
+
+  ],
+  "outputStyles": "./styles/"
+}
