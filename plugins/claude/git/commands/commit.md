@@ -14,17 +14,35 @@ $ARGUMENTS
 
 ## Execution
 
-Invoke the commit-maker agent to handle the commit workflow:
+### Resolve plugin root
 
-Use the Task tool with:
+Before invoking the agent, determine the absolute path to this plugin's root directory:
+
+```
+Plugin root: ${CLAUDE_PLUGIN_ROOT}
+```
+
+### Argument handling
+
+If `$ARGUMENTS` is exactly `--resolve-root`:
+- Output the plugin root path: `${CLAUDE_PLUGIN_ROOT}`
+- Do not invoke the agent
+- Stop here
+
+### Invoke agent
+
+Otherwise, invoke the commit-maker agent with the resolved plugin root.
+
+Use the Agent tool with:
 - **subagent_type**: `commit-maker`
 - **description**: "Strategic commit analysis"
-- **prompt**: Include the user context below, then instruct the agent to execute its full workflow.
+- **prompt**: Include the plugin root and user context, then instruct the agent to execute its full workflow.
 
 Prompt template:
 ```
 Execute your full commit workflow for this repository.
 
+Plugin root: ${CLAUDE_PLUGIN_ROOT}
 User context: $ARGUMENTS
 
 Analyze the working tree, determine the commit strategy, validate messages, and execute commits following your complete workflow.

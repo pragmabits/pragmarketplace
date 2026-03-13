@@ -55,14 +55,28 @@ The validator accepts Unicode letters in descriptions — this means non-ASCII c
 Real validation is required before every commit.
 
 Required command:
-`python "${CLAUDE_PLUGIN_ROOT}/scripts/validate-commit.py" "$MESSAGE"`
+`python "<plugin-root>/scripts/validate-commit.py" "<message>"`
 
 Hard rule:
 - validation must run before any `git commit`
 - if validation fails, abort immediately
 - do not retry `git commit` with the same invalid message
 - do not replace validator execution with manual reasoning
-- only execute `git commit -m "$MESSAGE"` after successful validation
+- only execute `git commit -m "<message>"` after successful validation
+- pass the message as a literal string argument — do not use shell variables
+
+### Plugin root resolution
+
+The validator script lives at `<plugin-root>/scripts/validate-commit.py`.
+
+The plugin root path is provided in your prompt as `Plugin root: <path>` when invoked via the `/commit` command.
+
+If no plugin root was provided in your prompt:
+1. Call the Skill tool with skill `commit` and args `--resolve-root`
+2. The output contains the absolute path to the plugin root
+3. Use that path for all subsequent validator calls
+
+Once resolved, use the path directly in all bash commands — do not define shell variables to store it.
 
 ### Hard failures
 
@@ -201,9 +215,8 @@ These answers determine commit type, commit boundaries, whether `git add -p` is 
 
 ```bash
 git add file1.go file2.go
-MESSAGE="feat: add token expiry check"
-python "${CLAUDE_PLUGIN_ROOT}/scripts/validate-commit.py" "$MESSAGE"
-git commit -m "$MESSAGE"
+python "<plugin-root>/scripts/validate-commit.py" "feat: add token expiry check"
+git commit -m "feat: add token expiry check"
 git log --oneline -1
 ```
 
@@ -278,27 +291,24 @@ Auth changes form one semantic unit — new behavior and its supporting tests sh
 
 ```bash
 git add auth/service.go auth/service_test.go
-MESSAGE="feat: add token expiry validation"
-python "${CLAUDE_PLUGIN_ROOT}/scripts/validate-commit.py" "$MESSAGE"
-git commit -m "$MESSAGE"
+python "<plugin-root>/scripts/validate-commit.py" "feat: add token expiry validation"
+git commit -m "feat: add token expiry validation"
 ```
 
 The payment fix corrects existing behavior in a separate domain — distinct behavioral intent, no relation to auth or docs.
 
 ```bash
 git add payment/calculator.go
-MESSAGE="fix: fix interest rounding in payment calculator"
-python "${CLAUDE_PLUGIN_ROOT}/scripts/validate-commit.py" "$MESSAGE"
-git commit -m "$MESSAGE"
+python "<plugin-root>/scripts/validate-commit.py" "fix: fix interest rounding in payment calculator"
+git commit -m "fix: fix interest rounding in payment calculator"
 ```
 
 Documentation only — no code change, no behavioral overlap.
 
 ```bash
 git add README.md
-MESSAGE="docs: update installation instructions"
-python "${CLAUDE_PLUGIN_ROOT}/scripts/validate-commit.py" "$MESSAGE"
-git commit -m "$MESSAGE"
+python "<plugin-root>/scripts/validate-commit.py" "docs: update installation instructions"
+git commit -m "docs: update installation instructions"
 ```
 
 # Special Cases
