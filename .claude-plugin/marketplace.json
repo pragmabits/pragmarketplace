@@ -1,0 +1,70 @@
+{
+  "name": "pragmarketplace",
+  "owner": {
+    "name": "pragmabits",
+    "email": "leonardoleoncio96@gmail.com"
+  },
+  "metadata": {
+    "description": "Collection of Claude plugins for guidelines, agents, and skills focused on development.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "guideline",
+      "source": "./plugins/claude/guideline",
+      "description": "A plugin that provides output styles based on predefined guidelines or rules to format the output of AI models according to specific standards.",
+      "version": "1.0.0",
+      "author": {
+        "name": "pragmabits",
+        "email": "leonardoleoncio96@gmail.com"
+      },
+      "homepage": "https://github.com/pragmabits/pragmarketplace",
+      "repository": "https://github.com/pragmabits/pragmarketplace",
+      "category": "output",
+      "outputStyles": "./styles/",
+      "keywords": [
+        "output",
+        "style",
+        "output-style",
+        "guidelines",
+        "guideline",
+        "rule",
+        "rules",
+        "formatting",
+        "format",
+        "AI",
+        "interaction",
+        "model",
+        "Claude",
+        "plugin"
+      ]
+    },
+    {
+      "name": "git",
+      "source": "./plugins/claude/git",
+      "description": "Strategic git commit plugin powered by the git-orchestrator agent — semantic analysis, intelligent partitioning, and validated commits",
+      "version": "1.0.0",
+      "author": {
+        "name": "pragmabits",
+        "email": "leonardoleoncio96@gmail.com"
+      },
+      "homepage": "https://github.com/pragmabits/pragmarketplace",
+      "repository": "https://github.com/pragmabits/pragmarketplace",
+      "category": "tools",
+      "commands": "./commands",
+      "agents": ["./agents/git-orchestrator.md"],
+      "keywords": [
+        "git",
+        "commit",
+        "version-control",
+        "conventional-commits",
+        "workflow",
+        "automation",
+        "strategic-commits",
+        "patch-mode",
+        "agent",
+        "validation"
+      ]
+    }
+  ]
+}
