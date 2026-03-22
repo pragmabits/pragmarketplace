@@ -1,0 +1,17 @@
+{
+  "description": "Safety hooks for the git commit plugin — prevents interactive git commands and problematic flags",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/validate-git-command.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
