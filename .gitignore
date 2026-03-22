@@ -21,3 +21,7 @@ Thumbs.db
 .env
 .env.*
 .claude
+.venv
+
+# Skill development workspaces
+*-workspace/
