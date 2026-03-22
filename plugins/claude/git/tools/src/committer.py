@@ -40,10 +40,8 @@ def commit_staged(repo_path: str, spec: dict, message: str) -> dict:
 
     author = f"{name} <{email}>".encode("utf-8")
     commit_time = int(time.time())
-    # Get timezone offset
-    import calendar
-    utc_offset = time.timezone if time.daylight == 0 else time.altzone
-    tz = -utc_offset  # Git timezone is inverted from Python's
+    # Get timezone offset from local time (handles DST correctly)
+    tz = time.localtime(commit_time).tm_gmtoff
 
     commit_sha = repo.do_commit(
         message=message.encode("utf-8"),
