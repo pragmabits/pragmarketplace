@@ -1,0 +1,102 @@
+{
+  "skill_name": "commit",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I just finished implementing user authentication with JWT tokens. There are changes in auth/service.go, auth/service_test.go, and I also fixed a typo in README.md while I was at it. Can you commit everything properly?",
+      "expected_output": "Agent separates the auth feature (service + test) into one feat commit and the README typo fix into a separate docs commit, each with a validated single-line message",
+      "files": [],
+      "expectations": [
+        "Creates at least 2 separate commits (auth changes and docs change)",
+        "Auth commit uses feat type and groups service.go with service_test.go",
+        "README commit uses docs type",
+        "Each commit message follows type: description format without scope",
+        "Validation script is run before each commit"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I have a big service.go file where I refactored the error handling (renamed variables, extracted a helper) and also added a new endpoint for user deletion. These are mixed in the same file. Please commit them separately.",
+      "expected_output": "Agent uses the staging tool to parse hunks, stages refactoring hunks separately from the new endpoint hunks, creates two commits: one refactor and one feat",
+      "files": [],
+      "expectations": [
+        "Uses the staging tool (git-staging.pyz) parse mode to identify hunks",
+        "Creates separate commits for refactor and behavioral change",
+        "Refactor commit uses refactor type",
+        "New endpoint commit uses feat type",
+        "Does not use git add -p (uses staging tool instead)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "/commit",
+      "expected_output": "Agent autonomously analyzes the working tree, determines the commit strategy based on semantic diff analysis, validates messages, and creates appropriate commits without asking unnecessary questions",
+      "files": [],
+      "expectations": [
+        "Runs git status, git diff HEAD, git diff --cached, and git log",
+        "Performs semantic diff analysis before committing",
+        "Validates each message with validate-commit.py before git commit",
+        "Reports final result with commits created and status"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "/commit",
+      "expected_output": "Agent detects clean working directory and reports it without attempting any commits",
+      "setup_note": "Run this eval on a clean repo with no uncommitted changes",
+      "expectations": [
+        "Runs git status and git diff HEAD",
+        "Detects no changes to commit",
+        "Reports clean working directory",
+        "Does not attempt to create any commits",
+        "Does not ask unnecessary questions"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "I forgot to add the config file to my last commit. Can you amend it to include config/settings.yaml?",
+      "expected_output": "Agent stages config/settings.yaml and amends the last commit, reusing or updating the message after validation",
+      "expectations": [
+        "Stages config/settings.yaml",
+        "Uses git commit --amend",
+        "Validates the commit message before amending",
+        "Does not create a new separate commit",
+        "Reports the amended commit"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "commit the changes in the binary image file logo.png and the text change in README.md",
+      "expected_output": "Agent handles binary file gracefully, commits both changes with appropriate type",
+      "expectations": [
+        "Recognizes logo.png as binary",
+        "Stages both files appropriately",
+        "Does not attempt to compute hunks for binary file",
+        "Creates commit with validated message",
+        "Uses appropriate commit type (chore or docs depending on grouping)"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "/commit use staging tool commit mode",
+      "expected_output": "Agent uses git-staging.pyz commit subcommand to stage and commit in one step, after validating the message first",
+      "expectations": [
+        "Uses git-staging.pyz commit mode (not just stage mode)",
+        "Validates message with validate-commit.py BEFORE calling commit mode",
+        "Does not call git commit separately after staging tool commit",
+        "Reports the commit result"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "/commit unstage the payment changes and only commit the auth changes",
+      "expected_output": "Agent uses unstage capability to remove payment changes from staging, then commits only auth changes",
+      "expectations": [
+        "Uses staging tool unstage mode or git reset for payment files",
+        "Only auth-related changes are in the final commit",
+        "Validates message before committing",
+        "Reports what was committed and what was left unstaged"
+      ]
+    }
+  ]
+}
