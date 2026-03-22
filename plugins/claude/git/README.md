@@ -1,536 +1,273 @@
 # Git Plugin
 
-Strategic commit tool powered by an intelligent agent for analysis and advanced validation.
+Strategic commit tool powered by the commit-maker agent for semantic analysis, intelligent partitioning, and validated commits.
 
-# CRITICAL WARNING - READ FIRST
-
-This plugin follows **ABSOLUTE and INVIOLABLE** rules for commit messages:
+## Commit Format
 
 ```
-✅ CORRECT FORMAT:    type: description
-❌ FORBIDDEN FORMAT:  type(scope): description
-❌ FORBIDDEN FORMAT:  type: description\n\nadditional body
-❌ FORBIDDEN FORMAT:  messages with signatures/metadata
+type: description
 ```
 
-**WHAT IS FORBIDDEN:**
-- ❌ Claude Code signatures (`🤖 Generated with...`)
-- ❌ Automatic Co-authored-by
-- ❌ Scope in parentheses: `type(scope):`
-- ❌ Body/multiple lines
-- ❌ Messages in a language inconsistent with the repository history
+- Single line only — no body, no footer, no signatures (configurable via settings)
+- No scope (parentheses forbidden)
+- Language follows the dominant language from repository commit history (overridable via settings)
+- Validated by `scripts/validate-commit.py` before every commit
 
-**WHAT IS MANDATORY:**
-- ✅ Format: `type: description`
-- ✅ Single line only
-- ✅ Dominant language from repository commit history
-- ✅ Use configured git user
-- ✅ Validation via script before every commit
+Valid types: `feat` | `fix` | `docs` | `style` | `refactor` | `test` | `chore` | `perf`
 
-**These rules exist to keep the history clean and professional.**
+Additional types can be configured via project settings (see below).
 
----
-
-## Overview
-
-The Git plugin provides a **specialized agent** (commit-maker) that automatically analyzes the repository, detects patterns, validates quality, and creates small, focused, strategic commits following Conventional Commits. The commit message language follows the dominant language established by the repository's existing commit history.
-
-### Architecture
+## Architecture
 
 ```
-/commit (gateway) → commit-maker (all logic)
+/commit (command) → commit-maker (agent) → staging tool + validator
+                                         ↑
+                               safety hook (PreToolUse)
 ```
 
-**How it works:**
-1. User runs `/commit`
-2. Command delegates to the commit-maker agent
-3. Agent analyzes, plans, validates, and executes commits
-4. User receives result
+1. User runs `/commit [context]`
+2. Safety hook validates git commands (blocks `git add -p`, `git -C`, config changes)
+3. Command delegates to the commit-maker agent
+4. Agent analyzes, plans, validates, and executes commits
 
-### Features
+## Features
 
-- **🤖 Intelligent Agent**: Deep analysis with commit-maker
-- **⚡ Strategic Commits**: Groups changes logically into small, focused commits
-- **🧰 Staging Tool**: Non-interactive `.pyz` tool for hunk-level staging via Dulwich
-- **🔪 Hunk Staging**: Uses non-interactive staging tool for surgical commits when needed
-- **📝 Standardized Messages**: Follows Conventional Commits without scope (`type: description`)
-- **✅ Mandatory Validation**: Runs `validate-commit.py` before every commit
-- **🧠 Pattern Learning**: Adapts to the project's history
-- **💬 Interactive**: Asks the user only when there are strategic decisions
-- **🔒 Respects Configuration**: Uses the existing git user config, never modifies it
+- **Semantic analysis**: Groups changes by behavioral intent, not file count
+- **Hunk-level staging**: Non-interactive `.pyz` tool (Dulwich-based) for surgical commits
+- **Unstage support**: Reset staged files back to HEAD state
+- **Mandatory validation**: `validate-commit.py` runs before every `git commit`
+- **Intelligent partitioning**: Separates refactoring from behavioral changes
+- **Pattern learning**: Adapts to the project's commit history and language
+- **Minimal interactivity**: Asks only when the commit strategy is genuinely ambiguous
+- **Amend mode**: Amend the last commit when explicitly requested
+- **Safety hooks**: PreToolUse hook blocks dangerous git patterns
+- **Project settings**: Per-project configuration via `.claude/git.local.md`
+- **.gitignore awareness**: Parser respects .gitignore when scanning for untracked files
 
-## Available Commands
+## Usage
 
-### `/commit`
-
-Creates strategic, focused commits with standardized messages.
-
-**Usage:**
-```
-/commit [context or instruction]
-```
-
-**Examples:**
 ```bash
-# Simple commit - let the agent analyze and decide
+# Let the agent analyze and decide
 /commit
 
-# Complete feature
+# Provide context
 /commit complete login feature
 
-# Split by context/module
+# Request splitting
 /commit split by module
 
-# Use patch mode for granular changes
+# Request hunk-level staging
 /commit use patch mode for independent changes
+
+# Amend the last commit
+/commit amend, I forgot to add the config file
 ```
 
-**What happens when you use `/commit`:**
+## How It Works
 
-1. **Command delegates** to the commit-maker agent automatically
-2. **Agent analyzes** the repository (git status, diff, diff --cached, log)
-3. **Agent performs semantic diff analysis** to determine type and commit boundaries
-4. **Agent plans** partitioning strategy with explicit justification
-5. **Agent validates** each message via `validate-commit.py` before committing
-6. **Agent executes** commits only after successful validation
-7. **Agent reports** final result (commits created, status, blocks)
+The commit-maker agent:
 
-**You don't need to know about the agent** - just use `/commit` normally!
+1. **Analyzes** the repository — `git status`, `git diff HEAD`, `git diff --cached`, `git log`
+2. **Reads settings** — checks `.claude/git.local.md` for project-specific configuration
+3. **Performs semantic diff analysis** — determines commit type and boundaries
+4. **Plans partitioning** — explicit justification for how changes are grouped
+5. **Stages** — whole files via `git add`, specific hunks via the staging tool, or unstages via unstage mode
+6. **Validates** — runs `validate-commit.py`; aborts on failure
+7. **Commits** — only after validation passes (supports amend mode)
+8. **Reports** — commits created, final status, any blocks
 
-## Project Conventions
+## Commit Convention
 
-### Message Format
+| Type       | Description           | Example                                  |
+| ---------- | --------------------- | ---------------------------------------- |
+| `feat`     | New feature           | `feat: add JWT authentication`           |
+| `fix`      | Bug fix               | `fix: fix CPF validation`                |
+| `docs`     | Documentation         | `docs: update installation instructions` |
+| `style`    | Formatting (no logic) | `style: format code following standard`  |
+| `refactor` | Refactoring           | `refactor: extract validation function`  |
+| `test`     | Tests                 | `test: add payment tests`                |
+| `chore`    | Maintenance/deps      | `chore: update dependencies`             |
+| `perf`     | Performance           | `perf: optimize database query`          |
 
-**Required format:**
-```
-type: concise description
-```
+**Message rules:**
+- Description starts with a lowercase letter or digit
+- Allowed characters: Unicode letters, digits, spaces, and `, . / + -`
+- No scope, no body, no co-authored-by, no signatures
+- Breaking changes: use `!` after type (e.g., `feat!: remove legacy API`)
 
-**Characteristics:**
-- ✅ Single line only (no body, no footer)
-- ✅ No scope in parentheses
-- ✅ Dominant language from repository commit history
-- ✅ Description starts with a lowercase letter or digit
-- ✅ Allowed characters: Unicode letters, digits, spaces, and `, . / + -`
-- ✅ Validated by `validate-commit.py` before every commit
+## Staging Tool
 
-**Valid types:**
+The staging tool (`tools/git-staging.pyz`) replaces `git add -p` for non-interactive environments.
 
-| Type       | Description             | Example                                    |
-| ---------- | ----------------------- | ------------------------------------------ |
-| `feat`     | New feature             | `feat: add JWT authentication`             |
-| `fix`      | Bug fix                 | `fix: fix CPF validation`                  |
-| `docs`     | Documentation           | `docs: update installation instructions`   |
-| `style`    | Formatting (no logic)   | `style: format code following standard`    |
-| `refactor` | Refactoring             | `refactor: extract validation function`    |
-| `test`     | Tests                   | `test: add payment tests`                  |
-| `chore`    | Maintenance/deps        | `chore: update dependencies`               |
-| `perf`     | Performance             | `perf: optimize database query`            |
-
-**Valid examples:**
-```
-feat: add OAuth2 authentication system
-fix: fix compound interest calculation
-docs: update REST API documentation
-refactor: extract validation to separate function
-test: add unit tests for calculator
-chore: update project dependencies
-style: format code following Go standard
-perf: add index on users table
+**Parse** — read-only analysis:
+```bash
+python "tools/git-staging.pyz" parse --repo .
 ```
 
-**Invalid examples:**
-```
-❌ feat(auth): add OAuth2                    (no scope allowed)
-❌ fix: fix bug                              (too vague)
-
-    Bug details here                         (no body allowed)
-❌ Add OAuth2 authentication                 (missing type, invalid format)
-❌ feat: Add authentication                  (description must start lowercase)
+**Stage** — selective hunk staging:
+```bash
+python "tools/git-staging.pyz" stage --repo . --spec '{"file.py": [0, 2], "other.py": "all"}'
 ```
 
-### Commit Strategies
+**Unstage** — reset files to HEAD state:
+```bash
+python "tools/git-staging.pyz" unstage --repo . --spec '{"file.py": "all"}'
+```
 
-**Fundamental principle: One commit = one semantic change**
+**Commit** — stage + commit in one step:
+```bash
+python "tools/git-staging.pyz" commit --repo . --spec '{"file.py": [0]}' --message "fix: description"
+```
 
-Commit boundaries are determined by **semantic cohesion**, not by file count. A valid commit may touch one file or many, as long as all staged changes belong to the same logical change.
+Spec values: `"all"` (whole file), `[0, 2]` (hunk indices), `"delete"` (file deletion).
 
-✅ **Primary grouping criteria:**
-- One behavioral intent
-- One coherent reason to exist
-- No unrelated changes staged together
-- Pure refactoring separated from behavioral changes
+The commit mode does not validate messages — always run `validate-commit.py` first.
 
-❌ **Avoid:**
-- Multiple unrelated features in one commit
-- Mixing refactor and behavioral change in the same commit
-- Using file count as a primary heuristic
-- Vague messages like "updates" or "fixes"
-
-**Supporting heuristics** (subordinate to semantic analysis):
-- **Module/directory**: `auth/`, `payment/`, `user/` — may indicate separate changes
-- **Change type**: feat, fix, docs, refactor — different types often indicate separate commits
-- **Tests**: `*_test.go` — typically grouped with the implementation being tested
-
-**Hunk-Level Staging (staging tool):**
-
-The agent uses the staging tool (`tools/git-staging.pyz`) when:
-- A file contains multiple independent changes
-- A file mixes refactoring and behavioral change
-- More than 3 distinct hunks may justify inspection
-
-**Practical example:**
+## Validator
 
 ```bash
-# File service.go has:
-# - New cache function (feat)
-# - Bug fix in error handling (fix)
+# Basic validation
+python scripts/validate-commit.py "feat: add login endpoint"
 
-# 1. Parse to identify hunks
-python "<plugin-root>/tools/git-staging.pyz" parse --repo .
-# Returns JSON with hunk indices for each file
+# With extra types
+python scripts/validate-commit.py --extra-types build,ci,revert "build: update webpack config"
 
-# 2. Stage only the fix hunks (e.g., hunk 0)
-python "<plugin-root>/tools/git-staging.pyz" stage --repo . --spec '{"service.go": [0]}'
+# With body support
+python scripts/validate-commit.py --allow-body "feat: add auth
 
-python "<plugin-root>/scripts/validate-commit.py" "fix: fix error handling in service"
-git commit -m "fix: fix error handling in service"
+Implements JWT-based authentication with refresh tokens."
 
-# 3. Stage the rest
-git add service.go
-python "<plugin-root>/scripts/validate-commit.py" "feat: add result caching in service"
-git commit -m "feat: add result caching in service"
+# With max length
+python scripts/validate-commit.py --max-length 72 "feat: add login"
 ```
 
-## Git-Orchestrator Agent
+## Project Settings
 
-The Git plugin includes a **specialized agent** that provides advanced intelligence for commits.
+Create `.claude/git.local.md` in your project root to customize behavior:
 
-### What is an Agent?
+```markdown
+---
+extra_types:
+  build: build system or external dependencies
+  ci: continuous integration configuration
+  revert: revert a previous commit
+language: en
+allow_body: false
+max_length: 72
+---
+```
 
-An agent is an **autonomous subprocess** of Claude that:
-- Has specialized tools (Bash, Grep, Read, AskUserQuestion, TodoWrite)
-- Maintains context throughout execution
-- Can make multiple chained decisions
-- Is specialized in a specific domain (git workflows)
+Available settings:
+- **extra_types**: Additional commit types beyond the default 8
+- **language**: Override commit message language (default: detected from git log)
+- **allow_body**: Allow multi-line commit messages (default: `false`)
+- **max_length**: Maximum description length in characters (default: no limit)
 
-### Git-Orchestrator Capabilities
+After editing, restart Claude Code for changes to take effect.
 
-**Repository Analysis:**
-- Runs git status, diff, diff --cached, log
-- Identifies patterns from commit history
-- Detects relationships between files
-- Recognizes module structure (auth/, payment/, etc.)
+Add to `.gitignore`:
+```
+.claude/*.local.md
+```
 
-**Semantic Diff Analysis:**
-- Evaluates whether the diff changes observable behavior or only internal structure
-- Identifies whether it introduces a new capability, corrects existing behavior, or reorganizes code
-- Checks changes in public contracts, interfaces, validation, return values, and error handling
-- Determines whether tests document the same change or are an independent changeset
+See `examples/git.local.md` for a complete template.
 
-**Intelligent Strategy:**
-- Groups changes by semantic cohesion (not by file count)
-- Automatically detects when to use hunk-level staging
-- Requires explicit partitioning justification for each commit
-- Separates pure refactoring from behavioral changes
+## Safety Hooks
 
-**Mandatory Validation:**
-- Runs `validate-commit.py` before every `git commit`
-- Aborts immediately if validation fails
-- Does not retry with the same invalid message
-
-**Hard Failures (aborts execution):**
-- Nothing staged (`git diff --cached` empty, without prior preparation)
-- Commit decision requires user input that has not been provided
-- Independent semantic changes staged together without being split
-- Commit message validation failure
-
-**Tests for Sensitive Changes:**
-- Inspects whether relevant tests exist for changes in validation, control flow, public contracts, persistence, authorization, money-related logic, error handling
-- Includes related test updates in the same commit as the behavioral change
-- Explicitly reports when tests are absent for sensitive changes
-
-**Progress Tracking with TodoWrite:**
-- For multiple commits, tracks progress using TodoWrite
-- Tracks status of each planned commit (pending, in_progress, complete)
-
-### When Does the Agent Ask?
-
-The agent only asks when the commit decision cannot be reliably made from the staged diff:
-
-✅ **Asks when:**
-- More than one valid strategy remains after semantic diff analysis
-- The staged diff mixes unrelated semantic changes and the split is not obvious
-- Commit type is materially ambiguous after inspecting `git diff --cached`
-- The same change could reasonably be classified as either behavioral change or pure refactor
-- More than 10 files involved across multiple contexts with unclear semantic grouping
-
-❌ **Does NOT ask when:**
-- The staged diff clearly maps to one semantic change
-- File grouping is obvious from the diff
-- Commit type is clear from behavioral effect
-- The question would only seek trivial confirmation
-
-## Installation
-
-This plugin is automatically loaded by Claude Code when present in the plugins directory.
-
-**Expected location:**
-- `~/.claude/plugins/git/` (global installation)
-- `<project>/.claude/plugins/git/` (local installation)
+The plugin includes a PreToolUse hook that blocks:
+- `git add -p` / `--patch` — interactive, fails in headless environments
+- `git -C` — causes path resolution issues with staging tool
+- `git config user.name/email` — intrusive identity modifications
 
 ## Important Rules
 
-### 1. Git Configuration Preserved
+1. **Git config preserved** — never modifies `user.name` or `user.email`
+2. **Mandatory validation** — every message validated by script before commit
+3. **No git -C flag** — all commands run in current working directory
+4. **Refactor/behavior separation** — pure refactoring and behavioral changes go in separate commits when separable
+5. **Message accuracy** — the message must accurately describe every hunk in `git diff --cached`
+6. **Amend only on request** — never amends automatically
 
-The agent **always uses** the existing user configuration:
+## Examples
 
-```bash
-git config user.name    # Used as-is
-git config user.email   # Used as-is
-```
+### Multiple contexts
 
-**Never modifies** git configuration.
+Changes in `auth/`, `payment/`, and `README.md`:
 
-### 2. Mandatory Validation via Script
-
-Every commit message is validated by the `scripts/validate-commit.py` script before `git commit` execution. If validation fails, the commit is aborted immediately.
-
-```bash
-# The agent runs before every commit:
-python "<plugin-root>/scripts/validate-commit.py" "type: description"
-# Only runs git commit if validation passes
-git commit -m "type: description"
-```
-
-### 3. Simple and Direct Messages
-
-Messages are **simple and direct**, without automatic signatures or additional metadata.
-
-# ABSOLUTE RULES - ZERO TOLERANCE
-
-**The plugin enforces extremely strict validations:**
-
-#### ❌ FORBIDDEN (with consequences)
-
-1. **Claude Code signatures**
-   ```bash
-   # NEVER DO THIS
-   git commit -m "feat: new feature
-
-   🤖 Generated with Claude Code
-   Co-Authored-By: Claude"
-   ```
-   **Consequence:** Invalid commit, polluted history
-
-2. **Scope usage**
-   ```bash
-   # NEVER DO THIS
-   git commit -m "feat(auth): add login"
-   ```
-   **Consequence:** Format not accepted in this project
-
-3. **Body/multiple lines**
-   ```bash
-   # NEVER DO THIS
-   git commit -m "feat: new feature
-
-   Detailed description here"
-   ```
-   **Consequence:** Violates single-line directive
-
-4. **Messages in language inconsistent with history**
-   ```bash
-   # If history is in Portuguese, NEVER DO THIS
-   git commit -m "feat: add new feature"
-   ```
-   **Consequence:** Language inconsistent with history
-
-#### ✅ CORRECT FORMAT
-
-```bash
-# ALWAYS DO THIS
-git commit -m "feat: add new feature"
-git commit -m "fix: fix calculation bug"
-git commit -m "docs: update API documentation"
-```
-
-**Characteristics:**
-- Single line
-- Format: `type: description`
-- Dominant language from repository history
-- No signatures or metadata
-- No scope in parentheses
-- Validated by `validate-commit.py`
-
-### 4. Intelligent Interactivity
-
-The agent asks the user only when necessary:
-
-✅ **Asks when:**
-- Multiple valid grouping strategies
-- Ambiguous changes that can be interpreted in various ways
-- Large files with many independent changes
-- Uncertainty about commit type
-
-❌ **Does not ask when:**
-- There is a clearly superior strategy
-- Changes are obvious and direct
-- Trivial formatting decisions
-
-## Usage Examples
-
-### Scenario 1: Complete feature
-
-**Situation:** Implemented JWT authentication with tests
-
-**Command:**
-```
-/commit authentication feature
-```
-
-**Result:**
-```
-feat: add JWT authentication system with validation
-```
-
-**Files included:** `auth/jwt.go`, `auth/jwt_test.go`, `auth/middleware.go`
-
----
-
-### Scenario 2: Multiple contexts
-
-**Situation:** Changes in `auth/`, `payment/`, and `README.md`
-
-**Command:**
 ```
 /commit split by context
 ```
 
-**Result:**
+Result:
 ```
 feat: add token validation in middleware
 fix: fix fee calculation in payment
 docs: update deployment instructions
 ```
 
----
+### Mixed changes in one file
 
-### Scenario 3: Complex changes in one file
+`service.go` has a new feature + a bug fix:
 
-**Situation:** `service.go` has a new feature + a bug fix
-
-**Command:**
 ```
 /commit use patch mode
 ```
 
-**Process:**
-1. Agent detects multiple independent changes
-2. Uses the staging tool to select specific hunks
-3. First commit with the fix
-4. Second commit with the feature
+The agent parses hunks, stages them separately, and creates two commits.
 
-**Result:**
+### Amend last commit
+
 ```
-fix: fix error handling in service
-feat: add result caching in service
+/commit amend, forgot to include the migration file
 ```
 
----
+The agent stages the migration file and amends the last commit.
 
-### Scenario 4: Automatic analysis
+### Automatic analysis
 
-**Situation:** Multiple files modified, let the agent decide
-
-**Command:**
 ```
 /commit
 ```
 
-**Process:**
-1. Agent analyzes git status, diff, diff --cached, and log
-2. Performs semantic diff analysis to determine boundaries
-3. Stages and commits separately by semantic cohesion (validating each message)
-4. Reports final result
+The agent determines the strategy autonomously, only asking when genuinely ambiguous.
 
-**Result:**
-```
-feat: add user listing endpoint
-fix: fix email validation in registration
-test: add tests for user controller
-docs: update API documentation
-```
+## Installation
 
-## Troubleshooting
+Place in plugins directory:
+- `~/.claude/plugins/git/` (global)
+- `<project>/.claude/plugins/git/` (local)
 
-### Problem: Many unrelated changes
+## Version History
 
-**Symptom:** Working directory with files across multiple modules
+### v2.0.0 — March 2026
+- Extracted shared utilities (`repo_utils.py`) — eliminates code duplication
+- Fixed timezone bug in committer (correct DST handling via `tm_gmtoff`)
+- Fixed git index flags field (encodes path name length per spec)
+- Added `.gitignore` awareness to parser (respects ignore patterns)
+- Added `unstage` subcommand to staging tool
+- Added project settings support (`.claude/git.local.md`)
+- Added safety hook (blocks `git add -p`, `git -C`, config changes)
+- Optimized parser for large repos (SHA-based fast path, separate tracked/untracked)
+- Added amend mode support
+- Extended validator: `--extra-types`, `--allow-body`, `--max-length`, breaking change `!`
+- Expanded eval suite with negative and edge-case test scenarios
+- Moved development workspace out of distribution (`dev/`)
 
-**Solution:** The agent will ask which grouping strategy to use (by semantic cohesion, by type, etc.)
+### v1.2.0 — March 2026
+- Added `commit` skill with evaluation test cases
+- Improved agent prompt: leaner, less repetitive, explains reasoning
+- Overhauled README for clarity and conciseness
 
----
+### v1.1.0 — March 2026
+- Non-interactive staging tool (`tools/git-staging.pyz`) via Dulwich
+- Three staging modes: parse, stage, commit
+- Racy-git protection for partial hunk staging
 
-### Problem: Unsure which commit type to use
+### v1.0.1 — March 2026
+- Portable plugin root resolution via `CLAUDE_PLUGIN_ROOT`
 
-**Symptom:** Doubt whether the change is `feat:` or `refactor:`
-
-**Solution:** The agent will analyze the nature of the change via semantic diff analysis, and will ask using AskUserQuestion if ambiguous
-
----
-
-### Problem: File with changes that should be in separate commits
-
-**Symptom:** A file has a new feature and a bug fix
-
-**Solution:** Use `/commit use patch mode` to select specific hunks
-
----
-
-### Problem: Previous commits use a different format
-
-**Symptom:** History has messages like `feat(auth): description`
-
-**Solution:** The agent will follow the specified format (`type: description` without scope), validated by the `validate-commit.py` script
-
-## Versioning
-
-- **Current version:** 1.1.0
-- **Versioning:** Semantic Versioning (MAJOR.MINOR.PATCH)
-
-### Version History
-
-#### v1.1.0 - March 2026
-- **Non-interactive staging tool**: New `tools/git-staging.pyz` replaces `git add -p` with a Dulwich-based `.pyz` zipapp that provides hunk-level staging in non-interactive environments
-- **Three staging modes**: `parse` (read-only repo analysis with hunk indices), `stage` (selective hunk staging), `commit` (stage + commit in one step)
-- **Racy-git protection**: Index entries use smudged timestamps to force git to read blob content when staged content differs from working tree
-- **Agent updated**: All `git add -p` references replaced with staging tool usage; new "Staging tool" section documents the three modes and rules
-
-#### v1.0.1 - March 2026
-- **Portable plugin root resolution**: `/commit` command resolves `CLAUDE_PLUGIN_ROOT` and passes the absolute path to the agent, eliminating permission prompts for validator execution
-- **Fallback resolution**: Agent can resolve plugin root via `/commit --resolve-root` when invoked directly
-- **Agent files updated**: Replaced `${CLAUDE_PLUGIN_ROOT}` references with `<plugin-root>` placeholder resolved at runtime
-
-#### v1.0.0 - December 2025
-- **Initial release** with agent-based architecture
-- commit-maker agent for commit analysis and execution
-- `/commit` command as gateway delegating to the agent
-- Advanced quality validations
-- Project pattern learning
-- Automatic patch mode detection
-- Conventional Commits without scope, language follows repository history
-- Strict format rules with zero tolerance for violations
-
-## Contributing
-
-To add new commands or improvements:
-
-1. Follow command structure in `commands/*.md`
-2. Update `plugin.json` if necessary
-3. Document in README.md
-4. Test locally
-5. Commit: `feat: add command X` (following conventions)
+### v1.0.0 — December 2025
+- Initial release with agent-based architecture
 
 ## License
 
@@ -538,12 +275,6 @@ Property of Pragmabits.
 
 ## Contact
 
-**Author:** Leonardo Leôncio
+**Author:** Leonardo Leoncio
 **Email:** leonardoleoncio96@gmail.com
 **Company:** Pragmabits
-
----
-
-**Version:** 1.1.0
-**Updated:** March 2026
-**Status:** Active
