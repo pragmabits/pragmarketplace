@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Collection of Claude plugins for guidelines, agents, and skills focused on development.",
-    "version": "1.1.0"
+    "version": "1.2.0"
   },
   "plugins": [
     {
@@ -42,8 +42,8 @@
     {
       "name": "git",
       "source": "./plugins/claude/git",
-      "description": "Strategic git commit plugin powered by the commit-maker agent — semantic analysis, intelligent partitioning, and validated commits",
-      "version": "1.1.0",
+      "description": "Strategic git commit plugin — semantic analysis, hunk-level staging, validated commits, safety hooks, and per-project settings",
+      "version": "2.0.0",
       "author": {
         "name": "pragmabits",
         "email": "leonardoleoncio96@gmail.com"
@@ -61,7 +61,7 @@
         "workflow",
         "automation",
         "strategic-commits",
-        "hunk-staging",
+        "patch-mode",
         "agent",
         "validation"
       ]
@@ -88,6 +88,30 @@
         "settings",
         "customization",
         "plugin"
+      ]
+    },
+    {
+      "name": "fontawesome",
+      "source": "./plugins/claude/fontawesome",
+      "description": "Font Awesome icon expert — selection, animation, styling, and integration guidance powered by the official FA 7 documentation",
+      "version": "1.0.0",
+      "author": {
+        "name": "pragmabits",
+        "email": "leonardoleoncio96@gmail.com"
+      },
+      "homepage": "https://github.com/pragmabits/pragmarketplace",
+      "repository": "https://github.com/pragmabits/pragmarketplace",
+      "category": "design",
+      "commands": "./commands",
+      "agents": ["./agents/fontawesome.md"],
+      "keywords": [
+        "fontawesome",
+        "icons",
+        "css",
+        "animation",
+        "styling",
+        "ui",
+        "agent"
       ]
     }
   ]
