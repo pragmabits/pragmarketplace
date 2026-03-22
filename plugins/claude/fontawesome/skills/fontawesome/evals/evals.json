@@ -1,0 +1,42 @@
+{
+  "skill_name": "fontawesome",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I'm building a settings page for our SaaS app and need icons for: user profile, notifications, billing, security, and logout. We use React with fa-solid style throughout. Can you give me the complete icon plan with the JSX snippets?",
+      "expected_output": "A structured table mapping each settings item to a specific FA icon with full class names, JSX code snippets using @fortawesome/react-fontawesome, accessibility attributes, and consistency notes about using fa-solid throughout",
+      "files": [],
+      "expectations": [
+        "Response includes icon recommendations for all 5 items: user profile, notifications, billing, security, and logout",
+        "Every recommended icon uses the fa-solid family prefix",
+        "JSX snippets use FontAwesomeIcon component from @fortawesome/react-fontawesome",
+        "Icons include accessibility attributes (aria-hidden, aria-label, or role)",
+        "Response includes a structured table or clear mapping format"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "the loading spinner on my checkout button is jerky and too fast, its using fa-spinner fa-spin right now. how do i slow it down and make it smoother? also it needs to stop spinning when the payment goes through and show a checkmark instead",
+      "expected_output": "CSS custom property --fa-animation-duration to slow the spin, explanation of fa-spin vs fa-spin-pulse, and a code pattern for swapping fa-spinner to fa-check on success",
+      "files": [],
+      "expectations": [
+        "Mentions --fa-animation-duration CSS custom property as the way to slow the spin",
+        "Provides code showing how to swap the spinner icon to a checkmark icon on payment success",
+        "Recommends fa-check or fa-circle-check as the success icon",
+        "Does not recommend writing custom @keyframes as the primary solution (prefers native FA utilities)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "We just migrated from Material Icons to Font Awesome 7 in our Vue 3 project but half the icons arent showing up. The console shows no errors. We installed @fortawesome/fontawesome-free via npm and imported 'all.css' in main.ts. Some icons work (like fa-solid fa-house) but others dont (fa-light fa-bell, fa-duotone fa-camera). What's going on?",
+      "expected_output": "Diagnosis that fa-light and fa-duotone require Font Awesome Pro, explanation of Free vs Pro families, and guidance on upgrading or using Free alternatives",
+      "files": [],
+      "expectations": [
+        "Correctly identifies that fa-light and fa-duotone icon families require Font Awesome Pro",
+        "Explains that fontawesome-free only includes Solid, Regular, and Brands families",
+        "Suggests Free alternative icons (e.g., fa-regular fa-bell instead of fa-light fa-bell)",
+        "Mentions upgrading to @fortawesome/fontawesome-pro as an option"
+      ]
+    }
+  ]
+}
