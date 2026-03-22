@@ -10,48 +10,7 @@ import os
 from dulwich.repo import Repo
 from dulwich.objects import Blob
 
-
-def _decode_safe(data: bytes) -> str | None:
-    """Decode bytes to str, return None for binary content."""
-    try:
-        return data.decode("utf-8")
-    except (UnicodeDecodeError, ValueError):
-        return None
-
-
-def _get_head_tree(repo: Repo):
-    """Return the tree object for HEAD, or None if no commits yet."""
-    try:
-        head_sha = repo.head()
-        commit = repo[head_sha]
-        return repo[commit.tree]
-    except Exception:
-        return None
-
-
-def _read_blob_from_tree(repo: Repo, tree, path: str) -> bytes | None:
-    """Read file content from a tree by path."""
-    if tree is None:
-        return None
-    parts = path.split("/")
-    current = tree
-    for i, part in enumerate(parts):
-        found = False
-        for item in current.items():
-            name = item.path.decode("utf-8") if isinstance(item.path, bytes) else item.path
-            if name == part:
-                obj = repo[item.sha]
-                if i == len(parts) - 1:
-                    if isinstance(obj, Blob):
-                        return obj.data
-                    return None
-                else:
-                    current = obj
-                    found = True
-                    break
-        if not found:
-            return None
-    return None
+from repo_utils import decode_safe, get_head_tree, read_blob_from_tree
 
 
 def _parse_hunk_header(header: str) -> dict:
@@ -129,7 +88,7 @@ def _get_staged_status(repo: Repo, tree, path: str, index_entries: dict) -> bool
     if path not in index_entries:
         return False
     index_sha = index_entries[path]
-    head_content = _read_blob_from_tree(repo, tree, path)
+    head_content = read_blob_from_tree(repo, tree, path)
     if head_content is None:
         return True  # new file staged
     # Compare HEAD blob sha with index sha
@@ -150,7 +109,7 @@ def parse_repo(repo_path: str) -> dict:
         branch = "unknown"
 
     # HEAD tree
-    tree = _get_head_tree(repo)
+    tree = get_head_tree(repo)
 
     # Recent commits
     recent_commits = []
@@ -177,10 +136,8 @@ def parse_repo(repo_path: str) -> dict:
             has_staged_content = True
             break
 
-    # Collect all known paths
-    all_paths = set()
-
-    # From HEAD tree
+    # Collect tracked paths from HEAD tree and index
+    head_paths = set()
     if tree is not None:
         def _walk_tree(t, prefix=""):
             for item in t.items():
@@ -188,74 +145,112 @@ def parse_repo(repo_path: str) -> dict:
                 full = f"{prefix}{name}" if not prefix else f"{prefix}/{name}"
                 obj = repo[item.sha]
                 if isinstance(obj, Blob):
-                    all_paths.add(full)
+                    head_paths.add(full)
                 else:
                     _walk_tree(obj, full)
         _walk_tree(tree)
 
-    # From index
-    all_paths.update(index_entries.keys())
+    tracked_paths = head_paths | set(index_entries.keys())
 
-    # From working directory (untracked)
+    # Collect untracked paths from working directory, respecting .gitignore
+    from dulwich.ignore import IgnoreFilterManager
+    ignore_manager = IgnoreFilterManager.from_repo(repo)
+    untracked_paths = set()
+
     for root, dirs, filenames in os.walk(repo_path):
         # Skip .git directory
         dirs[:] = [d for d in dirs if d != ".git"]
-        for fname in filenames:
-            full = os.path.join(root, fname)
-            rel = os.path.relpath(full, repo_path)
-            all_paths.add(rel)
+        rel_root = os.path.relpath(root, repo_path)
 
-    # Build file info, skipping .git paths
+        # Filter out ignored directories to avoid descending into them
+        filtered_dirs = []
+        for d in dirs:
+            rel_dir = d if rel_root == "." else f"{rel_root}/{d}"
+            if not ignore_manager.is_ignored(rel_dir + "/"):
+                filtered_dirs.append(d)
+        dirs[:] = filtered_dirs
+
+        for fname in filenames:
+            rel = fname if rel_root == "." else f"{rel_root}/{fname}"
+            # Only add if not already tracked (avoids re-reading tracked files)
+            if rel not in tracked_paths and not ignore_manager.is_ignored(rel):
+                untracked_paths.add(rel)
+
+    # Build file info — process tracked and untracked separately for efficiency
     files = {}
-    for path in sorted(all_paths):
+
+    # Process tracked files: use SHA comparison to skip unchanged files fast
+    for path in sorted(tracked_paths):
         if path.startswith(".git/") or path == ".git":
             continue
 
-        # HEAD content
-        head_bytes = _read_blob_from_tree(repo, tree, path)
-        head_text = _decode_safe(head_bytes) if head_bytes is not None else None
-
-        # Working tree content
         workdir_path = os.path.join(repo_path, path)
-        if os.path.isfile(workdir_path):
-            try:
-                with open(workdir_path, "rb") as f:
-                    work_bytes = f.read()
-                work_text = _decode_safe(work_bytes)
-            except (IOError, OSError):
-                work_bytes = None
-                work_text = None
-        else:
-            work_bytes = None
-            work_text = None
-
+        in_head = path in head_paths
         in_index = path in index_entries
-        in_workdir = work_bytes is not None
+        file_exists = os.path.isfile(workdir_path)
 
-        status = _file_status(in_index or head_bytes is not None, in_workdir, head_bytes, work_bytes)
-        if status == "clean":
+        # Deleted file
+        if not file_exists:
+            if in_head or in_index:
+                files[path] = {"status": "deleted", "in_index": False, "hunks": []}
             continue
 
+        # Fast path: compare working tree blob SHA against HEAD SHA
+        # to skip unchanged files without reading content
+        head_bytes = read_blob_from_tree(repo, tree, path) if in_head else None
+        try:
+            with open(workdir_path, "rb") as f:
+                work_bytes = f.read()
+        except (IOError, OSError):
+            continue
+
+        if head_bytes is not None and head_bytes == work_bytes:
+            # File unchanged from HEAD — check if index differs (staged change)
+            is_staged = _get_staged_status(repo, tree, path, index_entries) if in_index else False
+            if not is_staged:
+                continue  # Completely clean — skip
+
+        head_text = decode_safe(head_bytes) if head_bytes is not None else None
+        work_text = decode_safe(work_bytes)
         is_staged = _get_staged_status(repo, tree, path, index_entries) if in_index else False
 
-        # Compute hunks (HEAD vs working tree for unstaged, HEAD vs index for staged)
         if work_text is None and head_text is None:
-            # Binary or inaccessible
             hunks = []
             is_binary = True
         else:
             hunks = _compute_hunks(head_text, work_text)
             is_binary = False
 
-        file_info = {
-            "status": status,
-            "in_index": is_staged,
-            "hunks": hunks,
-        }
+        # Determine status
+        if head_bytes is None:
+            status = "untracked"  # in index but not in HEAD (newly staged)
+        elif head_bytes != work_bytes:
+            status = "modified"
+        elif is_staged:
+            status = "modified"  # index differs from HEAD
+        else:
+            continue  # clean
+
+        file_info = {"status": status, "in_index": is_staged, "hunks": hunks}
         if is_binary:
             file_info["binary"] = True
-
         files[path] = file_info
+
+    # Process untracked files (already filtered by .gitignore)
+    for path in sorted(untracked_paths):
+        workdir_path = os.path.join(repo_path, path)
+        try:
+            with open(workdir_path, "rb") as f:
+                work_bytes = f.read()
+        except (IOError, OSError):
+            continue
+
+        work_text = decode_safe(work_bytes)
+        if work_text is None:
+            files[path] = {"status": "untracked", "in_index": False, "hunks": [], "binary": True}
+        else:
+            hunks = _compute_hunks(None, work_text)
+            files[path] = {"status": "untracked", "in_index": False, "hunks": hunks}
 
     return {
         "ok": True,

@@ -5,6 +5,7 @@ Non-interactive hunk-level staging via Dulwich.
 Usage:
     python git-staging.pyz parse [--repo PATH]
     python git-staging.pyz stage [--repo PATH] --spec SPEC_JSON
+    python git-staging.pyz unstage [--repo PATH] --spec SPEC_JSON
     python git-staging.pyz commit [--repo PATH] --spec SPEC_JSON --message MSG
 """
 
@@ -14,6 +15,7 @@ import sys
 
 from parser import parse_repo
 from stager import stage_spec
+from unstager import unstage_spec
 from committer import commit_staged
 
 
@@ -41,6 +43,9 @@ def main() -> int:
     stage_p = sub.add_parser("stage", parents=[repo_parent], help="Stage files/hunks per spec")
     stage_p.add_argument("--spec", required=True, help="JSON spec or @filepath")
 
+    unstage_p = sub.add_parser("unstage", parents=[repo_parent], help="Unstage files (reset to HEAD)")
+    unstage_p.add_argument("--spec", required=True, help="JSON spec or @filepath")
+
     commit_p = sub.add_parser("commit", parents=[repo_parent], help="Stage and commit per spec")
     commit_p.add_argument("--spec", required=True, help="JSON spec or @filepath")
     commit_p.add_argument("--message", required=True, help="Commit message")
@@ -53,6 +58,9 @@ def main() -> int:
         elif args.command == "stage":
             spec = _read_spec(args.spec)
             result = stage_spec(args.repo, spec)
+        elif args.command == "unstage":
+            spec = _read_spec(args.spec)
+            result = unstage_spec(args.repo, spec)
         elif args.command == "commit":
             spec = _read_spec(args.spec)
             result = commit_staged(args.repo, spec, args.message)

@@ -15,45 +15,7 @@ import stat
 from dulwich.repo import Repo
 from dulwich.objects import Blob
 
-
-def _decode_safe(data: bytes) -> str | None:
-    try:
-        return data.decode("utf-8")
-    except (UnicodeDecodeError, ValueError):
-        return None
-
-
-def _get_head_tree(repo: Repo):
-    try:
-        head_sha = repo.head()
-        commit = repo[head_sha]
-        return repo[commit.tree]
-    except Exception:
-        return None
-
-
-def _read_blob_from_tree(repo: Repo, tree, path: str) -> bytes | None:
-    if tree is None:
-        return None
-    parts = path.split("/")
-    current = tree
-    for i, part in enumerate(parts):
-        found = False
-        for item in current.items():
-            name = item.path.decode("utf-8") if isinstance(item.path, bytes) else item.path
-            if name == part:
-                obj = repo[item.sha]
-                if i == len(parts) - 1:
-                    if isinstance(obj, Blob):
-                        return obj.data
-                    return None
-                else:
-                    current = obj
-                    found = True
-                    break
-        if not found:
-            return None
-    return None
+from repo_utils import decode_safe, get_head_tree, read_blob_from_tree
 
 
 def _compute_hunks(old_lines: list[str], new_lines: list[str]) -> list[tuple[int, int, list[str]]]:
@@ -149,20 +111,21 @@ def _stage_whole_file(repo: Repo, repo_path: str, path: str) -> str:
 
     index = repo.open_index()
     st = os.stat(full_path)
-    index[path.encode("utf-8")] = index.get_changes_as_new_entry(
-        path.encode("utf-8"), blob.id, st
-    ) if hasattr(index, "get_changes_as_new_entry") else _make_index_entry(st, blob.id)
+    index[path.encode("utf-8")] = _make_index_entry(st, blob.id, path=path)
     index.write()
 
     return blob.id.decode("ascii") if isinstance(blob.id, bytes) else str(blob.id)
 
 
-def _make_index_entry(st, blob_id, *, blob_size: int | None = None, smudge: bool = False):
+def _make_index_entry(st, blob_id, *, path: str = "", blob_size: int | None = None, smudge: bool = False):
     """Create an index entry tuple compatible with Dulwich.
 
     When smudge=True, set mtime/ctime to 0 to force git to compare blob
     content rather than relying on stat cache (avoids racy-git when index
     content differs from working tree).
+
+    The flags field encodes the path name length (capped at 0xFFF) per
+    the git index format specification.
     """
     from dulwich.index import IndexEntry
 
@@ -172,6 +135,10 @@ def _make_index_entry(st, blob_id, *, blob_size: int | None = None, smudge: bool
     else:
         ctime = (int(st.st_ctime), 0)
         mtime = (int(st.st_mtime), 0)
+
+    # Git index flags: lower 12 bits encode path name length (capped at 0xFFF)
+    name_len = len(path.encode("utf-8")) if path else 0
+    flags = min(name_len, 0xFFF)
 
     return IndexEntry(
         ctime=ctime,
@@ -183,7 +150,7 @@ def _make_index_entry(st, blob_id, *, blob_size: int | None = None, smudge: bool
         gid=st.st_gid,
         size=blob_size if blob_size is not None else st.st_size,
         sha=blob_id,
-        flags=min(len(blob_id), 0xFFF) if isinstance(blob_id, str) else 0,
+        flags=flags,
     )
 
 
@@ -199,8 +166,8 @@ def _stage_deletion(repo: Repo, repo_path: str, path: str) -> None:
 def _stage_hunks(repo: Repo, repo_path: str, tree, path: str, hunk_indices: list[int]) -> str:
     """Stage specific hunks of a file."""
     # Read HEAD content
-    head_bytes = _read_blob_from_tree(repo, tree, path)
-    head_text = _decode_safe(head_bytes) if head_bytes is not None else ""
+    head_bytes = read_blob_from_tree(repo, tree, path)
+    head_text = decode_safe(head_bytes) if head_bytes is not None else ""
     old_lines = (head_text or "").splitlines()
 
     # Read working tree content
@@ -235,7 +202,7 @@ def _stage_hunks(repo: Repo, repo_path: str, tree, path: str, hunk_indices: list
     # Use smudge=True to force git to read blob content instead of
     # trusting stat cache (staged content differs from working tree).
     index[path.encode("utf-8")] = _make_index_entry(
-        st, blob.id, blob_size=len(staged_bytes), smudge=True,
+        st, blob.id, path=path, blob_size=len(staged_bytes), smudge=True,
     )
     index.write()
 
@@ -250,7 +217,7 @@ def stage_spec(repo_path: str, spec: dict) -> dict:
     """
     repo_path = os.path.abspath(repo_path)
     repo = Repo(repo_path)
-    tree = _get_head_tree(repo)
+    tree = get_head_tree(repo)
 
     staged = {}
 
