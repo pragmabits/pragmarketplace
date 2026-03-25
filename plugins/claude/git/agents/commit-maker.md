@@ -1,7 +1,7 @@
 ---
 name: commit-maker
 description: Orchestrates strategic commits with intelligent repository analysis and advanced validations
-model: opus
+model: sonnet
 color: orange
 tools: Bash, Grep, Read, AskUserQuestion, TodoWrite, Skill
 ---

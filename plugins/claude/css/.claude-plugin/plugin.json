@@ -1,6 +1,6 @@
 {
   "name": "css",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "CSS expert toolkit — layouts, animations, responsive design, selectors, performance optimization, and preprocessor guidance (SCSS, Sass, Less, PostCSS) powered by runtime documentation lookup",
   "author": {
     "name": "pragmabits",

@@ -10,14 +10,14 @@ Pragmatic provides ready-to-install plugins that extend Claude Code with special
 
 | Plugin | Version | Category | Slash Commands | Description |
 |--------|---------|----------|----------------|-------------|
-| **git** | 2.0.0 | Tools | `/commit` | Semantic commits, hunk-level staging, validation, and safety hooks |
+| **git** | 2.1.0 | Tools | `/commit` | Semantic commits, hunk-level staging, validation, and safety hooks |
 | **guideline** | 1.0.0 | Output | — | Output style formatting via predefined rules and standards |
 | **pragma-statusline** | 1.0.0 | Tools | `/pragma-status` | Custom Claude Code statusline with git and context metrics |
-| **fontawesome** | 1.0.0 | Design | `/fontawesome` | Font Awesome 7 icon selection, animation, styling, and integration |
-| **shadcn** | 1.0.0 | Design | `/shadcn` | shadcn/ui component setup, CLI, theming, and framework integration |
+| **fontawesome** | 1.1.0 | Design | `/fontawesome` | Font Awesome 7 icon selection, animation, styling, and integration |
+| **shadcn** | 1.1.0 | Design | `/shadcn` | shadcn/ui component setup, CLI, theming, and framework integration |
 | **tailwindcss** | 1.0.0 | Frontend | `/tailwindcss` | Tailwind CSS 4 utility authoring, theming, and TW3-to-TW4 migration |
-| **css** | 1.0.0 | Frontend | `/css` | Layouts, animations, responsive design, selectors, and preprocessors |
-| **vuejs** | 1.0.0 | Frontend | `/vuejs`, `/nuxt` | Vue 3, Nuxt 3, Pinia, testing, forms, styling, and animation |
+| **css** | 1.1.0 | Frontend | `/css` | Layouts, animations, responsive design, selectors, and preprocessors |
+| **vuejs** | 1.1.0 | Frontend | `/vuejs`, `/nuxt` | Vue 3, Nuxt 3, Pinia, testing, forms, styling, and animation |
 
 ## Installation
 

@@ -1,6 +1,6 @@
 {
   "name": "vuejs",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Vue.js ecosystem expert — Vue 3, Vite, Nuxt 3, Pinia, Vue Router, VueUse, Vitest, Tailwind CSS, CVA, vee-validate, zod, reka-ui, lucide, vue-sonner, TanStack Query, and motion guidance powered by runtime documentation lookup",
   "author": {
     "name": "pragmabits",
