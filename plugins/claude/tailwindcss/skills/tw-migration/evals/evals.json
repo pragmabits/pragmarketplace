@@ -1,0 +1,41 @@
+{
+  "skill_name": "tw-migration",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Migrate my TW3 project to TW4. I have a tailwind.config.js with custom colors, a postcss setup, and use @tailwind directives in my CSS.",
+      "expected_output": "Agent provides a step-by-step migration: directives → @import, config colors → @theme, postcss → @tailwindcss/vite or @tailwindcss/postcss",
+      "files": [],
+      "expectations": [
+        "Converts @tailwind base/components/utilities to @import \"tailwindcss\"",
+        "Converts extend.colors to @theme --color-* tokens",
+        "Recommends @tailwindcss/vite for Vite projects or @tailwindcss/postcss for others",
+        "Provides a clear step-by-step migration order"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "My code uses bg-opacity-50, text-opacity-75, and ring-opacity-25. These stopped working after upgrading to TW4.",
+      "expected_output": "Agent explains deprecated opacity utilities and provides the /XX modifier replacement for each",
+      "files": [],
+      "expectations": [
+        "Identifies bg-opacity, text-opacity, ring-opacity as deprecated in TW4",
+        "Provides the /XX modifier syntax as replacement",
+        "Shows before/after: bg-blue-500 bg-opacity-50 → bg-blue-500/50",
+        "Covers all three opacity types mentioned"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I have a tailwind plugin that uses addUtilities and addVariant. How do I migrate it to TW4?",
+      "expected_output": "Agent shows conversion from JavaScript plugin API to CSS-native @utility and @custom-variant directives",
+      "files": [],
+      "expectations": [
+        "Converts addUtilities calls to @utility blocks",
+        "Converts addVariant calls to @custom-variant directives",
+        "Shows before/after JavaScript vs CSS comparison",
+        "Explains that the JavaScript plugin API is replaced by CSS-native directives"
+      ]
+    }
+  ]
+}

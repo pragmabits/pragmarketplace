@@ -1,0 +1,34 @@
+{
+  "name": "tailwindcss",
+  "version": "1.0.0",
+  "description": "Tailwind CSS 4 expert — utility authoring, CSS-first theming, responsive layouts, dark mode, TW3→TW4 migration, and PostCSS/Vite setup powered by runtime documentation lookup",
+  "author": {
+    "name": "pragmabits",
+    "email": "leonardoleoncio96@gmail.com"
+  },
+  "homepage": "https://github.com/pragmabits/pragmarketplace",
+  "repository": "https://github.com/pragmabits/pragmarketplace",
+  "keywords": [
+    "tailwindcss",
+    "tailwind",
+    "css",
+    "utility-first",
+    "theming",
+    "design-tokens",
+    "responsive",
+    "dark-mode",
+    "migration",
+    "postcss",
+    "vite",
+    "css-variables",
+    "layout",
+    "flexbox",
+    "grid",
+    "container-queries",
+    "agent"
+  ],
+  "commands": "./commands",
+  "agents": [
+    "./agents/tailwindcss.md"
+  ]
+}
