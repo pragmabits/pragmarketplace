@@ -1,0 +1,41 @@
+{
+  "skill_name": "vue-forms",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create a login form with email and password validation using vee-validate and zod in Vue 3.",
+      "expected_output": "Vue SFC with useForm, toTypedSchema, zod schema, handleSubmit, error display",
+      "files": [],
+      "expectations": [
+        "Uses useForm() from 'vee-validate' (Composition API, not v3 components)",
+        "Uses toTypedSchema() from '@vee-validate/zod' to bridge zod schema",
+        "Defines zod schema with z.object(), z.string().email(), z.string().min()",
+        "Uses handleSubmit for form submission with typed values"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "How do I use useField for individual field validation in vee-validate?",
+      "expected_output": "useField usage with value binding, error message, and blur handler",
+      "files": [],
+      "expectations": [
+        "Imports useField from 'vee-validate'",
+        "Shows value and errorMessage destructuring",
+        "Demonstrates binding value to input with v-model",
+        "Shows error message display in template"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Build a registration form with password confirmation validation using zod refinement.",
+      "expected_output": "Zod schema with .refine() for cross-field validation, form-level error handling",
+      "files": [],
+      "expectations": [
+        "Uses z.object().refine() for password confirmation check",
+        "Sets path: ['confirmPassword'] in refine to target the correct field",
+        "Uses useForm with toTypedSchema for the refined schema",
+        "Shows form-level errors for cross-field validation"
+      ]
+    }
+  ]
+}

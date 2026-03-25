@@ -1,0 +1,44 @@
+{
+  "skill_name": "vue-state",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "How do I create a Pinia store for managing a shopping cart with add, remove, and total computed?",
+      "expected_output": "Guide through defineStore with setup syntax, ref for items, computed for total, action functions",
+      "files": [],
+      "expectations": [
+        "Uses defineStore() with setup syntax (function returning refs/computed/functions)",
+        "Uses ref() for cart items array",
+        "Uses computed() for total price calculation",
+        "Defines add/remove functions (not mutations)",
+        "Shows store usage with storeToRefs() for destructuring"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I need to set up Vue Router with lazy-loaded routes, a navigation guard for auth, and nested routes for a dashboard.",
+      "expected_output": "Router config with dynamic imports, beforeEach guard, and children routes",
+      "files": [],
+      "expectations": [
+        "Uses createRouter() with createWebHistory()",
+        "Uses dynamic imports (import()) for lazy loading route components",
+        "Implements router.beforeEach() guard checking auth state",
+        "Shows nested routes with children array for dashboard sub-routes",
+        "Does NOT use next() callback pattern (uses return instead)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "How do I compose multiple Pinia stores together? My user store needs to access the auth store.",
+      "expected_output": "Store composition pattern with one store calling another inside actions",
+      "files": [],
+      "expectations": [
+        "Shows calling useAuthStore() inside the user store's setup function or actions",
+        "Explains that stores can be used inside other stores directly",
+        "Warns about circular dependencies and how to avoid them",
+        "Demonstrates the pattern with concrete code example",
+        "Mentions that store composition works naturally with setup syntax"
+      ]
+    }
+  ]
+}

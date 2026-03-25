@@ -1,0 +1,41 @@
+{
+  "skill_name": "vue-animation",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Add a fade-in and slide-up entrance animation to a card component using motion.",
+      "expected_output": "Motion component from motion/vue with initial and animate props",
+      "files": [],
+      "expectations": [
+        "Imports Motion from 'motion/vue'",
+        "Uses :initial prop with opacity: 0 and y offset",
+        "Uses :animate prop with opacity: 1 and y: 0",
+        "Includes :transition prop with duration or spring config"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Create a spring animation for a button that bounces when it appears.",
+      "expected_output": "Motion component with spring transition configuration",
+      "files": [],
+      "expectations": [
+        "Uses :transition with type: 'spring'",
+        "Includes spring parameters (stiffness, damping, or bounce)",
+        "Shows initial and animate states for the bounce effect",
+        "Imports from 'motion/vue'"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Implement enter and exit animations for a modal overlay using motion.",
+      "expected_output": "AnimatePresence wrapping Motion with v-if, initial/animate/exit props",
+      "files": [],
+      "expectations": [
+        "Uses AnimatePresence from 'motion/vue'",
+        "Wraps conditional Motion component with v-if inside AnimatePresence",
+        "Defines :exit prop for the leave animation",
+        "Shows both :initial and :animate props for enter animation"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "skill_name": "vue-styling",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Set up Tailwind CSS in my Vite + Vue 3 project from scratch.",
+      "expected_output": "Guide through installing @tailwindcss/vite, configuring vite.config.ts plugin, creating CSS import with @import 'tailwindcss'",
+      "files": [],
+      "expectations": [
+        "Uses @tailwindcss/vite plugin, not PostCSS configuration",
+        "Shows vite.config.ts with tailwindcss() in plugins array",
+        "Includes CSS file with @import 'tailwindcss'",
+        "Does not reference tailwind.config.js (v4 uses CSS-based config)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Create a cn() utility function for merging Tailwind classes conditionally.",
+      "expected_output": "Utility function combining clsx and tailwind-merge",
+      "files": [],
+      "expectations": [
+        "Imports clsx and ClassValue type from 'clsx'",
+        "Imports twMerge from 'tailwind-merge'",
+        "Combines both: twMerge(clsx(inputs))",
+        "Exports the cn function with ...inputs: ClassValue[] parameter"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Create a Button component with CVA variants for variant (default, destructive, outline) and size (sm, md, lg) using TypeScript.",
+      "expected_output": "Vue SFC with cva() definition, VariantProps type extraction, cn() usage",
+      "files": [],
+      "expectations": [
+        "Uses cva() from 'class-variance-authority' to define button variants",
+        "Extracts VariantProps<typeof buttonVariants> for type-safe props",
+        "Uses cn() to merge variant classes with custom class prop",
+        "Uses <script setup lang='ts'> syntax"
+      ]
+    }
+  ]
+}
