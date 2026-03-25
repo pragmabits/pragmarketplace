@@ -1,5 +1,5 @@
 {
-  "name": "pragmarketplace",
+  "name": "pragmatic",
   "owner": {
     "name": "pragmabits",
     "email": "leonardoleoncio96@gmail.com"
@@ -111,6 +111,151 @@
         "animation",
         "styling",
         "ui",
+        "agent"
+      ]
+    },
+    {
+      "name": "shadcn",
+      "source": "./plugins/claude/shadcn",
+      "description": "shadcn/ui expert — component setup, CLI guidance, theming, and framework integration powered by official documentation",
+      "version": "1.0.0",
+      "author": {
+        "name": "pragmabits",
+        "email": "leonardoleoncio96@gmail.com"
+      },
+      "homepage": "https://github.com/pragmabits/pragmarketplace",
+      "repository": "https://github.com/pragmabits/pragmarketplace",
+      "category": "design",
+      "commands": "./commands",
+      "agents": ["./agents/shadcn.md"],
+      "keywords": [
+        "shadcn",
+        "shadcn-ui",
+        "radix",
+        "tailwind",
+        "components",
+        "theming",
+        "css-variables",
+        "ui",
+        "react",
+        "nextjs",
+        "vite",
+        "astro",
+        "registry",
+        "design-system",
+        "agent"
+      ]
+    },
+    {
+      "name": "vuejs",
+      "source": "./plugins/claude/vuejs",
+      "description": "Vue.js ecosystem expert — Vue 3, Vite, Nuxt 3, Pinia, Vue Router, VueUse, Vitest, Tailwind CSS, CVA, vee-validate, zod, reka-ui, lucide, vue-sonner, TanStack Query, and motion guidance powered by runtime documentation lookup",
+      "version": "1.0.0",
+      "author": {
+        "name": "pragmabits",
+        "email": "leonardoleoncio96@gmail.com"
+      },
+      "homepage": "https://github.com/pragmabits/pragmarketplace",
+      "repository": "https://github.com/pragmabits/pragmarketplace",
+      "category": "frontend",
+      "commands": "./commands",
+      "agents": ["./agents/vuejs.md"],
+      "keywords": [
+        "vue",
+        "vuejs",
+        "vue3",
+        "vite",
+        "nuxt",
+        "nuxt3",
+        "pinia",
+        "vue-router",
+        "vueuse",
+        "vitest",
+        "composition-api",
+        "typescript",
+        "frontend",
+        "agent",
+        "tailwindcss",
+        "tailwind",
+        "cva",
+        "clsx",
+        "tailwind-merge",
+        "vee-validate",
+        "zod",
+        "reka-ui",
+        "lucide",
+        "vue-sonner",
+        "tanstack-query",
+        "vue-query",
+        "motion",
+        "fontsource",
+        "form-validation",
+        "animation"
+      ]
+    },
+    {
+      "name": "tailwindcss",
+      "source": "./plugins/claude/tailwindcss",
+      "description": "Tailwind CSS 4 expert — utility authoring, CSS-first theming, responsive layouts, dark mode, TW3→TW4 migration, and PostCSS/Vite setup powered by runtime documentation lookup",
+      "version": "1.0.0",
+      "author": {
+        "name": "pragmabits",
+        "email": "leonardoleoncio96@gmail.com"
+      },
+      "homepage": "https://github.com/pragmabits/pragmarketplace",
+      "repository": "https://github.com/pragmabits/pragmarketplace",
+      "category": "frontend",
+      "commands": "./commands",
+      "agents": ["./agents/tailwindcss.md"],
+      "keywords": [
+        "tailwindcss",
+        "tailwind",
+        "css",
+        "utility-first",
+        "theming",
+        "design-tokens",
+        "responsive",
+        "dark-mode",
+        "migration",
+        "postcss",
+        "vite",
+        "css-variables",
+        "layout",
+        "flexbox",
+        "grid",
+        "container-queries",
+        "agent"
+      ]
+    },
+    {
+      "name": "css",
+      "source": "./plugins/claude/css",
+      "description": "CSS expert toolkit — layouts, animations, responsive design, selectors, performance optimization, and preprocessor guidance (SCSS, Sass, Less, PostCSS) powered by runtime documentation lookup",
+      "version": "1.0.0",
+      "author": {
+        "name": "pragmabits",
+        "email": "leonardoleoncio96@gmail.com"
+      },
+      "homepage": "https://github.com/pragmabits/pragmarketplace",
+      "repository": "https://github.com/pragmabits/pragmarketplace",
+      "category": "frontend",
+      "commands": "./commands",
+      "agents": ["./agents/css.md"],
+      "keywords": [
+        "css",
+        "scss",
+        "sass",
+        "less",
+        "postcss",
+        "flexbox",
+        "grid",
+        "animation",
+        "responsive",
+        "selectors",
+        "performance",
+        "preprocessor",
+        "stylesheet",
+        "styling",
         "agent"
       ]
     }
