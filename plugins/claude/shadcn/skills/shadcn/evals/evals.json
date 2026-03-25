@@ -1,0 +1,101 @@
+{
+  "skill_name": "shadcn",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I want to set up shadcn/ui in my Next.js project. I'm using the App Router with TypeScript. What's the best way to get started?",
+      "expected_output": "Guide through `npx shadcn@latest init -t next` with explanation of key flags, components.json configuration, and RSC considerations",
+      "files": [],
+      "expectations": [
+        "Recommends `npx shadcn@latest init` (or `pnpm dlx shadcn@latest init`) with the `-t next` template flag",
+        "Mentions components.json as the configuration file that will be created",
+        "Explains RSC support and the `rsc: true` setting that auto-adds 'use client' directives",
+        "Notes that components are copied into the project, not installed as npm dependencies"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Add a date picker component to my shadcn project. I need it for a booking form.",
+      "expected_output": "CLI command to add the date picker, explanation of its compound component structure, and any additional dependencies",
+      "files": [],
+      "expectations": [
+        "Provides the CLI command: `npx shadcn@latest add date-picker` or guides through the Calendar + Popover composition",
+        "Explains that the date picker is typically composed from Calendar and Popover components",
+        "Mentions any additional dependencies that will be auto-installed (e.g., date-fns or day picker)",
+        "Shows a usage example with the compound component pattern"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "How do I change the primary color in my shadcn project? I want to use a custom blue instead of the default.",
+      "expected_output": "Explains CSS variables approach using OKLCH format, not Tailwind config overrides",
+      "files": [],
+      "expectations": [
+        "Explains that theming uses CSS variables, specifically the --primary and --primary-foreground variables",
+        "Uses OKLCH color format (e.g., `oklch(...)`) rather than HSL or hex",
+        "Shows where to modify the variables (in the CSS file, under :root and .dark selectors)",
+        "Does NOT suggest modifying tailwind.config.js as the primary approach"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "I'm using Astro, can I use shadcn/ui? How does it work with Astro's island architecture?",
+      "expected_output": "Confirms Astro support, explains initialization with -t astro flag, and covers client directives for interactive components",
+      "files": [],
+      "expectations": [
+        "Confirms that shadcn/ui supports Astro as a framework",
+        "Provides the init command with `-t astro` flag",
+        "Explains that interactive components (Dialog, Sheet, Dropdown) need client directives like `client:load`",
+        "Notes that non-interactive components (Card, Badge) can render as static HTML without hydration"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "How do I implement dark mode in my shadcn project? I'm using Next.js with the App Router.",
+      "expected_output": "Guide through next-themes setup with ThemeProvider, root layout wrapping, and ModeToggle component",
+      "files": [],
+      "expectations": [
+        "Recommends installing next-themes package",
+        "Shows creating a ThemeProvider component wrapping NextThemesProvider with 'use client' directive",
+        "Explains wrapping the root layout with ThemeProvider using attribute='class' and enableSystem",
+        "Provides or describes a ModeToggle component with light/dark/system options"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "I need to build a sortable, filterable data table for displaying user records. How do I do this with shadcn?",
+      "expected_output": "Guide through TanStack Table integration with shadcn Table component, column definitions, sorting and filtering state",
+      "files": [],
+      "expectations": [
+        "Recommends installing @tanstack/react-table alongside the shadcn table component",
+        "Shows column definitions using ColumnDef from TanStack Table",
+        "Includes sorting state management with getSortedRowModel",
+        "Includes filtering with getFilteredRowModel or column filter state"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "I installed some shadcn components months ago and want to check if there are upstream updates. How can I see what changed?",
+      "expected_output": "Explains the `npx shadcn diff` command to compare local components against upstream versions",
+      "files": [],
+      "expectations": [
+        "Recommends `npx shadcn@latest diff` or `npx shadcn@latest diff [component]` command",
+        "Explains that diff shows differences between local and upstream component versions",
+        "Notes that components are owned by the user and updates are opt-in, not automatic",
+        "Does NOT suggest reinstalling or running npm update as the primary approach"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "I need a login form with email and password validation using shadcn components. How should I set this up?",
+      "expected_output": "Guide through React Hook Form + Zod integration with shadcn Form components",
+      "files": [],
+      "expectations": [
+        "Recommends React Hook Form with Zod for validation (or mentions TanStack Form as alternative)",
+        "Shows Form, FormField, FormItem, FormLabel, FormControl, FormMessage component composition",
+        "Includes a Zod schema for email and password validation",
+        "Uses the shadcn Input component within FormControl"
+      ]
+    }
+  ]
+}
