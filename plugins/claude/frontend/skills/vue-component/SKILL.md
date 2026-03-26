@@ -1,6 +1,6 @@
 ---
 name: vue-component
-description: "This skill should be used when the user asks to create, modify, or understand Vue 3 components. Trigger phrases include \"create a Vue component\", \"Vue SFC\", \"Single File Component\", \"script setup\", \"defineProps\", \"defineEmits\", \"defineModel\", \"Composition API\", \"composable\", \"ref()\", \"reactive()\", \"computed()\", \"provide/inject\", \"slots\", \"Teleport\", \"Suspense\", \"KeepAlive\", \"Transition\", or any Vue 3 component or reactivity API question."
+description: "This skill should be used when the user asks to create, modify, debug, fix, or understand Vue 3 components. Trigger phrases include \"create a Vue component\", \"Vue SFC\", \"Single File Component\", \"script setup\", \"defineProps\", \"defineEmits\", \"defineModel\", \"Composition API\", \"composable\", \"ref()\", \"reactive()\", \"computed()\", \"provide/inject\", \"slots\", \"Teleport\", \"Suspense\", \"KeepAlive\", \"Transition\", or any Vue 3 component or reactivity API question, or describes a bug, broken behavior, event handling issue, or unexpected interaction in a Vue 3 component."
 ---
 
 # Vue 3 Component Development

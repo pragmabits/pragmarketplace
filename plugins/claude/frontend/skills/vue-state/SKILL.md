@@ -1,6 +1,6 @@
 ---
 name: vue-state
-description: "This skill should be used when the user asks about state management or routing in Vue.js applications. Trigger phrases include \"Pinia\", \"defineStore\", \"storeToRefs\", \"state management\", \"Vuex migration\", \"Vue Router\", \"useRoute\", \"useRouter\", \"navigation guards\", \"beforeEach\", \"dynamic routes\", \"nested routes\", \"lazy loading routes\", or any Pinia or Vue Router API question."
+description: "This skill should be used when the user asks about state management or routing in Vue.js applications. Trigger phrases include \"Pinia\", \"defineStore\", \"storeToRefs\", \"state management\", \"Vuex migration\", \"Vue Router\", \"useRoute\", \"useRouter\", \"navigation guards\", \"beforeEach\", \"dynamic routes\", \"nested routes\", \"lazy loading routes\", or any Pinia or Vue Router API question, or describes a bug with state management, routing, or navigation behavior."
 ---
 
 # Pinia & Vue Router

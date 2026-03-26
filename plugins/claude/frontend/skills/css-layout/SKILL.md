@@ -1,6 +1,6 @@
 ---
 name: css-layout
-description: "This skill should be used when the user asks about CSS layout techniques, \"flexbox\", \"CSS Grid\", \"display flex\", \"justify-content\", \"align-items\", \"gap\", \"grid-template\", \"place-items\", \"centering\", \"center a div\", \"layout\", \"box model\", \"position\", \"z-index\", \"stacking context\", \"float\", \"columns\", \"container queries\", \"@container\", or needs help building page layouts, aligning elements, or understanding CSS positioning."
+description: "This skill should be used when the user asks about CSS layout techniques, \"flexbox\", \"CSS Grid\", \"display flex\", \"justify-content\", \"align-items\", \"gap\", \"grid-template\", \"place-items\", \"centering\", \"center a div\", \"layout\", \"box model\", \"position\", \"z-index\", \"stacking context\", \"float\", \"columns\", \"container queries\", \"@container\", or needs help building page layouts, aligning elements, understanding CSS positioning, or debugging layout bugs and unexpected element placement."
 ---
 
 # CSS Layout

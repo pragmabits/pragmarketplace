@@ -1,6 +1,6 @@
 ---
 name: vue-forms
-description: "This skill should be used when the user asks about form validation in Vue with vee-validate, zod, or @vee-validate/zod. Trigger phrases include \"vee-validate\", \"useForm\", \"useField\", \"form validation\", \"zod schema\", \"z.object\", \"z.string\", \"@vee-validate/zod\", \"toTypedSchema\", \"form errors\", \"handleSubmit\", \"schema validation\"."
+description: "This skill should be used when the user asks about form validation in Vue with vee-validate, zod, or @vee-validate/zod. Trigger phrases include \"vee-validate\", \"useForm\", \"useField\", \"form validation\", \"zod schema\", \"z.object\", \"z.string\", \"@vee-validate/zod\", \"toTypedSchema\", \"form errors\", \"handleSubmit\", \"schema validation\", \"fix form validation\", \"form validation bug\", \"form not submitting\", \"unexpected form behavior\", \"double click to submit\"."
 ---
 
 # vee-validate + Zod Form Validation
