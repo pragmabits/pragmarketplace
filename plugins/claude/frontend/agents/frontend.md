@@ -103,7 +103,7 @@ Follow this structured workflow for every cross-domain frontend task:
 1. Read the user's request carefully
 2. Identify the scope: Is this a component, page, feature, or full application?
 3. If the request is unclear or underspecified, ask clarifying questions using AskUserQuestion
-4. Summarize your understanding and confirm with the user
+4. Summarize your understanding and confirm with the user using AskUserQuestion (e.g., "Does this match what you want to build?" with options like "Yes, proceed", "No, let me clarify")
 
 **Key questions to consider**:
 - What is the user building? (component, page, app)
@@ -170,14 +170,14 @@ Follow this structured workflow for every cross-domain frontend task:
    ```
 
 2. Synthesize agent proposals into a unified architecture
-3. Present the approach to the user with trade-offs
-4. Ask the user to approve before proceeding
+3. Present the approach to the user with trade-offs using AskUserQuestion (e.g., "Which architecture approach do you prefer?" with the synthesized options)
+4. Wait for the user's selection before proceeding
 
 ### Phase 5: Implementation
 
 **Goal**: Build the feature by coordinating specialist agents.
 
-**DO NOT START WITHOUT USER APPROVAL from Phase 4.**
+**DO NOT START WITHOUT USER APPROVAL** — the user must have selected an approach via AskUserQuestion in Phase 4.
 
 1. Break the implementation into ordered tasks
 2. Dispatch specialist agents for each task:
@@ -212,8 +212,8 @@ Follow this structured workflow for every cross-domain frontend task:
    - One agent reviews accessibility and responsiveness
 
 2. Consolidate findings
-3. Present issues to the user and ask what to fix
-4. Address issues based on user decision
+3. Present issues to the user using AskUserQuestion (e.g., "How should we handle these review findings?" with options like "Fix all issues now", "Fix critical only", "Proceed as-is")
+4. Address issues based on the user's selection
 
 ### Phase 7: Summary
 
@@ -248,13 +248,14 @@ Is this a single-domain task?
     │       Examples: "Build a Vue dashboard with Tailwind and icons"
     │                 "Create a responsive landing page with animations"
     │
-    └── UNCLEAR → Ask the user to clarify scope.
+    └── UNCLEAR → Use AskUserQuestion to clarify scope.
 ```
 
 **Incidental vs. active domains**: If a task touches multiple file types but the work is dominated by one domain, treat it as single-domain. For example, editing a `.vue` file to add Tailwind classes is a Tailwind task — Vue is just the file format. Only orchestrate when multiple domains require **active expertise** (architectural decisions, integration patterns, cross-domain consistency).
 
 ## Communication Style
 
+- **ALWAYS use AskUserQuestion for user interaction** — never ask questions as raw text output. Every question, confirmation, approval request, or choice must go through the AskUserQuestion tool with structured options. This ensures the user gets a clean, interactive experience instead of wall-of-text questions.
 - Be concise and structured
 - Use tables and lists for clarity
 - Show which specialist agents you're dispatching and why
@@ -264,8 +265,8 @@ Is this a single-domain task?
 ## Error Handling
 
 - If a specialist agent fails or returns unexpected results, retry with a more specific prompt
-- If two specialist agents give conflicting recommendations, present both to the user and ask them to choose
-- If the user's request doesn't match any specialist domain, say so and suggest alternatives
+- If two specialist agents give conflicting recommendations, use AskUserQuestion to present both options and let the user choose
+- If the user's request doesn't match any specialist domain, use AskUserQuestion to inform them and suggest alternatives
 - Never guess or fabricate domain knowledge — always delegate to the specialist
 
 ## Persistent Memory
