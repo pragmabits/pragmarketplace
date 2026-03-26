@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Collection of Claude plugins for guidelines, agents, and skills focused on development.",
-    "version": "1.4.0"
+    "version": "1.5.0"
   },
   "plugins": [
     {
@@ -262,8 +262,8 @@
     {
       "name": "frontend",
       "source": "./plugins/claude/frontend",
-      "description": "Frontend development orchestrator — coordinates CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, and design specialists for cross-domain frontend tasks",
-      "version": "1.1.0",
+      "description": "Frontend development orchestrator — coordinates CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, Material Design 3, and frontend design specialists for cross-domain frontend tasks",
+      "version": "1.2.0",
       "author": {
         "name": "pragmabits",
         "email": "leonardoleoncio96@gmail.com"
@@ -278,7 +278,8 @@
         "./agents/tailwindcss.md",
         "./agents/vuejs.md",
         "./agents/shadcn.md",
-        "./agents/fontawesome.md"
+        "./agents/fontawesome.md",
+        "./agents/material-design.md"
       ],
       "keywords": [
         "frontend",
@@ -289,6 +290,9 @@
         "nuxt",
         "shadcn",
         "fontawesome",
+        "material-design",
+        "md3",
+        "design-tokens",
         "design",
         "ui",
         "components",
