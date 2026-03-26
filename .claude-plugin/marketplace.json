@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Collection of Claude plugins for guidelines, agents, and skills focused on development.",
-    "version": "1.5.0"
+    "version": "1.6.0"
   },
   "plugins": [
     {
@@ -42,8 +42,8 @@
     {
       "name": "git",
       "source": "./plugins/claude/git",
-      "description": "Strategic git commit plugin — semantic analysis, hunk-level staging, validated commits, safety hooks, and per-project settings",
-      "version": "2.1.0",
+      "description": "Strategic git commit plugin — semantic analysis, hunk-level staging, validated commits, version tagging, safety hooks, and per-project settings",
+      "version": "2.2.0",
       "author": {
         "name": "pragmabits",
         "email": "leonardoleoncio96@gmail.com"
@@ -63,7 +63,9 @@
         "strategic-commits",
         "patch-mode",
         "agent",
-        "validation"
+        "validation",
+        "tagging",
+        "semver"
       ]
     },
     {
