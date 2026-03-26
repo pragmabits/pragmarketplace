@@ -130,11 +130,10 @@ Analysis and staging preparation can still proceed even when no content is stage
 
 ### 1. Analysis
 
+Run a single combined command to minimize tool calls:
+
 ```bash
-git status
-git diff HEAD
-git diff --cached
-git log --oneline -10
+echo "=== STATUS ===" && git status && echo "=== DIFF HEAD ===" && git diff HEAD && echo "=== DIFF CACHED ===" && git diff --cached && echo "=== LOG ===" && git log --oneline -10
 ```
 
 Identify modified/staged/untracked files, semantic intent of each change, and history patterns (including language).
@@ -143,6 +142,8 @@ Identify modified/staged/untracked files, semantic intent of each change, and hi
 - `git diff HEAD` provides an overview but don't use it alone when staged content exists
 - `git status` gives file-level overview
 - `git log` provides context, convention, and language
+
+Combine these into one Bash call to reduce permission prompts. The `=== SECTION ===` markers let you parse each output block.
 
 ### 2. Strategy
 
@@ -215,12 +216,17 @@ For these: check whether relevant tests exist and include test updates in the sa
 3. Commit — only after validation passes
 4. Verify — confirm the commit was recorded
 
+Chain validation + commit + verify into as few Bash calls as possible to reduce permission prompts:
+
 ```bash
 git add file1.go file2.go
-python "<plugin-root>/scripts/validate-commit.py" "feat: add token expiry check"
-git commit -m "feat: add token expiry check"
-git log --oneline -1
 ```
+
+```bash
+python "<plugin-root>/scripts/validate-commit.py" "feat: add token expiry check" && git commit -m "feat: add token expiry check" && git log --oneline -1
+```
+
+The `&&` chain ensures the commit only runs if validation passes, and verify only runs if the commit succeeds. This reduces 3 separate Bash calls to 1.
 
 ### 4. Decisions
 
