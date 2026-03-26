@@ -19,7 +19,8 @@ if ! echo "$command" | grep -qE '(^|\s|&&|\|\||;)git\s'; then
 fi
 
 # Block git add -p / --patch (interactive, fails in headless environments)
-if echo "$command" | grep -qE 'git\s+add\s+.*(-p|--patch)'; then
+# Match -p/--patch only as standalone flags, not inside paths like .claude-plugin/
+if echo "$command" | grep -qE 'git\s+add\s+(.+\s+)?(-p|--patch)(\s|$)'; then
   cat >&2 <<'EOF'
 {
   "hookSpecificOutput": {
