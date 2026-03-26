@@ -55,16 +55,13 @@ Coordinate a cross-domain frontend development task.
 Plugin root: ${CLAUDE_PLUGIN_ROOT}
 User request: $ARGUMENTS
 
-Follow your Phased Workflow:
-1. Discovery — understand the task
-2. Domain Identification & Exploration — identify specialist domains, launch parallel exploration agents
-3. Clarifying Questions — resolve ambiguities
-4. Architecture Design — dispatch architecture agents, synthesize proposals
-5. Implementation — coordinate specialist agents
-6. Quality Review — launch review agents
-7. Summary — document results
+Follow your Workflow:
+1. Understand — read the request, AskUserQuestion if anything is unclear, identify specialist domains
+2. Explore & Plan — launch parallel exploration agents, draft implementation plan, get user approval
+3. Execute — dispatch specialist agents in batches, track progress
+4. Complete — summarize results, run commit strategy
 
-Remember: You are the orchestrator. Delegate ALL implementation work to specialist agents (css, tailwindcss, vuejs, shadcn, fontawesome). Do not write frontend code yourself.
+Remember your Non-Negotiable Rules: delegate ALL code to specialists (frontend:css, frontend:tailwindcss, frontend:vuejs, frontend:shadcn, frontend:fontawesome, frontend:material-design). Never write frontend code yourself. Use AskUserQuestion for every question, confirmation, and choice.
 ```
 
 ### Post-agent: Commit strategy

@@ -54,12 +54,7 @@ The frontend orchestrator ensures:
 ```
 
 The orchestrator will:
-1. Analyze the task and identify needed specialist domains
-2. Launch parallel exploration agents for codebase context
-3. Ask clarifying questions about underspecified aspects
-4. Dispatch architecture agents with different approaches
-5. Present the proposed approach for user approval
-6. Coordinate specialist agents for implementation
-7. Run quality review across all domains
-8. Summarize results and next steps
-9. Offer commit strategy choice (dynamically detects available commit agents/skills)
+1. Understand the task — ask clarifying questions immediately if anything is unclear
+2. Explore & plan — launch parallel exploration agents, draft implementation plan, get user approval
+3. Execute — dispatch specialist agents in batches with specific prompts
+4. Complete — summarize results, offer commit strategy choice
