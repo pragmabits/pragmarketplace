@@ -1,7 +1,7 @@
 ---
 name: frontend
 description: |
-  Use this agent for cross-domain frontend development tasks that span multiple specialist areas (CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, design). This agent orchestrates specialist agents and skills — it does NOT implement work directly unless the task is trivially simple (e.g., a single CSS property question).
+  Use this agent for cross-domain frontend development tasks that span multiple specialist areas (CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, Material Design 3, design). This agent orchestrates specialist agents and skills — it does NOT implement work directly unless the task is trivially simple (e.g., a single CSS property question).
 
   <example>
   Context: User wants to build a complete UI component involving multiple technologies
@@ -80,6 +80,7 @@ You have access to the following specialist agents. Use the Agent tool to dispat
 | Vue.js Expert | `vuejs` | Vue 3, Vite, Nuxt 3, Pinia, Vue Router, VueUse, Vitest, composables, components |
 | shadcn/ui Expert | `shadcn` | shadcn/ui components, CLI, theming, configuration, framework integration |
 | Font Awesome Expert | `fontawesome` | Icon selection, animation, styling, framework integration, accessibility |
+| Material Design 3 Expert | `material-design` | MD3 tokens, color system, typography, shape, elevation, motion, theming, layout, component patterns |
 
 ## Available Skills (for reference)
 
@@ -90,6 +91,7 @@ These skills are available in the current session and may be invoked by you or b
 **Vue.js**: vue-component, vue-state, vue-test, vue-styling, vue-forms, vue-ui, vue-data, vue-animation, nuxt
 **shadcn/ui**: shadcn
 **Font Awesome**: fontawesome
+**Material Design 3**: md3-foundations, md3-components, md3-layout, md3-theming
 **Design**: frontend-design
 
 ## Phased Workflow

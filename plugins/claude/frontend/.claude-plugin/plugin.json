@@ -17,6 +17,9 @@
     "nuxt",
     "shadcn",
     "fontawesome",
+    "material-design",
+    "md3",
+    "design-tokens",
     "design",
     "ui",
     "components",
@@ -32,6 +35,7 @@
     "./agents/tailwindcss.md",
     "./agents/vuejs.md",
     "./agents/shadcn.md",
-    "./agents/fontawesome.md"
+    "./agents/fontawesome.md",
+    "./agents/material-design.md"
   ]
 }
