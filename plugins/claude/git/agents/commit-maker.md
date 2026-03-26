@@ -249,12 +249,103 @@ Present concrete alternatives and the reason for ambiguity.
 
 ### 5. Report
 
+Combine report commands into a single Bash call:
+
 ```bash
-git log --oneline -5
-git status
+echo "=== COMMITS ===" && git log --oneline -5 && echo "=== STATUS ===" && git status
 ```
 
 Report: commits created (type + description + files), final status, and any blocked commits with reasons.
+
+### 6. Tag suggestion
+
+After reporting, offer to create a tag for the newly committed work. This helps the user maintain a versioned history without having to remember to tag manually.
+
+**Step 1 — Gather tag context:**
+
+```bash
+echo "=== LATEST TAG ===" && { git describe --tags --abbrev=0 2>/dev/null || echo "NO_TAGS_FOUND"; } && echo "=== ALL TAGS (last 5) ===" && git tag --sort=-version:refname | head -5; echo "=== COMMITS SINCE LAST TAG ===" && { git log "$(git describe --tags --abbrev=0 2>/dev/null || echo 'HEAD~10')..HEAD" --oneline 2>/dev/null || git log --oneline -10; }
+```
+
+**Step 2 — Detect versioning scheme:**
+
+Look at existing tags to determine the scheme:
+- **Semver** (`v1.2.3`, `1.2.3`): suggest patch/minor/major increments based on commit types
+- **CalVer** (`2026.03.26`, `2026.03`): suggest next date-based version
+- **No tags exist**: default to semver starting at `v0.1.0`
+
+**Step 3 — Compute suggestions:**
+
+For semver (the most common case), analyze the commits since the last tag:
+- If any commit has `!` (breaking change) → suggest **major** bump
+- If any commit is `feat` → suggest **minor** bump
+- Otherwise (fix, docs, chore, etc.) → suggest **patch** bump
+
+Present all three increments as options, with the recommended one first.
+
+**Step 4 — Ask the user with AskUserQuestion:**
+
+Use AskUserQuestion with:
+- The recommended version as the first option (with justification)
+- Two alternative increments
+- A "Skip tagging" option
+
+**Semver example** (latest tag `v1.2.3`, commits include a `feat`):
+
+```
+Question: "Do you want to create a tag for these commits? Latest tag: v1.2.3, 3 commits since."
+Options:
+  1. "v1.3.0 (Recommended)" — "Minor bump: new feature detected (feat: add token expiry validation)"
+  2. "v1.2.4" — "Patch bump: if this is just a small fix"
+  3. "v2.0.0" — "Major bump: if this includes breaking changes"
+  4. "Skip tagging" — "Don't create a tag for now"
+```
+
+**No tags example** (first tag for the repository):
+
+```
+Question: "No tags exist yet. Do you want to create the first version tag? 10 commits in history."
+Options:
+  1. "v0.1.0 (Recommended)" — "Initial development version"
+  2. "v1.0.0" — "First stable release"
+  3. "Skip tagging" — "Don't create a tag for now"
+```
+
+**CalVer example** (latest tag `2026.03.15`):
+
+```
+Question: "Do you want to create a tag for these commits? Latest tag: 2026.03.15, 5 commits since."
+Options:
+  1. "2026.03.26 (Recommended)" — "Today's date-based version"
+  2. "2026.04.01" — "Different date if releasing later"
+  3. "Skip tagging" — "Don't create a tag for now"
+```
+
+**Step 5 — Create the tag (if user chose one):**
+
+If the user chose a version, create an annotated tag with a message summarizing the commits since the last tag. Use `printf` to build the multi-line message, then pass it to `git tag`:
+
+```bash
+git tag -a "<version>" -m "$(printf 'Release <version>\n\n- feat: add token expiry validation\n- fix: fix interest rounding in payment calculator\n- docs: update installation instructions')"
+```
+
+The tag message should list the commits since the last tag in this format:
+
+```
+Release <version>
+
+- feat: add token expiry validation
+- fix: fix interest rounding in payment calculator
+- docs: update installation instructions
+```
+
+After creating the tag, verify it:
+
+```bash
+git tag -l "<version>" && git log --oneline -1 "<version>"
+```
+
+If the user chose "Skip tagging", move on without comment.
 
 ## Context Detection
 
@@ -301,6 +392,7 @@ When the user explicitly requests amending the last commit (e.g., "amend", "add 
 - Only amend the most recent commit (never use interactive rebase)
 - If the last commit has been pushed, warn the user that amending will require force-push
 - The amend replaces the last commit entirely — verify the staged diff includes everything intended
+- Skip step 6 (tag suggestion) — amending is corrective, not release-marking
 
 ## Special Cases
 
