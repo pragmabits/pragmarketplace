@@ -1,7 +1,7 @@
 {
   "name": "frontend",
-  "version": "1.1.0",
-  "description": "Frontend development orchestrator — coordinates CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, and frontend design specialists for cross-domain frontend tasks",
+  "version": "1.2.0",
+  "description": "Frontend development orchestrator — coordinates CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, Material Design 3, and frontend design specialists for cross-domain frontend tasks",
   "author": {
     "name": "pragmabits",
     "email": "leonardoleoncio96@gmail.com"
