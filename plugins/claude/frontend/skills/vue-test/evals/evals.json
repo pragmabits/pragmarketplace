@@ -1,0 +1,44 @@
+{
+  "skill_name": "vue-test",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "How do I test a Vue 3 component that uses Pinia stores and Vue Router?",
+      "expected_output": "Test setup with mount(), global.plugins for Pinia and Router, and proper assertions",
+      "files": [],
+      "expectations": [
+        "Uses mount() from @vue/test-utils",
+        "Injects Pinia via global.plugins with createTestingPinia()",
+        "Provides router mock or uses createRouter with createMemoryHistory",
+        "Shows how to set initial store state in createTestingPinia",
+        "Demonstrates assertions on rendered output and emitted events"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "How do I test a custom composable that uses ref and onMounted?",
+      "expected_output": "Pattern for testing composables using a wrapper component or test helper",
+      "files": [],
+      "expectations": [
+        "Explains that composables must run inside setup() context",
+        "Shows wrapper component pattern or withSetup/renderHook helper",
+        "Handles onMounted lifecycle hook in tests",
+        "Uses flushPromises or nextTick for async operations",
+        "Demonstrates accessing returned reactive values in assertions"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "How do I mock an API call in a Vitest test for a component that uses useFetch?",
+      "expected_output": "Mocking strategy using vi.mock or MSW for API calls in Vue/Nuxt components",
+      "files": [],
+      "expectations": [
+        "Uses vi.mock() to mock the fetch/API module or useFetch composable",
+        "Shows proper mock return value structure matching the API response",
+        "Handles async behavior with await and flushPromises",
+        "Provides alternative approaches (MSW, vi.stubGlobal for fetch)",
+        "Tests both success and error scenarios"
+      ]
+    }
+  ]
+}

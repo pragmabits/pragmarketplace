@@ -1,0 +1,44 @@
+{
+  "skill_name": "nuxt",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "How do I create a server API route in Nuxt 3 that handles POST requests with body validation?",
+      "expected_output": "Guide through creating server/api/ file with defineEventHandler, readBody, and validation",
+      "files": [],
+      "expectations": [
+        "Creates file in server/api/ directory with .post.ts suffix for POST-only handling",
+        "Uses defineEventHandler with event parameter",
+        "Uses readBody(event) to parse request body",
+        "Includes input validation (with zod, H3 validators, or manual checks)",
+        "Shows proper error handling with createError()"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I need to add authentication middleware that redirects unauthenticated users to the login page in my Nuxt 3 app.",
+      "expected_output": "Guide through creating route middleware with defineNuxtRouteMiddleware and navigateTo",
+      "files": [],
+      "expectations": [
+        "Creates middleware file in middleware/ directory",
+        "Uses defineNuxtRouteMiddleware (or direct export default function)",
+        "Checks authentication state (via useState, useCookie, or composable)",
+        "Uses navigateTo('/login') for redirection",
+        "Shows how to apply middleware via definePageMeta or as global middleware"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "How do I fetch data from an API in Nuxt 3 with proper SSR support and loading states?",
+      "expected_output": "Guide through useFetch or useAsyncData with SSR considerations, loading/error handling",
+      "files": [],
+      "expectations": [
+        "Uses useFetch() or useAsyncData() for SSR-compatible data fetching",
+        "Shows destructured return values: data, pending, error, refresh",
+        "Explains the difference between useFetch and useAsyncData",
+        "Mentions useLazyFetch for non-blocking fetching",
+        "Addresses key-based caching and when to use a unique key"
+      ]
+    }
+  ]
+}

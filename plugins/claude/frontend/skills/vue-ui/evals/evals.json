@@ -1,0 +1,53 @@
+{
+  "skill_name": "vue-ui",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create a dropdown menu component using reka-ui with Tailwind CSS styling.",
+      "expected_output": "Reka UI DropdownMenu composition with proper imports from 'reka-ui', Tailwind classes",
+      "files": [],
+      "expectations": [
+        "Imports from 'reka-ui', NOT from 'radix-vue'",
+        "Uses composition pattern (DropdownMenuRoot, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem)",
+        "Uses DropdownMenuPortal for proper positioning",
+        "Applies Tailwind CSS classes for styling"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Add lucide icons to my Vue 3 component for a search input with a clear button.",
+      "expected_output": "Named imports from lucide-vue-next with size and styling props",
+      "files": [],
+      "expectations": [
+        "Imports specific icons (Search, X) from 'lucide-vue-next'",
+        "Uses named imports (tree-shakeable), not a global icon component",
+        "Shows size prop usage (:size=\"20\" or similar)",
+        "Demonstrates class or color prop for styling"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Set up toast notifications in my Vue 3 app using vue-sonner.",
+      "expected_output": "Toaster component in App.vue, toast() usage in components",
+      "files": [],
+      "expectations": [
+        "Adds <Toaster /> component to App.vue or root layout",
+        "Shows toast() import from 'vue-sonner'",
+        "Demonstrates toast.success(), toast.error(), or toast() variants",
+        "Includes Toaster configuration props (position, duration)"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "How do I self-host Roboto Mono font in my Vue project using fontsource?",
+      "expected_output": "Install @fontsource/roboto-mono, import in main.ts, apply in CSS",
+      "files": [],
+      "expectations": [
+        "Shows @fontsource/roboto-mono package import",
+        "Imports specific weights (400, 700) or the full package",
+        "Shows CSS font-family declaration",
+        "Import is done in main.ts or equivalent entry point"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "skill_name": "tw-config",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Set up Tailwind CSS 4 in my Vite + React project",
+      "expected_output": "Agent installs @tailwindcss/vite, adds it to vite.config.ts plugins, creates CSS entry with @import \"tailwindcss\", and imports CSS in main.tsx",
+      "files": [],
+      "expectations": [
+        "Uses @tailwindcss/vite plugin, not PostCSS",
+        "CSS entry uses @import \"tailwindcss\" not @tailwind directives",
+        "Shows vite.config.ts with tailwindcss() in plugins array",
+        "Does not create a tailwind.config.js file"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "How do I configure content sources in Tailwind CSS 4? I have components in a shared package.",
+      "expected_output": "Agent explains @source directive as replacement for content array, shows how to add external package sources",
+      "files": [],
+      "expectations": [
+        "Uses @source directive, not content array in config",
+        "Shows @source with glob pattern for shared package",
+        "Explains that @source replaces the content array from TW3",
+        "Provides correct glob syntax"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I need to set up Tailwind in a project that uses Webpack, not Vite",
+      "expected_output": "Agent recommends @tailwindcss/postcss for non-Vite projects, shows postcss.config.mjs setup",
+      "files": [],
+      "expectations": [
+        "Uses @tailwindcss/postcss, not @tailwindcss/vite",
+        "Shows postcss.config.mjs with correct plugin config",
+        "CSS entry still uses @import \"tailwindcss\"",
+        "Does not recommend Vite-specific setup"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "description": "TW4 linting hooks — validates Tailwind CSS 4 patterns when writing CSS, HTML, JSX, Vue, or config files",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/validate-tw-output.sh",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/validate-tw-output.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
