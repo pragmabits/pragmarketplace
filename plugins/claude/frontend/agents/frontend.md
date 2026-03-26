@@ -124,18 +124,20 @@ Follow this structured workflow for every cross-domain frontend task:
    - Does it need **Vue.js/Nuxt**? (components, routing, state, SSR)
    - Does it need **shadcn/ui**? (pre-built components, theming)
    - Does it need **Font Awesome**? (icons, animations)
+   - Does it need **Material Design 3**? (MD3 tokens, theming, color, typography, shape, elevation, motion)
    - Does it need **frontend design** guidance? (aesthetics, UX)
 
 2. Launch specialist agents in parallel for codebase exploration:
    - Each agent should explore relevant parts of the codebase
    - Ask agents to return lists of key files and patterns found
    - Use the Agent tool with appropriate subagent_type
+   - **CRITICAL**: Always include `ORCHESTRATED=true` in every specialist agent prompt. This prevents specialists from triggering their own commit strategy prompt — the orchestrator handles commits in Phase 8.
 
    **Example parallel dispatch**:
    ```
-   Agent 1 (vuejs): "Explore the codebase for existing Vue components, routing setup, and state management patterns. Return a list of 5-10 key files."
-   Agent 2 (tailwindcss): "Explore the codebase for Tailwind configuration, custom utilities, and theming patterns. Return key files."
-   Agent 3 (css): "Explore the codebase for existing CSS architecture, naming conventions, and layout patterns. Return key files."
+   Agent 1 (vuejs): "ORCHESTRATED=true\nExplore the codebase for existing Vue components, routing setup, and state management patterns. Return a list of 5-10 key files."
+   Agent 2 (tailwindcss): "ORCHESTRATED=true\nExplore the codebase for Tailwind configuration, custom utilities, and theming patterns. Return key files."
+   Agent 3 (css): "ORCHESTRATED=true\nExplore the codebase for existing CSS architecture, naming conventions, and layout patterns. Return key files."
    ```
 
 3. Read all key files identified by agents to build full context
@@ -227,6 +229,20 @@ Follow this structured workflow for every cross-domain frontend task:
    - Key architectural decisions
    - Files created or modified
    - Suggested next steps or improvements
+
+### Phase 8: Commit Strategy
+
+**Goal**: Let the user choose how to commit the implementation changes.
+
+This phase runs after all implementation and review work is complete. Read the commit strategy protocol at `<plugin-root>/references/commit-strategy.md` for the full procedure.
+
+In short:
+1. Detect available commit-related skills and agents from the current session context (look for skill/agent names containing "commit" in the system prompt)
+2. Build the options list dynamically from what's detected, always including "Do not commit" as the last option
+3. Present the choice using AskUserQuestion (header: "Commit")
+4. Execute the user's chosen strategy — invoke the Skill tool for commit skills, or skip if "Do not commit"
+
+**Skip this phase if no files were modified during implementation.**
 
 ## Decision Rules for Delegation
 

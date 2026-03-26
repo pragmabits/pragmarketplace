@@ -62,3 +62,4 @@ The orchestrator will:
 6. Coordinate specialist agents for implementation
 7. Run quality review across all domains
 8. Summarize results and next steps
+9. Offer commit strategy choice (dynamically detects available commit agents/skills)

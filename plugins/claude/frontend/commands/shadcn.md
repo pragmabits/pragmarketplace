@@ -50,4 +50,14 @@ Look up the relevant documentation files at <plugin-root>/docs/shadcn/web/ befor
 For project-specific guidance, check for components.json and package.json in the user's project to understand their framework, installed components, and configuration.
 ```
 
+### Post-agent: Commit strategy
+
+After the agent returns, apply the commit strategy protocol from `<plugin-root>/references/commit-strategy.md`:
+
+1. If `$ARGUMENTS` contains `ORCHESTRATED=true`, skip — the orchestrator handles commits
+2. If the agent did not modify any files (pure Q&A), skip
+3. Otherwise, detect available commit strategies from the session context (skill/agent names containing "commit")
+4. Present AskUserQuestion with detected options + "Do not commit"
+5. Execute the user's chosen strategy
+
 This command does not answer questions directly. The shadcn agent owns all component guidance, CLI reference, theming advice, and framework-specific patterns.

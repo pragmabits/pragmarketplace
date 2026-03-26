@@ -67,4 +67,8 @@ Follow your Phased Workflow:
 Remember: You are the orchestrator. Delegate ALL implementation work to specialist agents (css, tailwindcss, vuejs, shadcn, fontawesome). Do not write frontend code yourself.
 ```
 
+### Post-agent: Commit strategy
+
+The frontend orchestrator agent handles the commit strategy prompt internally (Phase 8). This command does not need to prompt separately — the orchestrator already asks the user.
+
 This command does not implement frontend work directly. The frontend orchestrator agent coordinates all specialist agents — CSS, Tailwind CSS, Vue.js, shadcn/ui, and Font Awesome — to deliver cohesive cross-domain results.

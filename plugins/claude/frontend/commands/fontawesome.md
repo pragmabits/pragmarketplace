@@ -48,4 +48,14 @@ User context: $ARGUMENTS
 Look up the relevant documentation files at <plugin-root>/docs/fontawesome/web/ before answering. Use Read, Glob, and Grep to find the information you need. Always verify your answers against the docs.
 ```
 
+### Post-agent: Commit strategy
+
+After the agent returns, apply the commit strategy protocol from `<plugin-root>/references/commit-strategy.md`:
+
+1. If `$ARGUMENTS` contains `ORCHESTRATED=true`, skip — the orchestrator handles commits
+2. If the agent did not modify any files (pure Q&A), skip
+3. Otherwise, detect available commit strategies from the session context (skill/agent names containing "commit")
+4. Present AskUserQuestion with detected options + "Do not commit"
+5. Execute the user's chosen strategy
+
 This command does not answer questions directly. The fontawesome agent owns all icon guidance, documentation lookup, and implementation advice.

@@ -48,4 +48,14 @@ User context: $ARGUMENTS
 Follow your Documentation Lookup Protocol and Project Context Detection steps. Verify answers against current documentation before responding.
 ```
 
+### Post-agent: Commit strategy
+
+After the agent returns, apply the commit strategy protocol from `<plugin-root>/references/commit-strategy.md`:
+
+1. If `$ARGUMENTS` contains `ORCHESTRATED=true`, skip — the orchestrator handles commits
+2. If the agent did not modify any files (pure Q&A), skip
+3. Otherwise, detect available commit strategies from the session context (skill/agent names containing "commit")
+4. Present AskUserQuestion with detected options + "Do not commit"
+5. Execute the user's chosen strategy
+
 This command does not answer questions directly. The css agent owns all CSS guidance — layouts, animations, responsive design, selectors, performance, and preprocessor patterns.
