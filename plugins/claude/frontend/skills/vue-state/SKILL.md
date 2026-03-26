@@ -99,13 +99,16 @@ export const useUserStore = defineStore('user', () => {
 })
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Whether this is about Pinia (state), Vue Router (routing), or both
+- Whether they're migrating from Vuex or setting up fresh
+- Store pattern preference (setup syntax vs options syntax)
+
 ## How to use
 
-Invoke the `/vuejs` command:
-
-```
-/vuejs <user's question about Pinia or Vue Router>
-```
+Dispatch the `frontend:vuejs` agent with the user's question or task. Do not answer Pinia/Vue Router questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Check the user's project for existing store and router patterns
@@ -113,5 +116,3 @@ The agent will:
 3. Answer with Composition API-style store definitions and TypeScript-first router config
 4. Flag common pitfalls (missing `storeToRefs`, deprecated `next()` in guards)
 5. Suggest related patterns (store composition, route middleware)
-
-Pinia and Vue Router questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

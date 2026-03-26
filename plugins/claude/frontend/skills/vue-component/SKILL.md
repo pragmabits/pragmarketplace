@@ -91,13 +91,16 @@ const ThemeKey: InjectionKey<Ref<'light' | 'dark'>> = Symbol('theme')
 // Consumer: const theme = inject(ThemeKey)
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Whether they want to create, modify, or debug a component
+- TypeScript vs JavaScript preference
+- Whether the component should be standalone or part of a larger pattern (composable, provide/inject)
+
 ## How to use
 
-Invoke the `/vuejs` command, passing the user's question or task as the argument:
-
-```
-/vuejs <user's question or task>
-```
+Dispatch the `frontend:vuejs` agent with the user's question or task. Do not answer Vue component questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Check the user's project context (package.json, tsconfig.json, vite.config.*)
@@ -105,5 +108,3 @@ The agent will:
 3. Answer with TypeScript-first, Composition API code examples
 4. Flag version-specific features and common pitfalls
 5. Suggest related composables or patterns
-
-Vue 3 component questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

@@ -1,44 +1,9 @@
 ---
 name: frontend
 description: |
-  Use this agent for cross-domain frontend development tasks that span multiple specialist areas (CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, Material Design 3, design). This agent orchestrates specialist agents and skills — it does NOT implement work directly unless the task is trivially simple (e.g., a single CSS property question).
+  Use this agent for cross-domain frontend tasks spanning 2+ specialist areas (CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, Material Design 3, design). Orchestrates specialist agents — does NOT implement work directly.
 
-  <example>
-  Context: User wants to build a complete UI component involving multiple technologies
-  user: "Build a Vue 3 dashboard page with a sidebar using shadcn components, Tailwind CSS styling, and Font Awesome icons for navigation"
-  assistant: "This spans Vue, shadcn, Tailwind, and Font Awesome — let me use the frontend orchestrator to coordinate all the specialists."
-  <commentary>
-  The task crosses four specialist domains. The frontend orchestrator identifies the domains, dispatches exploration agents in parallel, designs an architecture, and coordinates implementation.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User asks for a multi-technology frontend feature
-  user: "Create a settings page with form validation, dark mode toggle, responsive layout, and icon-based navigation"
-  assistant: "This involves Vue components, vee-validate, Tailwind responsive utilities, CSS dark mode, and Font Awesome icons. Let me orchestrate this with the frontend agent."
-  <commentary>
-  Multiple specialist skills are needed: vue-forms, vue-component, tw-responsive, css-responsive, fontawesome. The orchestrator coordinates them.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User wants to build a full frontend application or page
-  user: "I need a landing page with hero section, feature cards, testimonials carousel, and a contact form"
-  assistant: "This is a full-page frontend build spanning design, layout, components, and styling. Let me use the frontend orchestrator."
-  <commentary>
-  Building a complete page requires frontend-design aesthetics, CSS/Tailwind layout, component structure, and possibly icons. The orchestrator coordinates all of these.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User asks a single-domain question that does NOT need orchestration
-  user: "How do I center a div with flexbox?"
-  assistant: "This is a pure CSS question — I'll use the css agent directly, no orchestration needed."
-  <commentary>
-  Single-domain questions should go directly to the specialist agent, NOT through the orchestrator. The frontend agent is only for cross-domain coordination.
-  </commentary>
-  </example>
-
+  Use for: multi-technology features, full-page builds, tasks combining 2+ frontend domains. Single-domain questions go directly to the relevant specialist.
 model: opus
 color: cyan
 memory: user

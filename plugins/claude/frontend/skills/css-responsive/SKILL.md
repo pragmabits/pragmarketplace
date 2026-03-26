@@ -85,18 +85,19 @@ p {
 }
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Target devices/viewports
+- Whether to use media queries or container queries
+- Whether they use a framework with its own responsive system (Tailwind, Bootstrap)
+
 ## How to use
 
-Invoke the `/css` command, passing the user's question or task as the argument:
-
-```
-/css <user's question or task>
-```
+Dispatch the `frontend:css` agent with the user's question or task. Do not answer responsive design questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Check the user's project context for existing breakpoints and responsive patterns
 2. Look up current MDN documentation for responsive features
 3. Recommend modern approaches (fluid design, container queries) where appropriate
 4. Flag browser support for newer features (container queries, new viewport units)
-
-Responsive design questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

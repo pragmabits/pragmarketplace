@@ -68,18 +68,19 @@ Use for ANY request involving:
 </div>
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Whether they want a static utility or a functional (parameterized) one
+- Whether they need a variant (@custom-variant) or a utility (@utility)
+- Tailwind version context (v3 plugin API vs v4 CSS-native)
+
 ## How to use
 
-Invoke the `/tailwindcss` command, passing the user's question or task as the argument:
-
-```
-/tailwindcss <user's question or task>
-```
+Dispatch the `frontend:tailwindcss` agent with the user's question or task. Do not answer custom utility questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Check the user's project context for existing custom utilities
 2. Look up current `@utility` and `@custom-variant` documentation
 3. Provide CSS-native utility definitions with proper syntax
 4. Flag deprecated patterns (JavaScript addUtilities/addVariant plugin API)
-
-Custom utility and variant questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

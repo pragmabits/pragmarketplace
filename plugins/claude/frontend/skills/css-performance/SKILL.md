@@ -80,18 +80,19 @@ img, video {
 }
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- What performance issue they're observing (layout shifts, slow paint, large bundle)
+- Whether they have metrics/measurements or are optimizing proactively
+- Build tooling and deployment constraints
+
 ## How to use
 
-Invoke the `/css` command, passing the user's question or task as the argument:
-
-```
-/css <user's question or task>
-```
+Dispatch the `frontend:css` agent with the user's question or task. Do not answer CSS performance questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Check the user's project context for build tools and CSS loading strategy
 2. Look up current MDN documentation for performance APIs
 3. Recommend measurable optimizations backed by documentation
 4. Flag tradeoffs (e.g., content-visibility breaking find-in-page, will-change memory cost)
-
-Performance questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

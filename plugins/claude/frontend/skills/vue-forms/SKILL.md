@@ -129,18 +129,19 @@ const registerSchema = z
   })
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Whether they're building a new form or fixing an existing one
+- Whether they want field-level or form-level validation
+- Schema validation library preference (zod, yup, or custom)
+
 ## How to use
 
-Invoke the `/vuejs` command, passing the user's question or task as the argument:
-
-```
-/vuejs <user's question or task>
-```
+Dispatch the `frontend:vuejs` agent with the user's question or task. Do not answer form validation questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Check the user's project context (package.json for vee-validate version)
 2. Look up current vee-validate v4 and zod documentation
 3. Answer with Composition API patterns (not v3 component-based)
 4. Flag common pitfalls (v3 vs v4 patterns, missing toTypedSchema)
-
-Form validation questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

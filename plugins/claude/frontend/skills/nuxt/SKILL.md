@@ -102,19 +102,16 @@ export default defineNuxtConfig({
 })
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Whether this is a client-side, server-side, or hybrid rendering question
+- Whether they need a page, server route, middleware, or composable
+- Whether they're using Nuxt-specific features or generic Vue patterns
+
 ## How to use
 
-Invoke the `/nuxt` command for Nuxt-focused guidance (preferred):
-
-```
-/nuxt <user's question or task>
-```
-
-Or use `/vuejs` for general Vue ecosystem questions that also involve Nuxt:
-
-```
-/vuejs <user's question involving Nuxt>
-```
+Dispatch the `frontend:vuejs` agent with the user's question or task, specifying Nuxt 3 focus. Do not answer Nuxt questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Check the user's project for `nuxt.config.ts` and directory structure
@@ -122,5 +119,3 @@ The agent will:
 3. Answer with Nuxt 3 patterns (auto-imports, composables, Nitro)
 4. Flag SSR considerations and hydration pitfalls
 5. Suggest relevant Nuxt modules when applicable
-
-Nuxt 3 questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

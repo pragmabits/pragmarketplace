@@ -80,18 +80,19 @@ Use for ANY request involving:
 }
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Which layout approach they prefer (Flexbox vs Grid vs positioning)
+- Whether they need browser compatibility for older browsers
+- Whether this is a new layout or fixing an existing one
+
 ## How to use
 
-Invoke the `/css` command, passing the user's question or task as the argument:
-
-```
-/css <user's question or task>
-```
+Dispatch the `frontend:css` agent with the user's question or task. Do not answer CSS layout questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Check the user's project context (existing CSS methodology, framework)
 2. Look up current MDN documentation for layout properties
 3. Answer with modern, standards-compliant patterns
 4. Flag browser compatibility concerns for newer features (subgrid, container queries)
-
-Layout questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

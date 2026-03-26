@@ -87,18 +87,19 @@ export default {
 }
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Which framework they're using (Vite, Next.js, Nuxt, Astro)
+- Whether they're doing a fresh setup or reconfiguring an existing project
+- Tailwind version (v3 or v4)
+
 ## How to use
 
-Invoke the `/tailwindcss` command, passing the user's question or task as the argument:
-
-```
-/tailwindcss <user's question or task>
-```
+Dispatch the `frontend:tailwindcss` agent with the user's question or task. Do not answer Tailwind setup questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Check the user's project context (package.json, vite.config.*, postcss.config.*)
 2. Look up current Tailwind CSS 4 setup documentation
 3. Provide framework-appropriate installation and configuration steps
 4. Flag deprecated setup patterns (PostCSS in Vite projects, @tailwind directives)
-
-Setup and configuration questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

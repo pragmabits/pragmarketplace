@@ -122,18 +122,19 @@ const props = defineProps<Props>()
 </template>
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Whether they want CVA variants or simple conditional classes
+- Whether cn() utility is already set up in their project
+- Whether they're styling a new component or refactoring existing styles
+
 ## How to use
 
-Invoke the `/vuejs` command, passing the user's question or task as the argument:
-
-```
-/vuejs <user's question or task>
-```
+Dispatch the `frontend:vuejs` agent with the user's question or task. Do not answer Vue styling questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Check the user's project context (package.json, vite.config.*, CSS files)
 2. Look up current Tailwind CSS, CVA, clsx, and tailwind-merge documentation
 3. Answer with TypeScript-first code examples using modern patterns
 4. Flag common pitfalls (PostCSS vs Vite plugin, missing tailwind-merge)
-
-Tailwind CSS and styling questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

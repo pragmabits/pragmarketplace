@@ -86,18 +86,19 @@ Use for ANY request involving:
 </div>
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Dark mode strategy (media query vs class-based toggle)
+- Custom breakpoint requirements
+- Whether they're adding responsive behavior to existing components or building new ones
+
 ## How to use
 
-Invoke the `/tailwindcss` command, passing the user's question or task as the argument:
-
-```
-/tailwindcss <user's question or task>
-```
+Dispatch the `frontend:tailwindcss` agent with the user's question or task. Do not answer Tailwind responsive/dark mode questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Check the user's project context for responsive and dark mode patterns
 2. Look up current breakpoint and dark mode documentation
 3. Provide mobile-first responsive solutions with TW4 syntax
 4. Flag deprecated patterns (darkMode in config, screens in config)
-
-Responsive design and dark mode questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

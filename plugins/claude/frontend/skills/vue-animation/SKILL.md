@@ -123,18 +123,19 @@ const show = ref(true)
 </template>
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Whether they want motion.dev or Vue's built-in Transition/TransitionGroup
+- Type of animation (entrance, exit, scroll-triggered, gesture)
+- Performance requirements (spring vs tween, reduced motion support)
+
 ## How to use
 
-Invoke the `/vuejs` command, passing the user's question or task as the argument:
-
-```
-/vuejs <user's question or task>
-```
+Dispatch the `frontend:vuejs` agent with the user's question or task. Do not answer Vue animation questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Check the user's project context (package.json for motion)
 2. Look up current motion.dev documentation for Vue
 3. Answer with Vue-specific patterns (not React motion patterns)
 4. Flag common pitfalls (import path, React vs Vue API differences)
-
-Animation questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

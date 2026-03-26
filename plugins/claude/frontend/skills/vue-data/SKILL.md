@@ -141,18 +141,19 @@ const nextWeek = todayDate.add({ weeks: 1 })
 const lastMonth = todayDate.subtract({ months: 1 })
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Whether they're asking about TanStack Query or @internationalized/date
+- Whether they need setup or usage patterns
+- Their caching/invalidation requirements
+
 ## How to use
 
-Invoke the `/vuejs` command, passing the user's question or task as the argument:
-
-```
-/vuejs <user's question or task>
-```
+Dispatch the `frontend:vuejs` agent with the user's question or task. Do not answer data management questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Check the user's project context (package.json for @tanstack/vue-query)
 2. Look up current TanStack Query Vue or @internationalized/date documentation
 3. Answer with Vue-specific API patterns (not React Query patterns)
 4. Flag common pitfalls (missing VueQueryPlugin, React vs Vue API differences)
-
-Data management questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

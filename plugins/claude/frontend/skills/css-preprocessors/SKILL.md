@@ -107,18 +107,19 @@ export default {
 }
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Which preprocessor they're using or want to use (SCSS, Sass, Less, PostCSS)
+- Whether they're setting up from scratch or migrating
+- Build tool context (Vite, Webpack, standalone)
+
 ## How to use
 
-Invoke the `/css` command, passing the user's question or task as the argument:
-
-```
-/css <user's question or task>
-```
+Dispatch the `frontend:css` agent with the user's question or task. Do not answer preprocessor questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Check the user's project for preprocessor files (.scss, .sass, .less, postcss.config)
 2. Look up current Sass/Less/PostCSS documentation
 3. Recommend modern module patterns (@use/@forward, not @import)
 4. Suggest native CSS alternatives when preprocessor features are no longer needed
-
-Preprocessor questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

@@ -79,18 +79,19 @@ Use for ANY request involving:
 }
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Whether they want to define new tokens or modify existing ones
+- Color format preference (oklch, hsl, hex)
+- Whether they have an existing design system to integrate with
+
 ## How to use
 
-Invoke the `/tailwindcss` command, passing the user's question or task as the argument:
-
-```
-/tailwindcss <user's question or task>
-```
+Dispatch the `frontend:tailwindcss` agent with the user's question or task. Do not answer Tailwind theming questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Check the user's project context for existing theme configuration
 2. Look up current `@theme` documentation
 3. Provide design token definitions with proper `@theme` syntax
 4. Flag deprecated patterns (JavaScript extend.colors, theme() function)
-
-Theming questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

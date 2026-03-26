@@ -148,18 +148,19 @@ body {
 }
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Which UI library they're asking about (reka-ui, lucide, vue-sonner, fontsource)
+- Whether they need setup instructions or usage patterns
+- Whether they're integrating with shadcn/ui or building custom components
+
 ## How to use
 
-Invoke the `/vuejs` command, passing the user's question or task as the argument:
-
-```
-/vuejs <user's question or task>
-```
+Dispatch the `frontend:vuejs` agent with the user's question or task. Do not answer UI component questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Check the user's project context (package.json for installed UI libraries)
 2. Look up current reka-ui, lucide, vue-sonner, or fontsource documentation
 3. Answer with proper composition patterns and Tailwind styling
 4. Flag common pitfalls (radix-vue vs reka-ui, missing Toaster setup)
-
-UI component questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

@@ -1,6 +1,6 @@
 ---
 name: shadcn
-description: "shadcn/ui expert with access to official documentation covering CLI commands, component patterns, theming, configuration, and framework integrations. This skill provides verified, documentation-backed answers that are more accurate than general knowledge — especially for shadcn-specific patterns like components.json configuration, OKLCH CSS variable theming, registry setup, and framework-specific initialization.\n\nYou MUST use this skill whenever a user's request involves shadcn/ui in any way: initializing a project with `npx shadcn@latest init`, adding components with `npx shadcn add`, customizing themes via CSS variables, configuring components.json, setting up dark mode, building custom registries, or working with any shadcn/ui component.\n\nAlso use this skill when the user mentions shadcn, shadcn/ui, shadcn-ui, npx shadcn, shadcn add, shadcn init, shadcn diff, shadcn info, components.json (in a UI context), cn() utility, Radix UI (in a component setup context), CSS variable theming with Tailwind, design system preset, custom registry, v0.dev integration, or any shadcn/ui component name: Button, Card, Dialog, Sheet, Drawer, Table, Tabs, Command, Sidebar, Form, Input, Select, Checkbox, Switch, Slider, Badge, Avatar, Calendar, Chart, Toast, Popover, Tooltip, Dropdown Menu, Context Menu, Accordion, Collapsible, Alert Dialog, Hover Card, Navigation Menu, Breadcrumb, Pagination, Carousel, Combobox, Date Picker, Data Table, Skeleton, Progress, Spinner — even in passing. The skill's documentation access makes it strictly superior to answering from general knowledge for any shadcn/ui question."
+description: "This skill should be used when the user asks about shadcn/ui — setup, CLI commands (npx shadcn add/init/diff), theming, components.json config, dark mode, custom registries, or any shadcn/ui component (Button, Card, Dialog, Form, Table, Tabs, etc.). Also triggers on: shadcn, cn() utility, Radix UI setup context, or any shadcn component bug/issue. Provides documentation-backed answers via bundled reference files."
 ---
 
 # shadcn/ui Expert
@@ -37,13 +37,16 @@ Use this skill for ANY request involving shadcn/ui, including but not limited to
 - CLI commands (diff, info, docs, build, search, migrate)
 - Comparing or choosing between components
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Which framework they're using (Next.js, Vite, Astro, etc.)
+- Whether they want to add a component, customize theming, or fix an issue
+- Whether they have shadcn/ui already initialized or need setup
+
 ## How to use
 
-Invoke the `/shadcn` command, passing the user's question or task as the argument:
-
-```
-/shadcn <user's question or task>
-```
+Dispatch the `frontend:shadcn` agent with the user's question or task. Do not answer shadcn/ui questions from general knowledge — the agent has access to official documentation for more accurate answers.
 
 The agent will:
 1. Resolve the plugin root path to find the bundled docs
@@ -51,5 +54,3 @@ The agent will:
 3. Look up the relevant documentation files
 4. Answer with documentation-backed guidance, CLI commands, and code examples
 5. Flag framework-specific considerations (RSC boundaries, client directives, etc.)
-
-Do not attempt to answer shadcn/ui questions yourself — the agent has access to the official documentation and will provide more accurate, up-to-date answers. Let the agent handle it.

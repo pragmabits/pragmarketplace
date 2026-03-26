@@ -47,11 +47,16 @@ The frontend orchestrator ensures:
 - "Add a date picker" → `/shadcn`
 - "Which icon for a delete button?" → `/fontawesome`
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Which technologies/domains are involved
+- Priority and scope (full page vs single component)
+- Design requirements or constraints
+
 ## How to use
 
-```
-/frontend <task description>
-```
+Dispatch the `frontend:frontend` agent with the user's task description.
 
 The orchestrator will:
 1. Understand the task — ask clarifying questions immediately if anything is unclear

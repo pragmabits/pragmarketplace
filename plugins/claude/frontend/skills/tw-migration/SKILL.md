@@ -127,13 +127,16 @@ module.exports = {
 @source "./src/**/*.{html,js,jsx,tsx}";
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Whether they want a full project migration or just fixing specific deprecated patterns
+- Whether they can break things (staged migration vs all-at-once)
+- Any third-party Tailwind plugins that need attention
+
 ## How to use
 
-Invoke the `/tailwindcss` command, passing the user's question or task as the argument:
-
-```
-/tailwindcss <user's question or task>
-```
+Dispatch the `frontend:tailwindcss` agent with the user's question or task. Do not answer Tailwind migration questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Detect whether the project uses TW3 or TW4 (check version, config style)
@@ -141,5 +144,3 @@ The agent will:
 3. Provide before/after code for each deprecated pattern found
 4. Suggest a step-by-step migration path
 5. Flag patterns that will silently break in TW4
-
-Migration questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

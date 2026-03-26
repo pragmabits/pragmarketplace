@@ -88,18 +88,19 @@ Use for ANY request involving:
 }
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Whether they want CSS-only or a JS animation library
+- Performance constraints (reduced motion, mobile targets)
+- Whether this is a one-off effect or a reusable pattern
+
 ## How to use
 
-Invoke the `/css` command, passing the user's question or task as the argument:
-
-```
-/css <user's question or task>
-```
+Dispatch the `frontend:css` agent with the user's question or task. Do not answer CSS animation questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Check the user's project context for existing animation patterns
 2. Look up current MDN documentation for animation properties
 3. Answer with performant, accessible animation patterns
 4. Flag browser support for newer features (scroll-driven animations, view transitions)
-
-Animation questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

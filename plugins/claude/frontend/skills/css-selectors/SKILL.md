@@ -84,18 +84,19 @@ Use for ANY request involving:
 :where(h1, h2, h3) { margin-block: 0.5em; }
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Whether they're debugging a specificity issue or writing new selectors
+- Their CSS methodology (BEM, Modules, utility-first, cascade layers)
+- Browser support requirements
+
 ## How to use
 
-Invoke the `/css` command, passing the user's question or task as the argument:
-
-```
-/css <user's question or task>
-```
+Dispatch the `frontend:css` agent with the user's question or task. Do not answer selector/cascade questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Check the user's project context for CSS methodology (BEM, Modules, utility-first)
 2. Look up current MDN documentation for selectors and specificity
 3. Recommend modern cascade management techniques where appropriate
 4. Flag browser support for newer selectors (:has(), @layer)
-
-Selector and cascade questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

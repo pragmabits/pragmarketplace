@@ -106,13 +106,16 @@ it('emits submit with form data', async () => {
 })
 ```
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- What they're testing (component, composable, store, utility)
+- Whether they want unit tests or integration tests
+- Whether they already have a test setup or need to configure from scratch
+
 ## How to use
 
-Invoke the `/vuejs` command:
-
-```
-/vuejs <user's question about testing>
-```
+Dispatch the `frontend:vuejs` agent with the user's question or task. Do not answer Vue testing questions from general knowledge — the agent fetches current documentation for more accurate answers.
 
 The agent will:
 1. Check the user's project for test configuration (`vitest.config.*`, test files)
@@ -120,5 +123,3 @@ The agent will:
 3. Answer with proper test patterns (plugin injection, mocking, async handling)
 4. Flag common pitfalls (missing `flushPromises`, improper store injection)
 5. Suggest testing patterns (component, composable, store, e2e)
-
-Vue testing questions should be delegated to the agent rather than answered from general knowledge — the agent fetches current documentation for more accurate, up-to-date answers.

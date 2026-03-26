@@ -1,6 +1,6 @@
 ---
 name: fontawesome
-description: "Font Awesome 7 icon expert with access to the complete official FA7 web documentation (75 reference files). This skill provides verified, documentation-backed answers that are more accurate than general knowledge — especially for FA7-specific APIs like CSS custom properties (--fa-animation-duration, --fa-beat-scale), the Pro vs Free icon family matrix, framework integrations (React, Vue, Angular), and accessibility patterns.\n\nYou MUST use this skill whenever a user's request involves Font Awesome icons in any way: selecting icons for UI elements, animating icons (fa-spin, fa-beat, fa-bounce, fa-fade, fa-shake, fa-flip), styling icons (sizing, rotation, stacking, layering, duotone, power transforms, masking), troubleshooting icons not rendering, diagnosing Free vs Pro issues, setting up Font Awesome in a project, replacing emoji with FA icons, or planning icon usage across a feature or page.\n\nAlso use this skill when the user mentions fa-solid, fa-regular, fa-light, fa-thin, fa-duotone, fa-brands, fa-sharp, FontAwesomeIcon, @fortawesome, fa-fw, fa-stack, fa-layers, or any fa- CSS class — even in passing. The skill's documentation access makes it strictly superior to answering from general knowledge for any Font Awesome question."
+description: "This skill should be used when the user asks about Font Awesome icons — selection, animation (fa-spin, fa-beat, fa-bounce, fa-fade, fa-shake, fa-flip), styling, troubleshooting, or project setup. Triggers on: fa-solid, fa-regular, fa-light, fa-duotone, fa-brands, fa-sharp, FontAwesomeIcon, @fortawesome, fa-fw, fa-stack, fa-layers, or any fa- CSS class. Provides FA7 documentation-backed answers via bundled reference files."
 ---
 
 # Font Awesome Icon Expert
@@ -26,13 +26,16 @@ Use this skill for ANY request involving Font Awesome, including but not limited
 - Dark mode icon toggles, notification badges on FA icons, icon swapping on state change
 - Comparing webfont vs SVG+JS rendering methods
 
+## Before delegating
+
+BEFORE dispatching, use AskUserQuestion to clarify the user's intent. Every question to the user MUST go through AskUserQuestion — never ask as plain text. Common things to clarify:
+- Whether they're using Free or Pro (many icons/features are Pro-only)
+- Their integration method (CDN, npm, framework component)
+- Whether they need icon selection, animation, styling, or setup help
+
 ## How to use
 
-Invoke the `/fontawesome` command, passing the user's question or task as the argument:
-
-```
-/fontawesome <user's question or task>
-```
+Dispatch the `frontend:fontawesome` agent with the user's question or task. Do not answer Font Awesome questions from general knowledge — the agent has access to the full official FA7 documentation for more accurate answers.
 
 The agent will:
 1. Resolve the plugin root path to find the bundled docs
@@ -40,5 +43,3 @@ The agent will:
 3. Answer with documentation-backed guidance, complete CSS classes, and accessibility best practices
 4. Offer 2-3 alternatives with rationale when selecting icons
 5. Flag whether icons/features require Font Awesome Pro
-
-Do not attempt to answer Font Awesome questions yourself — the agent has access to the full official FA7 documentation and will provide more accurate, up-to-date answers. Let the agent handle it.
