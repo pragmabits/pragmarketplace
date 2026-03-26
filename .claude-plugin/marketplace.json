@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Collection of Claude plugins for guidelines, agents, and skills focused on development.",
-    "version": "1.3.0"
+    "version": "1.4.0"
   },
   "plugins": [
     {
@@ -263,7 +263,7 @@
       "name": "frontend",
       "source": "./plugins/claude/frontend",
       "description": "Frontend development orchestrator — coordinates CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, and design specialists for cross-domain frontend tasks",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "pragmabits",
         "email": "leonardoleoncio96@gmail.com"
