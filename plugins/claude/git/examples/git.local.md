@@ -24,3 +24,43 @@ Per-project configuration for the git commit plugin.
 Place this file at `.claude/git.local.md` in your project root.
 
 After editing, restart Claude Code for changes to take effect.
+
+## Recommended Permission Rules
+
+The commit-maker agent runs several Bash commands per commit. To avoid being prompted
+for each one, add these rules to `.claude/settings.json` in your project root:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status*)",
+      "Bash(git diff *)",
+      "Bash(git diff)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(python *validate-commit.py*)",
+      "Bash(python *git-staging.pyz*)",
+      "Bash(echo *=== STATUS ===*)",
+      "Bash(echo *=== DIFF*)",
+      "Bash(echo *=== LOG ===*)",
+      "Bash(echo *=== COMMITS ===*)",
+      "Bash(echo *=== LATEST TAG ===*)",
+      "Bash(echo *=== ALL TAGS*)",
+      "Bash(echo *=== COMMITS SINCE LAST TAG ===*)",
+      "Bash(echo *=== HEAD ===*)",
+      "Bash(echo *NO_TAGS_FOUND*)",
+      "Bash(git describe *)",
+      "Bash(git tag --sort*)",
+      "Bash(git tag -a *)",
+      "Bash(git tag -l *)",
+      "Bash(git rev-parse *)"
+    ]
+  }
+}
+```
+
+Or run `/commit-setup --apply` to configure this automatically.
+
+The safety hook still blocks dangerous patterns regardless of these rules.
