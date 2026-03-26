@@ -18,6 +18,7 @@ Pragmatic provides ready-to-install plugins that extend Claude Code with special
 | **tailwindcss** | 1.0.0 | Frontend | `/tailwindcss` | Tailwind CSS 4 utility authoring, theming, and TW3-to-TW4 migration |
 | **css** | 1.1.0 | Frontend | `/css` | Layouts, animations, responsive design, selectors, and preprocessors |
 | **vuejs** | 1.1.0 | Frontend | `/vuejs`, `/nuxt` | Vue 3, Nuxt 3, Pinia, testing, forms, styling, and animation |
+| **frontend** | 1.0.0 | Frontend | `/frontend` | Cross-domain orchestrator — coordinates CSS, Tailwind, Vue, shadcn, FA specialists |
 
 ## Installation
 
@@ -46,6 +47,7 @@ Once installed, plugins are available through slash commands in Claude Code:
 /css             # CSS expert guidance
 /vuejs           # Vue.js ecosystem guidance
 /nuxt            # Nuxt 3 guidance
+/frontend        # Cross-domain frontend orchestrator
 ```
 
 The **guideline** plugin has no slash command — it provides output style rules that shape how Claude formats responses when active.

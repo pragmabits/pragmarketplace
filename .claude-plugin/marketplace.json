@@ -258,6 +258,45 @@
         "styling",
         "agent"
       ]
+    },
+    {
+      "name": "frontend",
+      "source": "./plugins/claude/frontend",
+      "description": "Frontend development orchestrator — coordinates CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, and design specialists for cross-domain frontend tasks",
+      "version": "1.0.0",
+      "author": {
+        "name": "pragmabits",
+        "email": "leonardoleoncio96@gmail.com"
+      },
+      "homepage": "https://github.com/pragmabits/pragmarketplace",
+      "repository": "https://github.com/pragmabits/pragmarketplace",
+      "category": "frontend",
+      "commands": "./commands",
+      "agents": [
+        "./agents/frontend.md",
+        "./agents/css.md",
+        "./agents/tailwindcss.md",
+        "./agents/vuejs.md",
+        "./agents/shadcn.md",
+        "./agents/fontawesome.md"
+      ],
+      "keywords": [
+        "frontend",
+        "orchestrator",
+        "css",
+        "tailwindcss",
+        "vuejs",
+        "nuxt",
+        "shadcn",
+        "fontawesome",
+        "design",
+        "ui",
+        "components",
+        "responsive",
+        "animation",
+        "theming",
+        "agent"
+      ]
     }
   ]
 }
