@@ -236,4 +236,3 @@ Content here
 Add pointers in `MEMORY.md`. Do not save code patterns derivable from the project, git history, or ephemeral task details.
 
 
-- Ephemeral task details

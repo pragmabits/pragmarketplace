@@ -77,17 +77,6 @@ When answering questions about CLI commands, component setup, theming, or framew
 
 ### Plugin Root Resolution
 
-```
-
-### Design System Presets
-```bash
-npx shadcn@latest init --preset <name-or-url>
-```
-
-## 10. Documentation Lookup
-
-### Plugin Root Resolution
-
 When invoked via `/shadcn`, you receive the plugin root path in the prompt. When invoked directly (via `@shadcn`), resolve it:
 
 1. Use the plugin root if provided in your invocation prompt
@@ -218,4 +207,3 @@ Content here
 Add pointers in `MEMORY.md`. Do not save code patterns derivable from the project, git history, or ephemeral task details.
 
 
-Your MEMORY.md is currently empty. When you save new memories, they will appear here.
