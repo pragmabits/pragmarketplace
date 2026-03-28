@@ -10,7 +10,7 @@ Pragmatic provides ready-to-install plugins that extend Claude Code with special
 
 | Plugin | Version | Category | Slash Commands | Description |
 |--------|---------|----------|----------------|-------------|
-| **git** | 2.2.0 | Tools | `/commit`, `/tag-it`, `/commit-setup` | Semantic commits, hunk-level staging, validation, version tagging, and safety hooks |
+| **git** | 2.3.0 | Tools | `/commit`, `/tag-it`, `/commit-setup` | Semantic commits, hunk-level staging, validation, native git hooks, version tagging, and safety hooks |
 | **guideline** | 1.0.0 | Output | — | Output style formatting via predefined rules and standards |
 | **pragma-statusline** | 1.0.0 | Tools | `/pragma-status` | Custom Claude Code statusline with git and context metrics |
 | **fontawesome** | 1.1.0 | Design | `/fontawesome` | Font Awesome 7 icon selection, animation, styling, and integration |

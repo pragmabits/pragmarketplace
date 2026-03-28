@@ -266,6 +266,13 @@ Place in plugins directory:
 
 ## Version History
 
+### v2.3.0 — March 2026
+- Added native git hooks: `commit-msg` (message validation), `pre-commit` (secret/file guard), `prepare-commit-msg` (smart drafting), `post-commit` (tag advisor)
+- Updated `commit-setup` with validation strategy choice and optional hook installation
+- Added `python3` permission rule variants for validator and staging tool
+- Agent now requires `AskUserQuestion` for all user-facing communication
+- Agent documents `commit-msg` hook as fallback when validator unavailable
+
 ### v2.0.0 — March 2026
 - Extracted shared utilities (`repo_utils.py`) — eliminates code duplication
 - Fixed timezone bug in committer (correct DST handling via `tm_gmtoff`)
