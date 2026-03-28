@@ -20,7 +20,7 @@ Format: `type: description`
 - Description starts with a lowercase letter or digit
 - Allowed characters: Unicode letters, digits, spaces, and `, . / + -`
 
-The validator script (`scripts/validate-commit.py`) is the authoritative source of truth for format and character rules. Never bypass or reimplement its checks.
+How these rules are enforced depends on the `validation_strategy` setting in `.claude/git.local.md` — see the "Mandatory validation" section below. Never reimplement the format checks manually.
 
 ## Rules
 
@@ -51,8 +51,8 @@ Do not infer language from code, variable names, or comments — only from commi
 The validation approach depends on the `validation_strategy` setting in `.claude/git.local.md`:
 
 - **`script`** (default when no setting exists): Run `validate-commit.py` before every commit. The script is the sole validation gate.
-- **`hook`**: The `commit-msg` git hook handles all validation at the git level. Do NOT run `validate-commit.py` — proceed directly with `git commit`. The hook will reject invalid messages.
-- **`both`**: Run `validate-commit.py` for early feedback, then `git commit` (where the hook provides a second check).
+- **`hook`**: Validation is handled transparently by git itself. Do NOT run `validate-commit.py` or any other validation command. Just run `git commit` — if the message is invalid, `git commit` will fail and print the error. Read its stderr, fix the message, and retry.
+- **`both`**: Run `validate-commit.py` for early feedback, then run `git commit` (which performs a second check transparently).
 
 **When strategy is `script` or `both`**, run:
 
@@ -71,7 +71,7 @@ Rules:
 - Pass the message as a literal string, not a shell variable
 - Only execute `git commit -m "<message>"` after the validator exits 0
 
-**When strategy is `hook`**, skip the validator entirely — the git hook is the authority. If `git commit` fails because the hook rejects the message, treat it as a validation failure: read the hook's stderr, fix the message, and retry.
+**When strategy is `hook`**, do not run any validation command. Just proceed to `git commit`. If the commit fails, read stderr for the error, fix the message, and retry.
 
 ### Plugin root resolution
 
@@ -115,7 +115,7 @@ Spec values: `"all"` (whole file), `[0, 2]` (hunk indices from parse), `"delete"
 ```bash
 python "<plugin-root>/tools/git-staging.pyz" commit --repo . --spec '{"file.py": [0]}' --message "fix: description"
 ```
-This mode does not validate the message — always run `validate-commit.py` first.
+This mode does not validate the message — run `validate-commit.py` first if the validation strategy requires it (`script` or `both`).
 
 **Unstage** — reset staged files back to HEAD:
 ```bash
@@ -402,7 +402,7 @@ When the user explicitly requests amending the last commit (e.g., "amend", "add 
 2. Determine the new message:
    - If user provides a new message, validate and use it
    - If user says "keep the message" or doesn't mention one, reuse the existing message from `git log -1 --format=%s`
-3. Validate the message with `validate-commit.py`
+3. Validate the message (run `validate-commit.py` if strategy is `script` or `both`; skip if `hook`)
 4. Execute: `git commit --amend -m "<message>"`
 5. Verify with `git log --oneline -1`
 

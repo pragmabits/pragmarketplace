@@ -125,7 +125,13 @@ Use AskUserQuestion to ask which additional hooks the user wants to install:
 
 For each selected hook, copy from `${CLAUDE_PLUGIN_ROOT}/hooks/<hook-name>` to `.git/hooks/<hook-name>` and make executable.
 
-If any hook already exists and was NOT installed by this plugin, warn the user and ask whether to overwrite or skip. If a hook is already installed by this plugin (check for the plugin's marker comments at the top of each script), report it as already up to date.
+If any hook already exists and was NOT installed by this plugin, warn the user and ask whether to overwrite or skip. To determine if a hook was installed by this plugin, check for these marker comments near the top of each script:
+- `commit-msg`: `# commit-msg hook — validates commit message format.`
+- `pre-commit`: `# pre-commit hook — catches dangerous content before it enters history.`
+- `prepare-commit-msg`: `# prepare-commit-msg hook — drafts a conventional commit message from staged changes.`
+- `post-commit`: `# post-commit hook — tracks commits since last tag and suggests when to tag.`
+
+If the marker is present, report the hook as already up to date.
 
 If the user did not select a hook that is currently installed, use AskUserQuestion to ask whether to remove it. This keeps the setup clean — the user should be in control of which hooks are active.
 
