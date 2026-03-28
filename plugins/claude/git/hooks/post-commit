@@ -18,7 +18,11 @@ if [[ -z "$last_tag" ]]; then
   commit_count=$(git rev-list --count HEAD 2>/dev/null || echo "0")
 else
   commit_list=$(git log "${last_tag}..HEAD" --oneline)
-  commit_count=$(echo "$commit_list" | grep -c '.' || echo "0")
+  if [[ -z "$commit_list" ]]; then
+    commit_count=0
+  else
+    commit_count=$(echo "$commit_list" | wc -l | tr -d ' ')
+  fi
 fi
 
 # --- Classify commits ---

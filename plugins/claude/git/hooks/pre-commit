@@ -13,7 +13,7 @@ SETTINGS_FILE="$REPO_ROOT/.claude/git.local.md"
 
 if [[ -f "$SETTINGS_FILE" ]]; then
   frontmatter=$(sed -n '/^---$/,/^---$/p' "$SETTINGS_FILE" | sed '1d;$d')
-  size_val=$(echo "$frontmatter" | grep -E '^\s*max_file_size_kb:\s*' | head -1 | sed 's/.*:\s*//' | tr -d ' ')
+  size_val=$(echo "$frontmatter" | grep -E '^\s*max_file_size_kb:\s*' | head -1 | sed 's/.*:\s*//' | tr -d ' ' || true)
   if [[ -n "$size_val" ]] && [[ "$size_val" =~ ^[0-9]+$ ]]; then
     MAX_FILE_SIZE_KB="$size_val"
   fi

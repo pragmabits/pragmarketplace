@@ -5,6 +5,11 @@ set -euo pipefail
 # Blocks: git add -p (interactive), git -C (path issues with staging tool),
 # git config user.name/email (intrusive identity changes).
 
+if ! command -v jq &>/dev/null; then
+  echo '{"systemMessage": "jq is required but not installed. validate-git-command.sh cannot run."}' >&2
+  exit 2
+fi
+
 input=$(cat)
 command=$(echo "$input" | jq -r '.tool_input.command // ""')
 

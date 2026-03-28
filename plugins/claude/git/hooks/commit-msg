@@ -45,13 +45,13 @@ if [[ -f "$SETTINGS_FILE" ]]; then
   fi
 
   # Parse allow_body
-  allow_body_val=$(echo "$frontmatter" | grep -E '^\s*allow_body:\s*' | head -1 | sed 's/.*:\s*//' | tr -d ' ')
+  allow_body_val=$(echo "$frontmatter" | grep -E '^\s*allow_body:\s*' | head -1 | sed 's/.*:\s*//' | tr -d ' ' || true)
   if [[ "$allow_body_val" == "true" ]]; then
     ALLOW_BODY="true"
   fi
 
   # Parse max_length
-  max_length_val=$(echo "$frontmatter" | grep -E '^\s*max_length:\s*' | head -1 | sed 's/.*:\s*//' | tr -d ' ')
+  max_length_val=$(echo "$frontmatter" | grep -E '^\s*max_length:\s*' | head -1 | sed 's/.*:\s*//' | tr -d ' ' || true)
   if [[ -n "$max_length_val" ]] && [[ "$max_length_val" =~ ^[0-9]+$ ]]; then
     MAX_LENGTH="$max_length_val"
   fi
