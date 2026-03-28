@@ -11,7 +11,7 @@ type: description
 - Single line only — no body, no footer, no signatures (configurable via settings)
 - No scope (parentheses forbidden)
 - Language follows the dominant language from repository commit history (overridable via settings)
-- Validated by `scripts/validate-commit.py` before every commit
+- Validated before every commit (via python script, git hook, or both — see Project Settings)
 
 Valid types: `feat` | `fix` | `docs` | `style` | `refactor` | `test` | `chore` | `perf`
 
@@ -35,7 +35,7 @@ Additional types can be configured via project settings (see below).
 - **Semantic analysis**: Groups changes by behavioral intent, not file count
 - **Hunk-level staging**: Non-interactive `.pyz` tool (Dulwich-based) for surgical commits
 - **Unstage support**: Reset staged files back to HEAD state
-- **Mandatory validation**: `validate-commit.py` runs before every `git commit`
+- **Mandatory validation**: Configurable strategy — python script, git hook, or both
 - **Intelligent partitioning**: Separates refactoring from behavioral changes
 - **Pattern learning**: Adapts to the project's commit history and language
 - **Minimal interactivity**: Asks only when the commit strategy is genuinely ambiguous
@@ -72,7 +72,7 @@ The commit-maker agent:
 3. **Performs semantic diff analysis** — determines commit type and boundaries
 4. **Plans partitioning** — explicit justification for how changes are grouped
 5. **Stages** — whole files via `git add`, specific hunks via the staging tool, or unstages via unstage mode
-6. **Validates** — runs `validate-commit.py`; aborts on failure
+6. **Validates** — runs validation per configured strategy; aborts on failure
 7. **Commits** — only after validation passes (supports amend mode)
 8. **Reports** — commits created, final status, any blocks
 
@@ -121,7 +121,7 @@ python "tools/git-staging.pyz" commit --repo . --spec '{"file.py": [0]}' --messa
 
 Spec values: `"all"` (whole file), `[0, 2]` (hunk indices), `"delete"` (file deletion).
 
-The commit mode does not validate messages — always run `validate-commit.py` first.
+The commit mode does not validate messages — run `validate-commit.py` first if your validation strategy requires it.
 
 ## Validator
 
@@ -162,6 +162,7 @@ Available settings:
 - **language**: Override commit message language (default: detected from git log)
 - **allow_body**: Allow multi-line commit messages (default: `false`)
 - **max_length**: Maximum description length in characters (default: no limit)
+- **validation_strategy**: How commit messages are validated — `script` (python validator only, default), `hook` (git handles it transparently), or `both`. Set by `/commit-setup --apply`.
 
 After editing, restart Claude Code for changes to take effect.
 
@@ -209,7 +210,7 @@ The hooks read `.claude/git.local.md` for project-specific settings (extra_types
 ## Important Rules
 
 1. **Git config preserved** — never modifies `user.name` or `user.email`
-2. **Mandatory validation** — every message validated by script before commit
+2. **Mandatory validation** — every message validated per configured strategy before commit
 3. **No git -C flag** — all commands run in current working directory
 4. **Refactor/behavior separation** — pure refactoring and behavioral changes go in separate commits when separable
 5. **Message accuracy** — the message must accurately describe every hunk in `git diff --cached`
@@ -265,6 +266,15 @@ Place in plugins directory:
 - `<project>/.claude/plugins/git/` (local)
 
 ## Version History
+
+### v2.3.1 — March 2026
+- Added `validation_strategy` setting (`script` | `hook` | `both`) to `.claude/git.local.md`
+- Commit-maker agent respects validation strategy — skips python validator when set to `hook`
+- `/commit-setup --apply` persists the chosen validation strategy
+- Fixed `post-commit` hook: empty commit list no longer miscounts as 1
+- Added `jq` availability check to `validate-git-command.sh` safety hook
+- Documented hook marker strings in `commit-setup` for reliable detection
+- Added `python3` permission rule variants to `examples/git.local.md`
 
 ### v2.3.0 — March 2026
 - Added native git hooks: `commit-msg` (message validation), `pre-commit` (secret/file guard), `prepare-commit-msg` (smart drafting), `post-commit` (tag advisor)

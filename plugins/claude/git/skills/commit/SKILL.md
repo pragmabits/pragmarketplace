@@ -40,7 +40,7 @@ The agent will:
 1. Analyze the working tree (status, diff, diff --cached, log)
 2. Perform semantic diff analysis to determine commit boundaries
 3. Stage changes (whole files or specific hunks via the staging tool)
-4. Validate each message with `validate-commit.py`
+4. Validate each message per the configured `validation_strategy` in `.claude/git.local.md`
 5. Execute commits only after validation passes
 6. Report the result
 
