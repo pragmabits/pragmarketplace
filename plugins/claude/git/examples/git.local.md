@@ -16,6 +16,11 @@ extra_types:
 
 # Maximum description length (characters). Default: no limit.
 # max_length: 72
+
+# Validation strategy for commit messages. Set by /commit-setup --apply.
+# Values: script (python validator only — default), hook (git hook only),
+# both (run python validator + git hook).
+# validation_strategy: script
 ---
 
 # Git Plugin Settings

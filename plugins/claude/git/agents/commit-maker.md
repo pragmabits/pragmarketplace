@@ -48,7 +48,13 @@ Do not infer language from code, variable names, or comments — only from commi
 
 ### Mandatory validation
 
-Run the validator before every commit:
+The validation approach depends on the `validation_strategy` setting in `.claude/git.local.md`:
+
+- **`script`** (default when no setting exists): Run `validate-commit.py` before every commit. The script is the sole validation gate.
+- **`hook`**: The `commit-msg` git hook handles all validation at the git level. Do NOT run `validate-commit.py` — proceed directly with `git commit`. The hook will reject invalid messages.
+- **`both`**: Run `validate-commit.py` for early feedback, then `git commit` (where the hook provides a second check).
+
+**When strategy is `script` or `both`**, run:
 
 ```bash
 python "<plugin-root>/scripts/validate-commit.py" "<message>"
@@ -65,9 +71,7 @@ Rules:
 - Pass the message as a literal string, not a shell variable
 - Only execute `git commit -m "<message>"` after the validator exits 0
 
-**When a commit-msg git hook is installed:**
-
-If `.git/hooks/commit-msg` exists and is executable, the hook enforces the same rules at the git level. In this case, running the validator script before `git commit` is still recommended (it gives you early feedback and avoids a failed commit attempt), but not strictly required — the hook is the safety net. If the validator is unavailable (e.g., plugin root not resolved), you can rely on the hook and proceed directly with `git commit`.
+**When strategy is `hook`**, skip the validator entirely — the git hook is the authority. If `git commit` fails because the hook rejects the message, treat it as a validation failure: read the hook's stderr, fix the message, and retry.
 
 ### Plugin root resolution
 
@@ -86,6 +90,7 @@ Check for `.claude/git.local.md` during analysis. If present, read its YAML fron
 - **language**: Override commit message language detection. If set, use this language instead of detecting from git log.
 - **allow_body**: If `true`, allow multi-line commit messages (body after blank line). Default: `false`.
 - **max_length**: Maximum description length in characters. Default: no limit.
+- **validation_strategy**: How commit messages are validated. Values: `script` (python validator only — default), `hook` (git hook only — do not run the validator script), `both` (run both). Set by `/commit-setup --apply`.
 
 If the file doesn't exist, use defaults. Do not ask the user about settings — just apply what's configured.
 
@@ -220,21 +225,27 @@ For these: check whether relevant tests exist and include test updates in the sa
 ### 3. Execution
 
 1. Stage files — `git add` for whole files, staging tool for partial hunks
-2. Validate message — run `validate-commit.py`; abort on failure
-3. Commit — only after validation passes
+2. Validate message — run `validate-commit.py` (skip if `validation_strategy` is `hook`)
+3. Commit — only after validation passes (or directly if relying on the hook)
 4. Verify — confirm the commit was recorded
 
-Chain validation + commit + verify into as few Bash calls as possible to reduce permission prompts:
+Chain commands into as few Bash calls as possible to reduce permission prompts:
 
 ```bash
 git add file1.go file2.go
 ```
 
+**When using the validator** (`script` or `both` strategy):
 ```bash
 python "<plugin-root>/scripts/validate-commit.py" "feat: add token expiry check" && git commit -m "feat: add token expiry check" && git log --oneline -1
 ```
 
-The `&&` chain ensures the commit only runs if validation passes, and verify only runs if the commit succeeds. This reduces 3 separate Bash calls to 1.
+**When relying on the hook** (`hook` strategy):
+```bash
+git commit -m "feat: add token expiry check" && git log --oneline -1
+```
+
+The `&&` chain ensures each step only runs if the previous one succeeds.
 
 ### 4. Decisions
 

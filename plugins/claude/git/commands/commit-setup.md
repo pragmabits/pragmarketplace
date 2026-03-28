@@ -96,9 +96,18 @@ Use AskUserQuestion to ask which validation approach the user wants:
 
 Based on the user's choice:
 
-- **Python script only**: If a `commit-msg` git hook is currently installed, use AskUserQuestion to ask whether to remove it. If the user confirms, delete `.git/hooks/commit-msg`. If they decline, leave it in place and warn that both will remain active.
+- **Python script only**: If a `commit-msg` git hook is currently installed, use AskUserQuestion to ask whether to remove it. If the user confirms, delete `.git/hooks/commit-msg`. If they decline, leave it in place and warn that both will remain active. Set `validation_strategy: script` in `.claude/git.local.md`.
 - **Git hook** or **Both**: Copy `${CLAUDE_PLUGIN_ROOT}/hooks/commit-msg` to `.git/hooks/commit-msg` and make it executable. If a `commit-msg` hook already exists that was NOT installed by this plugin (check if it contains the marker comment `# commit-msg hook — validates commit message format.`), warn the user and ask whether to overwrite or skip.
-- **Both**: Also ensure the agent-side validation remains in the workflow (no changes needed — it's the default).
+  - **Git hook**: Set `validation_strategy: hook` in `.claude/git.local.md`.
+  - **Both**: Set `validation_strategy: both` in `.claude/git.local.md`.
+
+**Persisting the validation strategy:**
+
+After the user chooses, update `.claude/git.local.md` to record the choice:
+1. If `.claude/git.local.md` exists, read it, update or add `validation_strategy` in the YAML frontmatter, and write it back. Preserve all other frontmatter fields and markdown content.
+2. If `.claude/git.local.md` does not exist, create it with the `validation_strategy` field in frontmatter and a minimal body (use the example at `${CLAUDE_PLUGIN_ROOT}/examples/git.local.md` as a template).
+
+This setting controls the commit-maker agent's behavior — when set to `hook`, the agent skips `validate-commit.py` entirely and relies on the git hook.
 
 Report what was installed or removed.
 
