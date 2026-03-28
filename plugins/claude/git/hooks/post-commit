@@ -1,0 +1,80 @@
+#!/bin/bash
+set -euo pipefail
+
+# post-commit hook — tracks commits since last tag and suggests when to tag.
+# Writes a suggestion file to .claude/tag-suggestion when thresholds are met.
+# This file can be read by the commit-maker agent or /tag-it command.
+
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+SUGGESTION_FILE="$REPO_ROOT/.claude/tag-suggestion"
+
+# --- Get last tag ---
+last_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+commits_since=""
+
+if [[ -z "$last_tag" ]]; then
+  commits_since="all"
+  commit_list=$(git log --oneline -20)
+  commit_count=$(git rev-list --count HEAD 2>/dev/null || echo "0")
+else
+  commit_list=$(git log "${last_tag}..HEAD" --oneline)
+  commit_count=$(echo "$commit_list" | grep -c '.' || echo "0")
+fi
+
+# --- Classify commits ---
+feat_count=0
+fix_count=0
+breaking_count=0
+
+while IFS= read -r line; do
+  if echo "$line" | grep -qE '^[a-f0-9]+ feat!?:'; then
+    feat_count=$((feat_count + 1))
+  fi
+  if echo "$line" | grep -qE '^[a-f0-9]+ fix:'; then
+    fix_count=$((fix_count + 1))
+  fi
+  if echo "$line" | grep -qE '^[a-f0-9]+ [a-z]+!:'; then
+    breaking_count=$((breaking_count + 1))
+  fi
+done <<< "$commit_list"
+
+# --- Determine if we should suggest tagging ---
+should_suggest=false
+reason=""
+
+if [[ "$breaking_count" -gt 0 ]]; then
+  should_suggest=true
+  reason="breaking change detected — major version bump recommended"
+elif [[ "$feat_count" -ge 3 ]]; then
+  should_suggest=true
+  reason="$feat_count new features since last tag — minor version bump recommended"
+elif [[ "$commit_count" -ge 10 ]]; then
+  should_suggest=true
+  reason="$commit_count commits since last tag — consider a release"
+elif [[ "$commits_since" == "all" ]] && [[ "$commit_count" -ge 5 ]]; then
+  should_suggest=true
+  reason="no tags exist yet and $commit_count commits in history — consider creating v0.1.0"
+fi
+
+# --- Write or clean up suggestion file ---
+if [[ "$should_suggest" == true ]]; then
+  mkdir -p "$REPO_ROOT/.claude"
+  cat > "$SUGGESTION_FILE" << SUGGESTION
+---
+generated: $(date -Iseconds)
+last_tag: ${last_tag:-none}
+commits_since: $commit_count
+feats: $feat_count
+fixes: $fix_count
+breaking: $breaking_count
+---
+$reason
+
+Run /tag-it to create a version tag.
+SUGGESTION
+else
+  # Remove stale suggestion if thresholds no longer met (unlikely post-commit, but clean)
+  rm -f "$SUGGESTION_FILE" 2>/dev/null || true
+fi
+
+exit 0

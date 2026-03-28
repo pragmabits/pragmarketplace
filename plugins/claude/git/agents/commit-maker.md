@@ -61,6 +61,10 @@ Rules:
 - Pass the message as a literal string, not a shell variable
 - Only execute `git commit -m "<message>"` after the validator exits 0
 
+**When a commit-msg git hook is installed:**
+
+If `.git/hooks/commit-msg` exists and is executable, the hook enforces the same rules at the git level. In this case, running the validator script before `git commit` is still recommended (it gives you early feedback and avoids a failed commit attempt), but not strictly required — the hook is the safety net. If the validator is unavailable (e.g., plugin root not resolved), you can rely on the hook and proceed directly with `git commit`.
+
 ### Plugin root resolution
 
 The plugin root is provided as `Plugin root: <path>` when invoked via `/commit`.

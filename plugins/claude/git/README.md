@@ -179,6 +179,33 @@ The plugin includes a PreToolUse hook that blocks:
 - `git -C` — causes path resolution issues with staging tool
 - `git config user.name/email` — intrusive identity modifications
 
+## Git Hooks (Native Validation)
+
+The plugin includes native git hooks that enforce commit conventions at the git level — not just when using Claude Code, but from any git client (terminal, IDE, CI).
+
+**Available hooks:**
+- `commit-msg` — validates commit message format (mirrors `validate-commit.py`)
+- `pre-commit` — blocks secrets, large files, no-commit markers, and blocklisted file types
+- `prepare-commit-msg` — drafts a conventional commit message from staged files
+- `post-commit` — tracks commits since last tag and suggests when to create a release
+
+**Installation:**
+
+```bash
+/commit-setup --apply
+```
+
+Choose your validation strategy and optional hooks when prompted.
+
+**Manual installation:**
+
+```bash
+cp plugins/claude/git/hooks/commit-msg .git/hooks/commit-msg
+chmod +x .git/hooks/commit-msg
+```
+
+The hooks read `.claude/git.local.md` for project-specific settings (extra_types, allow_body, max_length).
+
 ## Important Rules
 
 1. **Git config preserved** — never modifies `user.name` or `user.email`

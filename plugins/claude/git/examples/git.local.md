@@ -64,3 +64,17 @@ for each one, add these rules to `.claude/settings.json` in your project root:
 Or run `/commit-setup --apply` to configure this automatically.
 
 The safety hook still blocks dangerous patterns regardless of these rules.
+
+## Native Git Hooks
+
+For validation that works outside of Claude Code (terminal, IDE, CI), install the
+commit-msg git hook via `/commit-setup --apply` and choose "Git hook" or "Both".
+
+Additional hooks available: `pre-commit` (secret/file guard), `prepare-commit-msg` (smart drafting), `post-commit` (tag advisor).
+
+## Recommended .gitignore entries
+
+```
+.claude/*.local.md
+.claude/tag-suggestion
+```

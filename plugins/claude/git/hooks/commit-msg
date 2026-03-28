@@ -1,0 +1,134 @@
+#!/bin/bash
+set -euo pipefail
+
+# commit-msg hook — validates commit message format.
+# Mirrors the rules in validate-commit.py:
+#   Format: type: description
+#   - Single line (unless allow_body is true)
+#   - No scope (parentheses forbidden)
+#   - Valid types: feat|fix|docs|style|refactor|test|chore|perf (+ extra_types)
+#   - Description starts with lowercase letter or digit
+#   - Allowed chars: Unicode letters, digits, spaces, and , . / + -
+#   - Breaking change marker (!) allowed after type
+
+COMMIT_MSG_FILE="$1"
+
+if [[ ! -f "$COMMIT_MSG_FILE" ]]; then
+  echo "error: commit message file not found: $COMMIT_MSG_FILE" >&2
+  exit 1
+fi
+
+# Read the commit message, stripping comment lines (lines starting with #)
+message=$(sed '/^#/d' "$COMMIT_MSG_FILE")
+
+if [[ -z "$message" ]]; then
+  echo "error: commit message is empty" >&2
+  exit 1
+fi
+
+# --- Read project settings from .claude/git.local.md ---
+EXTRA_TYPES=""
+ALLOW_BODY="false"
+MAX_LENGTH=""
+
+# Find the repo root
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+SETTINGS_FILE="$REPO_ROOT/.claude/git.local.md"
+
+if [[ -f "$SETTINGS_FILE" ]]; then
+  # Extract YAML frontmatter (between --- delimiters)
+  frontmatter=$(sed -n '/^---$/,/^---$/p' "$SETTINGS_FILE" | sed '1d;$d')
+
+  # Parse extra_types (collect indented lines after extra_types:)
+  if echo "$frontmatter" | grep -q '^extra_types:'; then
+    EXTRA_TYPES=$(echo "$frontmatter" | sed -n '/^extra_types:/,/^[^ #]/{/^  /p}' | sed 's/^\s*//' | cut -d: -f1 | tr '\n' '|' | sed 's/|$//')
+  fi
+
+  # Parse allow_body
+  allow_body_val=$(echo "$frontmatter" | grep -E '^\s*allow_body:\s*' | head -1 | sed 's/.*:\s*//' | tr -d ' ')
+  if [[ "$allow_body_val" == "true" ]]; then
+    ALLOW_BODY="true"
+  fi
+
+  # Parse max_length
+  max_length_val=$(echo "$frontmatter" | grep -E '^\s*max_length:\s*' | head -1 | sed 's/.*:\s*//' | tr -d ' ')
+  if [[ -n "$max_length_val" ]] && [[ "$max_length_val" =~ ^[0-9]+$ ]]; then
+    MAX_LENGTH="$max_length_val"
+  fi
+fi
+
+# --- Build the valid types pattern ---
+DEFAULT_TYPES="feat|fix|docs|style|refactor|test|chore|perf"
+if [[ -n "$EXTRA_TYPES" ]]; then
+  ALL_TYPES="$DEFAULT_TYPES|$EXTRA_TYPES"
+else
+  ALL_TYPES="$DEFAULT_TYPES"
+fi
+
+# --- Extract subject line ---
+subject=$(echo "$message" | head -1)
+
+# Check for body when not allowed
+line_count=$(echo "$message" | wc -l)
+if [[ "$ALLOW_BODY" == "false" ]] && [[ "$line_count" -gt 1 ]]; then
+  echo "error: commit message must be a single line (no body or footer)" >&2
+  echo "  received: $subject" >&2
+  exit 1
+fi
+
+# --- Validate format: type(!?): description ---
+if ! echo "$subject" | grep -qE "^($ALL_TYPES)!?: .+$"; then
+  echo "error: commit message does not match the required format" >&2
+  echo "  received: $subject" >&2
+  echo "  expected: type: description" >&2
+  echo "  valid types: $(echo "$ALL_TYPES" | tr '|' ', ')" >&2
+  echo "  description must start with a lowercase letter or digit" >&2
+  exit 1
+fi
+
+# --- Extract description (everything after "type(!?): ") ---
+description=$(echo "$subject" | sed -E "s/^($ALL_TYPES)!?: //")
+
+# --- Check max_length ---
+if [[ -n "$MAX_LENGTH" ]]; then
+  desc_len=${#description}
+  if [[ "$desc_len" -gt "$MAX_LENGTH" ]]; then
+    echo "error: description exceeds maximum length ($desc_len > $MAX_LENGTH)" >&2
+    echo "  received: $subject" >&2
+    exit 1
+  fi
+fi
+
+# --- Check description starts with lowercase letter or digit ---
+first_char="${description:0:1}"
+if ! echo "$first_char" | grep -qE '^[a-z0-9]$'; then
+  echo "error: description must start with a lowercase letter or digit" >&2
+  echo "  received: $subject" >&2
+  exit 1
+fi
+
+# --- Check allowed characters in description ---
+# Allowed: Unicode letters, digits, spaces, and , . / + -
+# Use a negative match: find any character that is NOT allowed
+# Note: bash regex handles ASCII; for full Unicode support we use grep -P
+if echo "$description" | grep -qP '[^\p{L}\p{N} ,./+\-]'; then
+  # Find the offending character for a helpful error message
+  bad_char=$(echo "$description" | grep -oP '[^\p{L}\p{N} ,./+\-]' | head -1)
+  echo "error: description contains disallowed character: '$bad_char'" >&2
+  echo "  received: $subject" >&2
+  echo "  allowed: Unicode letters, digits, spaces, and , . / + -" >&2
+  exit 1
+fi
+
+# --- Validate body format if present ---
+if [[ "$ALLOW_BODY" == "true" ]] && [[ "$line_count" -gt 1 ]]; then
+  second_line=$(echo "$message" | sed -n '2p')
+  if [[ -n "$second_line" ]]; then
+    echo "error: body must be separated from subject by a blank line" >&2
+    echo "  received first body line: $second_line" >&2
+    exit 1
+  fi
+fi
+
+# All checks passed
+exit 0
