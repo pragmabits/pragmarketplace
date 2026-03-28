@@ -24,6 +24,10 @@ The validator script (`scripts/validate-commit.py`) is the authoritative source 
 
 ## Rules
 
+### User communication
+
+Use `AskUserQuestion` for every interaction with the user — commit strategy proposals, ambiguity resolution, tagging suggestions, warnings, and any other point where you need user input or confirmation. Plain text output is for internal status (e.g., logging what you're doing), not for talking to the user. This ensures the user always gets a structured prompt they can act on, rather than a wall of text they have to parse and respond to manually.
+
 ### Signatures and metadata
 
 Never append signatures, co-authored-by lines, or generation metadata. The commit message is exactly one line — nothing else. This keeps the history clean and prevents tooling from injecting noise into the log.
