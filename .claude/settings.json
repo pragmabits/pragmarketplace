@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status*)",
+      "Bash(git diff *)",
+      "Bash(git diff)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(python *validate-commit.py*)",
+      "Bash(python3 *validate-commit.py*)",
+      "Bash(python *git-staging.pyz*)",
+      "Bash(python3 *git-staging.pyz*)",
+      "Bash(echo *=== STATUS ===*)",
+      "Bash(echo *=== DIFF*)",
+      "Bash(echo *=== LOG ===*)",
+      "Bash(echo *=== COMMITS ===*)",
+      "Bash(echo *=== LATEST TAG ===*)",
+      "Bash(echo *=== ALL TAGS*)",
+      "Bash(echo *=== COMMITS SINCE LAST TAG ===*)",
+      "Bash(echo *=== HEAD ===*)",
+      "Bash(echo *NO_TAGS_FOUND*)",
+      "Bash(git describe *)",
+      "Bash(git tag --sort*)",
+      "Bash(git tag -a *)",
+      "Bash(git tag -l *)",
+      "Bash(git rev-parse *)"
+    ]
+  }
+}

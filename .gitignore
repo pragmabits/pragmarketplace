@@ -20,8 +20,8 @@ Thumbs.db
 # Environment
 .env
 .env.*
-.claude
 .venv
 
 # Skill development workspaces
 *-workspace/
+git.local.md
