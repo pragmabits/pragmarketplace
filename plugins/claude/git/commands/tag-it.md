@@ -19,7 +19,7 @@ $ARGUMENTS
 Run a single combined command:
 
 ```bash
-echo "=== LATEST TAG ===" && { git describe --tags --abbrev=0 2>/dev/null || echo "NO_TAGS_FOUND"; } && echo "=== ALL TAGS (last 10) ===" && git tag --sort=-version:refname | head -10; echo "=== COMMITS SINCE LAST TAG ===" && { git log "$(git describe --tags --abbrev=0 2>/dev/null || echo 'HEAD~10')..HEAD" --oneline 2>/dev/null || git log --oneline -10; } && echo "=== HEAD ===" && git log --oneline -1
+echo "=== LATEST TAG ===" && (git describe --tags --abbrev=0 2>/dev/null || echo "NO_TAGS_FOUND") && echo "=== ALL TAGS (last 10) ===" && git tag --sort=-version:refname | head -10; echo "=== COMMITS SINCE LAST TAG ===" && (git log "$(git describe --tags --abbrev=0 2>/dev/null || echo 'HEAD~10')..HEAD" --oneline 2>/dev/null || git log --oneline -10) && echo "=== HEAD ===" && git log --oneline -1
 ```
 
 ### 2. Detect versioning scheme

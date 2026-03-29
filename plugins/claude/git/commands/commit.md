@@ -34,7 +34,7 @@ If `$ARGUMENTS` is exactly `--resolve-root`:
 Otherwise, invoke the commit-maker agent with the resolved plugin root.
 
 Use the Agent tool with:
-- **subagent_type**: `commit-maker`
+- **subagent_type**: `git:commit-maker`
 - **description**: "Strategic commit analysis"
 - **prompt**: Include the plugin root and user context, then instruct the agent to execute its full workflow.
 
