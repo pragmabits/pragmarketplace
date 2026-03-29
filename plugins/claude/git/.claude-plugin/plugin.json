@@ -1,6 +1,6 @@
 {
   "name": "git",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "description": "Strategic git commit plugin — semantic analysis, hunk-level staging, validated commits, version tagging, native git hooks, safety hooks, and per-project settings",
   "author": {
     "name": "pragmabits",
