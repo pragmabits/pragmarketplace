@@ -1,6 +1,6 @@
 {
   "name": "tailwindcss",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Tailwind CSS 4 expert — utility authoring, CSS-first theming, responsive layouts, dark mode, TW3→TW4 migration, and PostCSS/Vite setup powered by runtime documentation lookup",
   "author": {
     "name": "pragmabits",
