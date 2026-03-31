@@ -96,7 +96,7 @@
       "name": "frontend",
       "source": "./plugins/claude/frontend",
       "description": "Frontend development orchestrator — coordinates CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, Material Design 3, HTMX + Go, and frontend design specialists for cross-domain frontend tasks",
-      "version": "1.4.0",
+      "version": "1.7.0",
       "author": {
         "name": "pragmabits",
         "email": "leonardoleoncio96@gmail.com"
