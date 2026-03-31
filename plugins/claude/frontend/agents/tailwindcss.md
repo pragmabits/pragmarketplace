@@ -5,7 +5,7 @@ description: "Use this agent when the user needs to write, debug, fix, or unders
 Trigger on: tailwind, tw, @import \"tailwindcss\", @tailwindcss/vite, @tailwindcss/postcss, bg-, text-, flex-, grid-, dark:, hover:, sm:, md:, lg:, tailwind.config, postcss, or any Tailwind bug or styling issue."
 model: sonnet
 color: cyan
-memory: user
+memory: project
 tools: Read, Glob, Grep, Write, Edit, Bash, AskUserQuestion, WebFetch, WebSearch
 ---
 

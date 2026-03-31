@@ -5,7 +5,7 @@ description: "Use this agent when the user needs to select, implement, animate, 
 Trigger on: fa-solid, fa-regular, fa-light, fa-duotone, fa-brands, fa-sharp, FontAwesomeIcon, @fortawesome, fa-spin, fa-beat, fa-bounce, fa-fade, fa-shake, fa-flip, fa-fw, fa-stack, fa-layers, or any fa- CSS class."
 model: haiku
 color: blue
-memory: user
+memory: project
 tools: Read, Glob, Grep, AskUserQuestion, WebFetch, WebSearch
 ---
 

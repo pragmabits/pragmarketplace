@@ -5,7 +5,7 @@ description: "Use this agent when the user needs to build, debug, fix, or unders
 Trigger on: Vue, Vue 3, Vite, Nuxt, Pinia, Vue Router, VueUse, Vitest, Composition API, `<script setup>`, `.vue` files, SFC, composables, CVA, clsx, vee-validate, zod, reka-ui, lucide, vue-sonner, TanStack Query, motion, or any Vue.js bug, unexpected behavior, or component issue."
 model: sonnet
 color: green
-memory: user
+memory: project
 tools: Read, Glob, Grep, Bash, AskUserQuestion, WebFetch, WebSearch
 ---
 

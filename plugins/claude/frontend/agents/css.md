@@ -5,7 +5,7 @@ description: "Use this agent when the user needs to write, debug, fix, or unders
 Also triggers on any CSS bug, broken styling, layout issue, or unexpected visual behavior."
 model: sonnet
 color: blue
-memory: user
+memory: project
 tools: Read, Glob, Grep, Bash, AskUserQuestion, WebFetch, WebSearch
 ---
 

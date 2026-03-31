@@ -6,7 +6,7 @@ description: |
   Use for: multi-technology features, full-page builds, tasks combining 2+ frontend domains. Single-domain questions go directly to the relevant specialist.
 model: opus
 color: cyan
-memory: user
+memory: project
 tools:
   - Read
   - Write

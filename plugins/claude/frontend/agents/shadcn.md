@@ -5,7 +5,7 @@ description: "Use this agent when the user needs to use, debug, fix, or understa
 Trigger on: shadcn, shadcn/ui, npx shadcn, components.json, cn() utility, or any component name (Button, Card, Dialog, Sheet, Drawer, Table, Tabs, Form, Input, Select, etc.), or any shadcn component bug or styling issue."
 model: sonnet
 color: cyan
-memory: user
+memory: project
 tools: Read, Glob, Grep, Bash, AskUserQuestion, WebFetch, WebSearch
 ---
 

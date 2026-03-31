@@ -6,7 +6,7 @@ description: |
   Trigger on: Material Design, MD3, Material You, --md-sys-*, --md-ref-*, --md-comp-*, @material/web, md-filled-button, tonal palette, HCT color, surface tint, Material Theme Builder, or any MD3 bug or unexpected behavior.
 model: sonnet
 color: green
-memory: user
+memory: project
 tools: Read, Glob, Grep, Bash, AskUserQuestion, WebFetch, WebSearch
 ---
 
