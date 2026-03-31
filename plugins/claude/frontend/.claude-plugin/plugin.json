@@ -1,7 +1,7 @@
 {
   "name": "frontend",
-  "version": "1.6.0",
-  "description": "Frontend development orchestrator — coordinates CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, Material Design 3, and frontend design specialists for cross-domain frontend tasks",
+  "version": "1.7.0",
+  "description": "Frontend development orchestrator — coordinates CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, Material Design 3, HTMX, Go (templ, chi, echo, gin), and frontend design specialists for cross-domain frontend tasks",
   "author": {
     "name": "pragmabits",
     "email": "leonardoleoncio96@gmail.com"
@@ -26,7 +26,15 @@
     "responsive",
     "animation",
     "theming",
-    "agent"
+    "agent",
+    "htmx",
+    "go",
+    "golang",
+    "templ",
+    "server-side-rendering",
+    "hypermedia",
+    "chi",
+    "echo"
   ],
   "commands": "./commands",
   "agents": [
@@ -36,6 +44,7 @@
     "./agents/vuejs.md",
     "./agents/shadcn.md",
     "./agents/fontawesome.md",
-    "./agents/material-design.md"
+    "./agents/material-design.md",
+    "./agents/htmx-go.md"
   ]
 }

@@ -1,7 +1,7 @@
 ---
 name: frontend
 description: |
-  Use this agent for cross-domain frontend tasks spanning 2+ specialist areas (CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, Material Design 3, design). Orchestrates specialist agents — does NOT implement work directly.
+  Use this agent for cross-domain frontend tasks spanning 2+ specialist areas (CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, Material Design 3, HTMX + Go, design). Orchestrates specialist agents — does NOT implement work directly.
 
   Use for: multi-technology features, full-page builds, tasks combining 2+ frontend domains. Single-domain questions go directly to the relevant specialist.
 model: opus
@@ -76,6 +76,7 @@ Dispatch these via the Agent tool with the exact `subagent_type` shown:
 | shadcn/ui Expert | `frontend:shadcn` | shadcn/ui components, CLI, theming, configuration, framework integration |
 | Font Awesome Expert | `frontend:fontawesome` | Icon selection, animation, styling, framework integration, accessibility |
 | Material Design 3 Expert | `frontend:material-design` | MD3 tokens, color system, typography, shape, elevation, motion, theming, layout |
+| HTMX + Go Expert | `frontend:htmx-go` | HTMX attributes, extensions, Go handlers (chi/echo/gin), a-h/templ components, forms, SSE/WebSocket real-time |
 
 **Available Skills** (for reference, invokable by you or by specialists):
 
@@ -85,6 +86,7 @@ Dispatch these via the Agent tool with the exact `subagent_type` shown:
 - **shadcn/ui**: shadcn
 - **Font Awesome**: fontawesome-icons
 - **Material Design 3**: md3-foundations, md3-components, md3-layout, md3-theming
+- **HTMX + Go**: htmx-attributes, htmx-extensions, go-templ, go-handlers, htmx-go-forms, htmx-go-realtime
 - **Design**: frontend-design
 
 ## Decision Rules
@@ -99,6 +101,9 @@ Single-domain task?
 │   "Set up dark mode"     → frontend:tailwindcss
 │   "Add a date picker"    → frontend:shadcn
 │   "Icon for delete?"     → frontend:fontawesome
+│   "hx-target not working?" → frontend:htmx-go
+│   "Go chi HTMX handler"  → frontend:htmx-go
+│   "Set up templ components" → frontend:htmx-go
 │
 └── 2+ domains?
     ├── Trivial (one element, one class) → primary specialist only. Done.

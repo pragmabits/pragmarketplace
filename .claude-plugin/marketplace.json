@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Collection of Claude plugins for guidelines, agents, and skills focused on development.",
-    "version": "1.8.0"
+    "version": "1.9.0"
   },
   "plugins": [
     {
@@ -95,8 +95,8 @@
     {
       "name": "frontend",
       "source": "./plugins/claude/frontend",
-      "description": "Frontend development orchestrator — coordinates CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, Material Design 3, and frontend design specialists for cross-domain frontend tasks",
-      "version": "1.3.0",
+      "description": "Frontend development orchestrator — coordinates CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, Material Design 3, HTMX + Go, and frontend design specialists for cross-domain frontend tasks",
+      "version": "1.4.0",
       "author": {
         "name": "pragmabits",
         "email": "leonardoleoncio96@gmail.com"
@@ -112,7 +112,8 @@
         "./agents/vuejs.md",
         "./agents/shadcn.md",
         "./agents/fontawesome.md",
-        "./agents/material-design.md"
+        "./agents/material-design.md",
+        "./agents/htmx-go.md"
       ],
       "keywords": [
         "frontend",
@@ -132,7 +133,13 @@
         "responsive",
         "animation",
         "theming",
-        "agent"
+        "agent",
+        "htmx",
+        "go",
+        "golang",
+        "templ",
+        "server-side-rendering",
+        "hypermedia"
       ]
     }
   ]
