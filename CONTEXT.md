@@ -162,7 +162,7 @@ name: agent-name
 description: What this agent does
 model: sonnet|opus|haiku
 color: color-name
-memory: user|disabled
+memory: project|disabled
 tools:
   - Bash
   - Read
