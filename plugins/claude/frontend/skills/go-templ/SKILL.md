@@ -1,6 +1,6 @@
 ---
 name: go-templ
-description: "This skill should be used when the user asks about a-h/templ, \".templ files\", \"templ component\", \"templ generate\", \"templ.Handler\", \"templ.Component\", \"templ partial\", \"templ layout\", \"templ slot\", \"templ children\", \"{ children... }\", \"templ if/for\", \"templ CSS\", compiling templ files, Air live reload with templ, or Go server-side HTML rendering using the templ library. Also triggers on questions about type-safe Go HTML templates, replacing html/template with templ, or generating Go code from .templ files."
+description: "This skill should be used when the user asks about a-h/templ — component creation, layouts, partials, children slots, conditionals, CSS, compilation, Air live reload, or any Go server-side HTML rendering using the templ library. Also triggers on type-safe Go HTML templates or replacing html/template with templ."
 ---
 
 # Go templ Components

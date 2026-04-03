@@ -1,6 +1,6 @@
 ---
 name: htmx-attributes
-description: "This skill should be used when the user asks about HTMX attributes, \"hx-get\", \"hx-post\", \"hx-put\", \"hx-delete\", \"hx-target\", \"hx-swap\", \"hx-trigger\", \"hx-boost\", \"hx-indicator\", \"hx-push-url\", \"hx-swap-oob\", \"hx-select\", \"hx-include\", \"hx-vals\", \"hx-headers\", \"hx-params\", \"hx-confirm\", \"hx-sync\", \"hx-encoding\", \"hx-on\", \"out-of-band swap\", \"HTMX attribute\", trigger modifiers (delay, throttle, from, changed, once, every, intersect, revealed), swap strategies (innerHTML, outerHTML, beforeend, afterend, delete, none), or needs help with HTMX declarative behavior, unexpected HTMX request behavior, or understanding how HTMX attributes interact."
+description: "This skill should be used when the user asks about HTMX attributes, how HTMX controls page behavior, swap strategies, trigger configuration, out-of-band updates, request/response headers, or any unexpected HTMX request or DOM update behavior. Covers all hx-* attributes, trigger modifiers, and swap modes."
 ---
 
 # HTMX Attributes

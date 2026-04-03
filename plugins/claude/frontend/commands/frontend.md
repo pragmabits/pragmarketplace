@@ -1,6 +1,6 @@
 ---
 name: frontend
-description: Frontend development orchestrator — coordinates CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, and design specialists for cross-domain frontend tasks
+description: Frontend development orchestrator — coordinates CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, Material Design 3, HTMX + Go, and design specialists for cross-domain frontend tasks
 argument-hint: "[task description] - e.g. 'build a Vue dashboard with Tailwind, shadcn components, and FA icons'"
 ---
 
@@ -17,6 +17,8 @@ Entrypoint for the frontend orchestrator agent. This command coordinates multipl
 - `/nuxt` — Nuxt 3 pages, server routes, middleware, SSR
 - `/shadcn` — shadcn/ui components, CLI, theming
 - `/fontawesome` — Font Awesome icons, animation, styling
+- `/htmx-go` — HTMX attributes, Go handlers, templ components, SSE/WebSocket
+- `/material-design` — MD3 tokens, theming, color, typography, layout
 
 ## User Context
 
@@ -61,7 +63,7 @@ Follow your Workflow:
 3. Execute — dispatch specialist agents in batches, track progress
 4. Complete — summarize results, run commit strategy
 
-Remember your Non-Negotiable Rules: delegate ALL code to specialists (frontend:css, frontend:tailwindcss, frontend:vuejs, frontend:shadcn, frontend:fontawesome, frontend:material-design). Never write frontend code yourself. Use AskUserQuestion for every question, confirmation, and choice.
+Remember your Non-Negotiable Rules: delegate ALL code to specialists (frontend:css, frontend:tailwindcss, frontend:vuejs, frontend:shadcn, frontend:fontawesome, frontend:material-design, frontend:htmx-go). Never write frontend code yourself. Use AskUserQuestion for every question, confirmation, and choice.
 ```
 
 ### Post-agent: Commit strategy

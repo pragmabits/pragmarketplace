@@ -1,6 +1,6 @@
 ---
 name: go-handlers
-description: "This skill should be used when the user asks about Go HTTP handlers for HTMX, \"http.HandlerFunc\", \"HX-Request header\", \"fragment vs full page\", HTMX request detection in Go, chi router handlers, echo handlers, gin handlers, Go middleware for HTMX, CORS in Go, HTMX response headers in Go (HX-Location, HX-Redirect, HX-Trigger, HX-Retarget), setting up routes for HTMX, handler structure for HTMX responses, or Go server routing patterns in an HTMX project."
+description: "This skill should be used when the user asks about Go HTTP handlers for HTMX — request detection, fragment vs full-page responses, router setup (chi, echo, gin, fiber), middleware, CORS, HTMX response headers, or any Go server-side routing and handler pattern in an HTMX project."
 ---
 
 # Go Handlers for HTMX

@@ -1,6 +1,6 @@
 ---
 name: htmx-extensions
-description: "This skill should be used when the user asks about HTMX extensions, \"hx-ext\", \"idiomorph\", \"morphdom\", \"alpine-morph\", \"multi-swap\", \"json-enc\", \"loading-states\", \"path-deps\", \"preload\", \"remove-me\", \"restored\", \"debug\", HTMX extension configuration, writing a custom HTMX extension, WebSocket via HTMX extension, SSE via HTMX extension, or morphing-based DOM updates to preserve Alpine.js or other client state."
+description: "This skill should be used when the user asks about HTMX extensions, morphing-based DOM updates, preserving client state across swaps, multi-target updates, SSE or WebSocket via HTMX, loading states, or writing custom HTMX extensions. Covers idiomorph, morphdom, alpine-morph, multi-swap, json-enc, loading-states, preload, and all hx-ext configuration."
 ---
 
 # HTMX Extensions

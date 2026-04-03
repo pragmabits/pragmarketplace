@@ -1,6 +1,6 @@
 ---
 name: htmx-go-forms
-description: "This skill should be used when the user asks about HTMX form handling with Go, \"hx-post\" form, form validation in Go with HTMX, \"422\" validation response, inline validation, \"hx-trigger='blur'\", real-time field validation, form error display, re-rendering a form on error, file upload with HTMX and Go, \"hx-encoding='multipart/form-data'\", multi-step forms with HTMX, or any pattern combining HTML forms, HTMX attributes, and Go server-side validation or form processing."
+description: "This skill should be used when the user asks about form handling with HTMX and Go — server-side validation, inline field validation, form error display, file uploads, multi-step forms, or any pattern combining HTML forms with HTMX attributes and Go server-side processing."
 ---
 
 # HTMX + Go Form Handling

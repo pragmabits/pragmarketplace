@@ -1,6 +1,6 @@
 ---
 name: htmx-go-realtime
-description: "This skill should be used when the user asks about real-time features with HTMX and Go, \"SSE\", \"server-sent events\", \"hx-ext='sse'\", \"sse-connect\", \"sse-swap\", \"text/event-stream\", \"http.Flusher\", WebSocket with HTMX, \"hx-ext='ws'\", \"ws-connect\", \"ws-send\", live updates, \"polling\", \"hx-trigger='every Xs'\", push notifications, real-time dashboard, streaming HTML responses from Go, or long-running Go handlers that push data to the browser."
+description: "This skill should be used when the user asks about real-time features with HTMX and Go — server-sent events (SSE), WebSocket, polling, live updates, push notifications, streaming HTML responses, real-time dashboards, or any pattern where the server pushes data to the browser in an HTMX+Go project."
 ---
 
 # HTMX + Go Real-Time Patterns
