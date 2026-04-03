@@ -1,11 +1,15 @@
 ---
 name: htmx-go
-description: "Use this agent when the user needs to write, debug, fix, or understand HTMX or Go web applications — HTMX attributes (hx-get, hx-post, hx-target, hx-swap, hx-trigger, hx-boost, hx-swap-oob, hx-indicator, hx-push-url, hx-ext), HTMX extensions (WebSocket, SSE, idiomorph, morphdom, alpine-morph, multi-swap), Go server handlers (net/http, chi, echo, gin, fiber), a-h/templ components, Go template rendering, HTMX request/response header patterns, fragment vs full-page routing, form handling and validation, real-time updates with SSE or WebSocket, CSRF and middleware patterns, or any HTMX+Go integration bug or unexpected behavior."
+description: "Use this agent when the user needs to write, debug, fix, or understand HTMX or Go web applications — HTMX attributes, extensions, Go server handlers (net/http, chi, echo, gin, fiber), a-h/templ components, form handling, real-time updates (SSE, WebSocket), CSRF, or any server-driven interactive web behavior with Go backends.
+
+Also triggers on any HTMX bug, broken interaction, unexpected web behavior, drag and drop, sortable lists, dynamic content loading, or any Go+HTML web development issue."
 model: sonnet
 color: green
 memory: project
 tools:
   - Read
+  - Write
+  - Edit
   - Glob
   - Grep
   - Bash
