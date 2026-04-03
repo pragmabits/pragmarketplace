@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Frontend development orchestrator — coordinates CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, Material Design 3, HTMX, Go (templ, chi, echo, gin), and frontend design specialists for cross-domain frontend tasks",
   "author": {
     "name": "pragmabits",
