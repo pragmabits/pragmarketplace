@@ -1,6 +1,6 @@
 # Git Plugin
 
-Strategic commit tool powered by the commit-maker agent for semantic analysis, intelligent partitioning, and validated commits.
+Strategic commit tool with semantic analysis, whole-file staging, and hook-validated commits.
 
 ## Commit Format
 
@@ -11,7 +11,7 @@ type: description
 - Single line only — no body, no footer, no signatures (configurable via settings)
 - No scope (parentheses forbidden)
 - Language follows the dominant language from repository commit history (overridable via settings)
-- Validated before every commit (via python script, git hook, or both — see Project Settings)
+- Validated by git hooks on every commit
 
 Valid types: `feat` | `fix` | `docs` | `style` | `refactor` | `test` | `chore` | `perf`
 
@@ -20,34 +20,35 @@ Additional types can be configured via project settings (see below).
 ## Architecture
 
 ```
-/commit (command) → commit-maker (agent) → staging tool + validator
-                                         ↑
-                               safety hook (PreToolUse)
+/commit (command) → commit skill (inline workflow) → git add + git commit
+                                                      ↑
+                                            git hooks (commit-msg, pre-commit)
+                                                      ↑
+                                            safety hook (PreToolUse)
 ```
 
 1. User runs `/commit [context]`
 2. Safety hook validates git commands (blocks `git add -p`, `git -C`, config changes)
-3. Command delegates to the commit-maker agent
-4. Agent analyzes, plans, validates, and executes commits
+3. Commit skill runs inline — analyzes, stages, commits
+4. Git hooks validate messages and block dangerous content
 
 ## Features
 
 - **Semantic analysis**: Groups changes by behavioral intent, not file count
-- **Hunk-level staging**: Non-interactive `.pyz` tool (Dulwich-based) for surgical commits
-- **Unstage support**: Reset staged files back to HEAD state
-- **Mandatory validation**: Configurable strategy — python script, git hook, or both
-- **Intelligent partitioning**: Separates refactoring from behavioral changes
+- **Whole-file staging**: Simple `git add` — no hunk-level complexity
+- **Hook-based validation**: Git hooks enforce commit format, block secrets, and guard against dangerous content
+- **Inline workflow**: Runs directly in the main context — no sub-agent, no extra token cost
+- **Intelligent partitioning**: Separates refactoring from behavioral changes at the file level
 - **Pattern learning**: Adapts to the project's commit history and language
 - **Minimal interactivity**: Asks only when the commit strategy is genuinely ambiguous
 - **Amend mode**: Amend the last commit when explicitly requested
 - **Safety hooks**: PreToolUse hook blocks dangerous git patterns
 - **Project settings**: Per-project configuration via `.claude/git.local.md`
-- **.gitignore awareness**: Parser respects .gitignore when scanning for untracked files
 
 ## Usage
 
 ```bash
-# Let the agent analyze and decide
+# Let the workflow analyze and decide
 /commit
 
 # Provide context
@@ -56,25 +57,21 @@ Additional types can be configured via project settings (see below).
 # Request splitting
 /commit split by module
 
-# Request hunk-level staging
-/commit use patch mode for independent changes
-
 # Amend the last commit
 /commit amend, I forgot to add the config file
 ```
 
 ## How It Works
 
-The commit-maker agent:
+The commit workflow runs inline (no sub-agent):
 
 1. **Analyzes** the repository — `git status`, `git diff HEAD`, `git diff --cached`, `git log`
 2. **Reads settings** — checks `.claude/git.local.md` for project-specific configuration
 3. **Performs semantic diff analysis** — determines commit type and boundaries
-4. **Plans partitioning** — explicit justification for how changes are grouped
-5. **Stages** — whole files via `git add`, specific hunks via the staging tool, or unstages via unstage mode
-6. **Validates** — runs validation per configured strategy; aborts on failure
-7. **Commits** — only after validation passes (supports amend mode)
-8. **Reports** — commits created, final status, any blocks
+4. **Plans partitioning** — groups files by semantic purpose
+5. **Stages** — whole files via `git add`
+6. **Commits** — git hooks validate the message; on failure, fixes and retries
+7. **Reports** — commits created, final status, any blocks
 
 ## Commit Convention
 
@@ -94,52 +91,6 @@ The commit-maker agent:
 - Allowed characters: Unicode letters, digits, spaces, and `, . / + -`
 - No scope, no body, no co-authored-by, no signatures
 - Breaking changes: use `!` after type (e.g., `feat!: remove legacy API`)
-
-## Staging Tool
-
-The staging tool (`tools/git-staging.pyz`) replaces `git add -p` for non-interactive environments.
-
-**Parse** — read-only analysis:
-```bash
-python "tools/git-staging.pyz" parse --repo .
-```
-
-**Stage** — selective hunk staging:
-```bash
-python "tools/git-staging.pyz" stage --repo . --spec '{"file.py": [0, 2], "other.py": "all"}'
-```
-
-**Unstage** — reset files to HEAD state:
-```bash
-python "tools/git-staging.pyz" unstage --repo . --spec '{"file.py": "all"}'
-```
-
-**Commit** — stage + commit in one step:
-```bash
-python "tools/git-staging.pyz" commit --repo . --spec '{"file.py": [0]}' --message "fix: description"
-```
-
-Spec values: `"all"` (whole file), `[0, 2]` (hunk indices), `"delete"` (file deletion).
-
-The commit mode does not validate messages — run `validate-commit.py` first if your validation strategy requires it.
-
-## Validator
-
-```bash
-# Basic validation
-python scripts/validate-commit.py "feat: add login endpoint"
-
-# With extra types
-python scripts/validate-commit.py --extra-types build,ci,revert "build: update webpack config"
-
-# With body support
-python scripts/validate-commit.py --allow-body "feat: add auth
-
-Implements JWT-based authentication with refresh tokens."
-
-# With max length
-python scripts/validate-commit.py --max-length 72 "feat: add login"
-```
 
 ## Project Settings
 
@@ -162,7 +113,6 @@ Available settings:
 - **language**: Override commit message language (default: detected from git log)
 - **allow_body**: Allow multi-line commit messages (default: `false`)
 - **max_length**: Maximum description length in characters (default: no limit)
-- **validation_strategy**: How commit messages are validated — `script` (python validator only, default), `hook` (git handles it transparently), or `both`. Set by `/commit-setup --apply`.
 
 After editing, restart Claude Code for changes to take effect.
 
@@ -177,7 +127,7 @@ See `examples/git.local.md` for a complete template.
 
 The plugin includes a PreToolUse hook that blocks:
 - `git add -p` / `--patch` — interactive, fails in headless environments
-- `git -C` — causes path resolution issues with staging tool
+- `git -C` — causes path resolution issues
 - `git config user.name/email` — intrusive identity modifications
 
 ## Git Hooks (Native Validation)
@@ -185,7 +135,7 @@ The plugin includes a PreToolUse hook that blocks:
 The plugin includes native git hooks that enforce commit conventions at the git level — not just when using Claude Code, but from any git client (terminal, IDE, CI).
 
 **Available hooks:**
-- `commit-msg` — validates commit message format (mirrors `validate-commit.py`)
+- `commit-msg` — validates commit message format
 - `pre-commit` — blocks secrets, large files, no-commit markers, and blocklisted file types
 - `prepare-commit-msg` — drafts a conventional commit message from staged files
 - `post-commit` — tracks commits since last tag and suggests when to create a release
@@ -196,7 +146,7 @@ The plugin includes native git hooks that enforce commit conventions at the git 
 /commit-setup --apply
 ```
 
-Choose your validation strategy and optional hooks when prompted.
+Choose your hooks when prompted.
 
 **Manual installation:**
 
@@ -210,10 +160,10 @@ The hooks read `.claude/git.local.md` for project-specific settings (extra_types
 ## Important Rules
 
 1. **Git config preserved** — never modifies `user.name` or `user.email`
-2. **Mandatory validation** — every message validated per configured strategy before commit
+2. **Hook-based validation** — git hooks validate every message on commit
 3. **No git -C flag** — all commands run in current working directory
-4. **Refactor/behavior separation** — pure refactoring and behavioral changes go in separate commits when separable
-5. **Message accuracy** — the message must accurately describe every hunk in `git diff --cached`
+4. **Refactor/behavior separation** — pure refactoring and behavioral changes go in separate commits when separable at the file level
+5. **Message accuracy** — the message must accurately describe the staged changes
 6. **Amend only on request** — never amends automatically
 
 ## Examples
@@ -233,23 +183,13 @@ fix: fix fee calculation in payment
 docs: update deployment instructions
 ```
 
-### Mixed changes in one file
-
-`service.go` has a new feature + a bug fix:
-
-```
-/commit use patch mode
-```
-
-The agent parses hunks, stages them separately, and creates two commits.
-
 ### Amend last commit
 
 ```
 /commit amend, forgot to include the migration file
 ```
 
-The agent stages the migration file and amends the last commit.
+Stages the migration file and amends the last commit.
 
 ### Automatic analysis
 
@@ -257,7 +197,7 @@ The agent stages the migration file and amends the last commit.
 /commit
 ```
 
-The agent determines the strategy autonomously, only asking when genuinely ambiguous.
+Determines the strategy autonomously, only asking when genuinely ambiguous.
 
 ## Installation
 
@@ -266,6 +206,16 @@ Place in plugins directory:
 - `<project>/.claude/plugins/git/` (local)
 
 ## Version History
+
+### v3.0.0 — April 2026
+- Replaced sub-agent architecture with inline commit workflow
+- Removed hunk-level staging — whole-file staging only via `git add`
+- Removed Python script validation — git hooks are the sole validation mechanism
+- Commit skill is now self-contained — no agent dispatch, no extra token cost
+- Simplified permission rules (removed Python script/staging tool entries)
+- Added `git reset HEAD` permission rule for unstaging
+- Added hook installation check at workflow start
+- Retired `validate-commit.py` and `git-staging.pyz` (to be removed separately)
 
 ### v2.3.1 — March 2026
 - Added `validation_strategy` setting (`script` | `hook` | `both`) to `.claude/git.local.md`

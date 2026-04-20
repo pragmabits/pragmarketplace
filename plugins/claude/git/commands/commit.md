@@ -1,12 +1,12 @@
 ---
 name: commit
-description: Strategic commits using intelligent repository analysis
+description: Strategic commits with semantic analysis and hook-validated messages
 argument-hint: [context or instruction] - e.g. "complete feature" or "split by context"
 ---
 
 # Strategic Git Commit
 
-Convenient entrypoint for the commit-maker agent. All commit logic — analysis, staging, validation, partitioning, and execution — is handled by the agent.
+Entrypoint for the commit workflow. All logic runs inline — no sub-agent.
 
 ## User Context
 
@@ -16,8 +16,6 @@ $ARGUMENTS
 
 ### Resolve plugin root
 
-Before invoking the agent, determine the absolute path to this plugin's root directory:
-
 ```
 Plugin root: ${CLAUDE_PLUGIN_ROOT}
 ```
@@ -26,26 +24,18 @@ Plugin root: ${CLAUDE_PLUGIN_ROOT}
 
 If `$ARGUMENTS` is exactly `--resolve-root`:
 - Output the plugin root path: `${CLAUDE_PLUGIN_ROOT}`
-- Do not invoke the agent
 - Stop here
 
-### Invoke agent
+### Execute commit workflow
 
-Otherwise, invoke the commit-maker agent with the resolved plugin root.
+Follow the commit skill workflow directly:
 
-Use the Agent tool with:
-- **subagent_type**: `git:commit-maker`
-- **description**: "Strategic commit analysis"
-- **prompt**: Include the plugin root and user context, then instruct the agent to execute its full workflow.
+1. Run the **Analyze** step — combined git status/diff/log command
+2. Follow **Strategize** — determine semantic boundaries, one commit per semantic change, whole-file staging only
+3. Execute **Stage and Commit** — `git add` + `git commit` for each planned commit. Hooks validate messages transparently.
+4. Apply **Decisions** — ask the user only when the strategy is genuinely ambiguous
+5. Run the **Report** step — show commits created and final status
 
-Prompt template:
-```
-Execute your full commit workflow for this repository.
+Use `$ARGUMENTS` as additional context for commit strategy decisions (e.g., "split by module" influences grouping, "amend" triggers amend mode).
 
-Plugin root: ${CLAUDE_PLUGIN_ROOT}
-User context: $ARGUMENTS
-
-Analyze the working tree, determine the commit strategy, validate messages, and execute commits following your complete workflow.
-```
-
-This command does not perform commits directly. The commit-maker agent owns all commit decisions, validation, and execution.
+Do not invoke any agent. The commit skill contains the complete workflow — follow it directly.

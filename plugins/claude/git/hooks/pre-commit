@@ -29,9 +29,9 @@ if [[ -z "$staged_files" ]]; then
 fi
 
 # --- Check 1: Blocklisted file types ---
-blocklist_pattern='\.(pyc|pyo|DS_Store|swp|swo)$|^\.env$|^\.env\.'
+blocklist_pattern='\.(pyc|pyo|DS_Store|swp|swo)$|^\.env$|^\.env\.(?!.*example)'
 while IFS= read -r file; do
-  if echo "$file" | grep -qE "$blocklist_pattern"; then
+  if echo "$file" | grep -qP "$blocklist_pattern"; then
     errors+=("blocklisted file type: $file")
   fi
 done <<< "$staged_files"

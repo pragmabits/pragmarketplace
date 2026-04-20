@@ -6,7 +6,7 @@ extra_types:
   ci: continuous integration configuration
   revert: revert a previous commit
 
-# Override commit message language. By default, the agent detects
+# Override commit message language. By default, the workflow detects
 # language from git log. Set this to force a specific language.
 # language: en
 
@@ -16,11 +16,6 @@ extra_types:
 
 # Maximum description length (characters). Default: no limit.
 # max_length: 72
-
-# Validation strategy for commit messages. Set by /commit-setup --apply.
-# Values: script (python validator only — default), hook (git hook only),
-# both (run python validator + git hook).
-# validation_strategy: script
 ---
 
 # Git Plugin Settings
@@ -32,7 +27,7 @@ After editing, restart Claude Code for changes to take effect.
 
 ## Recommended Permission Rules
 
-The commit-maker agent runs several Bash commands per commit. To avoid being prompted
+The commit workflow runs several Bash commands per commit. To avoid being prompted
 for each one, add these rules to `.claude/settings.json` in your project root:
 
 ```json
@@ -44,25 +39,11 @@ for each one, add these rules to `.claude/settings.json` in your project root:
       "Bash(git diff)",
       "Bash(git log *)",
       "Bash(git add *)",
+      "Bash(git reset HEAD*)",
       "Bash(git commit *)",
-      "Bash(python *validate-commit.py*)",
-      "Bash(python3 *validate-commit.py*)",
-      "Bash(python *git-staging.pyz*)",
-      "Bash(python3 *git-staging.pyz*)",
-      "Bash(echo *=== STATUS ===*)",
-      "Bash(echo *=== DIFF*)",
-      "Bash(echo *=== LOG ===*)",
-      "Bash(echo *=== COMMITS ===*)",
-      "Bash(echo *=== LATEST TAG ===*)",
-      "Bash(echo *=== ALL TAGS*)",
-      "Bash(echo *=== COMMITS SINCE LAST TAG ===*)",
-      "Bash(echo *=== HEAD ===*)",
-      "Bash(echo *NO_TAGS_FOUND*)",
-      "Bash(git describe *)",
-      "Bash(git tag --sort*)",
-      "Bash(git tag -a *)",
-      "Bash(git tag -l *)",
-      "Bash(git rev-parse *)"
+      "Bash(git tag *)",
+      "Bash(git rev-parse *)",
+      "Bash(test -x *)"
     ]
   }
 }
@@ -74,10 +55,10 @@ The safety hook still blocks dangerous patterns regardless of these rules.
 
 ## Native Git Hooks
 
-For validation that works outside of Claude Code (terminal, IDE, CI), install the
-commit-msg git hook via `/commit-setup --apply` and choose "Git hook" or "Both".
+The commit workflow relies on git hooks for message validation. Install them via
+`/commit-setup --apply`.
 
-Additional hooks available: `pre-commit` (secret/file guard), `prepare-commit-msg` (smart drafting), `post-commit` (tag advisor).
+Available hooks: `commit-msg` (message validation), `pre-commit` (secret/file guard), `prepare-commit-msg` (smart drafting), `post-commit` (tag advisor).
 
 ## Recommended .gitignore entries
 

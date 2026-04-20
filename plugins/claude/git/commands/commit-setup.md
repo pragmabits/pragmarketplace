@@ -1,12 +1,12 @@
 ---
 name: commit-setup
-description: Configure recommended permission rules to reduce prompts during commit-maker and tag-it execution
+description: Configure recommended permission rules and install git hooks for commit and tag-it execution
 argument-hint: "[--show | --apply]"
 ---
 
 # Commit Setup
 
-Configures permission allow rules so the commit-maker agent can run git and validation commands without prompting for each one.
+Configures permission allow rules and installs git hooks so the commit workflow can run without prompting for each command.
 
 ## Context
 
@@ -14,7 +14,7 @@ $ARGUMENTS
 
 ## What this does
 
-The commit-maker agent runs ~11 Bash commands per commit (git status, git diff, git add, python validate-commit.py, git commit, git log). Without permission rules, each one prompts for approval.
+The commit workflow runs several Bash commands per commit (git status, git diff, git add, git commit, git log). Without permission rules, each one prompts for approval.
 
 This command adds targeted allow rules to your project's `.claude/settings.json` so these specific commands run without prompts. The safety hook (`validate-git-command.sh`) still blocks dangerous patterns (git add -p, git -C, git config user.name/email).
 
@@ -31,25 +31,11 @@ These are the permission rules this command configures:
       "Bash(git diff)",
       "Bash(git log *)",
       "Bash(git add *)",
+      "Bash(git reset HEAD*)",
       "Bash(git commit *)",
-      "Bash(python *validate-commit.py*)",
-      "Bash(python3 *validate-commit.py*)",
-      "Bash(python *git-staging.pyz*)",
-      "Bash(python3 *git-staging.pyz*)",
-      "Bash(echo *=== STATUS ===*)",
-      "Bash(echo *=== DIFF*)",
-      "Bash(echo *=== LOG ===*)",
-      "Bash(echo *=== COMMITS ===*)",
-      "Bash(echo *=== LATEST TAG ===*)",
-      "Bash(echo *=== ALL TAGS*)",
-      "Bash(echo *=== COMMITS SINCE LAST TAG ===*)",
-      "Bash(echo *=== HEAD ===*)",
-      "Bash(echo *NO_TAGS_FOUND*)",
-      "Bash(git describe *)",
-      "Bash(git tag --sort*)",
-      "Bash(git tag -a *)",
-      "Bash(git tag -l *)",
-      "Bash(git rev-parse *)"
+      "Bash(git tag *)",
+      "Bash(git rev-parse *)",
+      "Bash(test -x *)"
     ]
   }
 }
@@ -61,12 +47,10 @@ These are the permission rules this command configures:
 
 Display the recommended permission rules and explain what each one allows.
 
-Then explain the validation strategy options:
-- **Python script only** (current default): The commit-maker agent calls `validate-commit.py` before each commit. Validation only happens inside Claude Code sessions.
-- **Git hook only**: A native `commit-msg` hook installed in `.git/hooks/` that validates every commit — inside Claude Code, from the terminal, from IDEs, everywhere. The agent no longer needs to call the validator script separately.
-- **Both** (recommended): The git hook catches everything at the git level, and the agent still validates before attempting the commit to get early feedback and avoid a hook rejection.
+Then explain the hook-based validation approach:
+- The commit workflow relies on native git hooks for all validation. A `commit-msg` hook installed in `.git/hooks/` validates every commit — inside Claude Code, from the terminal, from IDEs, everywhere. If the message is invalid, `git commit` fails and the error explains what's wrong.
 
-Tell the user they can run `/commit-setup --apply` to apply permissions and choose their validation strategy.
+Tell the user they can run `/commit-setup --apply` to apply permissions and install git hooks.
 
 ### If `$ARGUMENTS` is `--apply`
 
@@ -79,37 +63,18 @@ Tell the user they can run `/commit-setup --apply` to apply permissions and choo
 
 Use Bash to read and write the JSON file. Use `jq` for safe JSON manipulation.
 
-**Step 2 — Validation strategy:**
+**Step 2 — Install commit-msg hook:**
 
-First, detect the current validation setup:
-- Check if `.git/hooks/commit-msg` exists and is executable → git hook is currently active
-- The Python script is always available (it's part of the plugin) — the agent calls it by default
+Check if `.git/hooks/commit-msg` exists and is executable. Report the current state.
 
-Report what is currently configured before asking the user to choose.
+If the hook is not installed, copy `${CLAUDE_PLUGIN_ROOT}/hooks/commit-msg` to `.git/hooks/commit-msg` and make it executable.
 
-Use AskUserQuestion to ask which validation approach the user wants:
+If a `commit-msg` hook already exists:
+- Check if it was installed by this plugin (contains the marker comment `# commit-msg hook — validates commit message format.`)
+- If it's from this plugin, report it as already up to date
+- If it's from another source, warn the user and ask (via AskUserQuestion) whether to overwrite or skip
 
-1. **Python script only** — No git hook installed. The agent validates via `validate-commit.py` before each commit. (This is the current behavior.)
-2. **Git hook (recommended)** — Install `commit-msg` hook to `.git/hooks/commit-msg`. Every commit is validated by git itself, regardless of whether it comes from Claude Code, the terminal, or an IDE.
-3. **Both** — Install the git hook AND keep the agent-side validation. Belt and suspenders.
-4. **Skip** — Don't change the validation setup.
-
-Based on the user's choice:
-
-- **Python script only**: If a `commit-msg` git hook is currently installed, use AskUserQuestion to ask whether to remove it. If the user confirms, delete `.git/hooks/commit-msg`. If they decline, leave it in place and warn that both will remain active. Set `validation_strategy: script` in `.claude/git.local.md`.
-- **Git hook** or **Both**: Copy `${CLAUDE_PLUGIN_ROOT}/hooks/commit-msg` to `.git/hooks/commit-msg` and make it executable. If a `commit-msg` hook already exists that was NOT installed by this plugin (check if it contains the marker comment `# commit-msg hook — validates commit message format.`), warn the user and ask whether to overwrite or skip.
-  - **Git hook**: Set `validation_strategy: hook` in `.claude/git.local.md`.
-  - **Both**: Set `validation_strategy: both` in `.claude/git.local.md`.
-
-**Persisting the validation strategy:**
-
-After the user chooses, update `.claude/git.local.md` to record the choice:
-1. If `.claude/git.local.md` exists, read it, update or add `validation_strategy` in the YAML frontmatter, and write it back. Preserve all other frontmatter fields and markdown content.
-2. If `.claude/git.local.md` does not exist, create it with the `validation_strategy` field in frontmatter and a minimal body (use the example at `${CLAUDE_PLUGIN_ROOT}/examples/git.local.md` as a template).
-
-This setting controls the commit-maker agent's behavior — when set to `hook`, the agent skips `validate-commit.py` entirely and relies on the git hook.
-
-Report what was installed or removed.
+Report what was installed.
 
 **Step 3 — Additional git hooks (optional):**
 
