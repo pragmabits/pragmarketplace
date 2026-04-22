@@ -17,6 +17,7 @@ Format: `type: description`
 - Description starts with a lowercase letter or digit
 - Allowed characters: Unicode letters, digits, spaces, and `, . / + -`
 - Breaking change: `!` after type (e.g., `feat!: remove legacy API`)
+- Merge, revert, squash, cherry-pick e mensagens `fixup!`/`squash!`/`amend!` geradas pelo git pulam a validação automaticamente (paridade com `commitlint defaultIgnores`).
 
 ## Rules
 

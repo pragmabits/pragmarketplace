@@ -1,8 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# commit-msg hook — validates commit message format.
-# Mirrors the rules in validate-commit.py:
+# commit-msg hook — validates commit messages against Conventional Commits format:
 #   Format: type: description
 #   - Single line (unless allow_body is true)
 #   - No scope (parentheses forbidden)
@@ -10,6 +9,9 @@ set -euo pipefail
 #   - Description starts with lowercase letter or digit
 #   - Allowed chars: Unicode letters, digits, spaces, and , . / + -
 #   - Breaking change marker (!) allowed after type
+#
+# Skips validation for git-generated messages (merge, revert, squash, cherry-pick,
+# fixup!/squash!/amend!) — mirrors @commitlint/is-ignored defaultIgnores.
 
 COMMIT_MSG_FILE="$1"
 
@@ -24,6 +26,22 @@ message=$(sed '/^#/d' "$COMMIT_MSG_FILE")
 if [[ -z "$message" ]]; then
   echo "error: commit message is empty" >&2
   exit 1
+fi
+
+# --- Skip validation for git-generated commit messages ---
+# Primary detector: marker files that git creates during these operations.
+GIT_DIR=$(git rev-parse --git-dir 2>/dev/null || echo ".git")
+if [[ -f "$GIT_DIR/MERGE_HEAD" ]] \
+   || [[ -f "$GIT_DIR/SQUASH_MSG" ]] \
+   || [[ -f "$GIT_DIR/CHERRY_PICK_HEAD" ]] \
+   || [[ -f "$GIT_DIR/REVERT_HEAD" ]]; then
+  exit 0
+fi
+
+# Fallback: textual prefixes (covers --amend after marker files are cleared).
+subject_first_line=$(echo "$message" | head -1)
+if [[ "$subject_first_line" =~ ^(Merge\ |Revert\ |Merged\ |fixup!|squash!|amend!) ]]; then
+  exit 0
 fi
 
 # --- Read project settings from .claude/git.local.md ---

@@ -85,6 +85,17 @@
         "Git hooks validate the commit message",
         "Reports what was committed and what was left unstaged"
       ]
+    },
+    {
+      "id": 8,
+      "prompt": "Acabei de resolver conflitos de um merge de develop para main. Faça o commit de merge.",
+      "expected_output": "Cria o merge commit com a mensagem padrão do git (Merge branch 'develop') sem exigir prefixo Conventional Commits",
+      "expectations": [
+        "Reconhece que há um merge em andamento (MERGE_HEAD presente)",
+        "Não tenta reescrever a mensagem padrão do git com prefixo chore:",
+        "Deixa o hook commit-msg passar sem erro",
+        "Não aplica validação Conventional Commits a merge commits"
+      ]
     }
   ]
 }

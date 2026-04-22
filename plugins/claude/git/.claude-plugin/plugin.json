@@ -1,6 +1,6 @@
 {
   "name": "git",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Strategic git commit plugin — semantic analysis, whole-file staging, hook-validated commits, version tagging, native git hooks, safety hooks, and per-project settings",
   "author": {
     "name": "pragmabits",

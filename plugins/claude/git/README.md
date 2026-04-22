@@ -207,6 +207,11 @@ Place in plugins directory:
 
 ## Version History
 
+### v3.0.1 — April 2026
+- `commit-msg` hook agora pula validação para commits gerados pelo git (merge, revert, squash, cherry-pick, `fixup!`/`squash!`/`amend!`) — paridade com `@commitlint/is-ignored defaultIgnores`
+- Detecção primária via marker files (`MERGE_HEAD`, `SQUASH_MSG`, `CHERRY_PICK_HEAD`, `REVERT_HEAD`) e fallback textual por prefixo
+- Resolve caso em que `git merge` / `git revert` falhavam por tentar validar a mensagem padrão do git contra o formato Conventional Commits
+
 ### v3.0.0 — April 2026
 - Replaced sub-agent architecture with inline commit workflow
 - Removed hunk-level staging — whole-file staging only via `git add`
