@@ -1,0 +1,20 @@
+{
+  "name": "review",
+  "version": "1.0.0",
+  "description": "Independent Codex-based code review of the current git diff. Provides the /codex-review skill which runs codex-review.sh and presents the verdict, summary, and findings.",
+  "author": {
+    "name": "pragmabits",
+    "email": "leonardoleoncio96@gmail.com"
+  },
+  "homepage": "https://github.com/pragmabits/pragmarketplace",
+  "repository": "https://github.com/pragmabits/pragmarketplace",
+  "keywords": [
+    "code-review",
+    "codex",
+    "git-diff",
+    "review",
+    "pre-commit",
+    "second-opinion"
+  ],
+  "agents": []
+}
