@@ -1,0 +1,19 @@
+{
+  "name": "session",
+  "version": "1.0.0",
+  "description": "Session lifecycle helpers for Claude Code. Provides the /report-session skill which generates a structured markdown retrospective of the current working session (work completed, issues, learnings, decisions, pending items) as a handoff document for future sessions.",
+  "author": {
+    "name": "pragmabits",
+    "email": "leonardoleoncio96@gmail.com"
+  },
+  "homepage": "https://github.com/pragmabits/pragmarketplace",
+  "repository": "https://github.com/pragmabits/pragmarketplace",
+  "keywords": [
+    "session",
+    "report",
+    "retrospective",
+    "handoff",
+    "summary",
+    "workflow"
+  ]
+}
