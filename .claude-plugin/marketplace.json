@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Collection of Claude plugins for guidelines, agents, and skills focused on development.",
-    "version": "1.10.1"
+    "version": "1.11.0"
   },
   "plugins": [
     {
@@ -139,6 +139,48 @@
         "templ",
         "server-side-rendering",
         "hypermedia"
+      ]
+    },
+    {
+      "name": "review",
+      "source": "./plugins/claude/review",
+      "description": "Independent Codex-based code review of the current git diff. Provides the /codex-review skill which runs codex-review.sh and presents the verdict, summary, and findings.",
+      "version": "1.0.0",
+      "author": {
+        "name": "pragmabits",
+        "email": "leonardoleoncio96@gmail.com"
+      },
+      "homepage": "https://github.com/pragmabits/pragmarketplace",
+      "repository": "https://github.com/pragmabits/pragmarketplace",
+      "category": "tools",
+      "keywords": [
+        "code-review",
+        "codex",
+        "git-diff",
+        "review",
+        "pre-commit",
+        "second-opinion"
+      ]
+    },
+    {
+      "name": "session",
+      "source": "./plugins/claude/session",
+      "description": "Session lifecycle helpers for Claude Code. Provides the /report-session skill which generates a structured markdown retrospective of the current working session (work completed, issues, learnings, decisions, pending items) as a handoff document for future sessions.",
+      "version": "1.0.0",
+      "author": {
+        "name": "pragmabits",
+        "email": "leonardoleoncio96@gmail.com"
+      },
+      "homepage": "https://github.com/pragmabits/pragmarketplace",
+      "repository": "https://github.com/pragmabits/pragmarketplace",
+      "category": "tools",
+      "keywords": [
+        "session",
+        "report",
+        "retrospective",
+        "handoff",
+        "summary",
+        "workflow"
       ]
     }
   ]
