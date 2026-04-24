@@ -111,10 +111,16 @@ session/
 │   └── plugin.json
 └── skills/
     └── report-session/
-        └── SKILL.md   # Skill with metadata !-exec blocks and the report template
+        ├── SKILL.md                       # Skill with metadata !-exec blocks and the report template
+        └── scripts/
+            └── ensure-sessions-dir.sh     # Resolves and creates <repo-root>/.claude/sessions
 ```
 
 ## Version History
+
+### v1.0.1 — April 2026
+- Moved output-directory resolution into a bundled `ensure-sessions-dir.sh` script invoked via a single `bash` call in SKILL.md. Pre-authorized via `allowed-tools: Bash(bash:*)` so end users get no permission prompt.
+- Replaced the inline `dir=...; mkdir; printf` compound statement, which was rejected by Claude Code's permission matcher (compound / expansion checks).
 
 ### v1.0.0 — April 2026
 - Initial release. `/report-session` skill with language auto-detection, optional `--lang` override, structured template, conditional section rules, and git-aware output path.

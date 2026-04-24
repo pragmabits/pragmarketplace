@@ -15,7 +15,7 @@ Pragmatic provides ready-to-install plugins that extend Claude Code with special
 | **pragma-statusline** | 1.0.0 | Tools | `/pragma-status` | Custom Claude Code statusline with git and context metrics |
 | **frontend** | 1.8.0 | Frontend | `/frontend`, `/css`, `/tailwindcss`, `/vuejs`, `/nuxt`, `/shadcn`, `/fontawesome` | Cross-domain orchestrator bundling CSS, Tailwind CSS 4, Vue/Nuxt, shadcn/ui, and Font Awesome specialists |
 | **review** | 1.0.1 | Tools | `/codex-review` | Independent Codex-based code review of the current `git diff` — verdict, summary, and findings |
-| **session** | 1.0.0 | Tools | `/report-session` | Session retrospective — structured markdown report of work completed, issues, learnings, and pending items |
+| **session** | 1.0.1 | Tools | `/report-session` | Session retrospective — structured markdown report of work completed, issues, learnings, and pending items |
 
 ## Installation
 
