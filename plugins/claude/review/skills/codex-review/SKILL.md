@@ -2,6 +2,7 @@
 name: codex-review
 description: Independent Codex-based code review of the current `git diff`. Invoke with `/codex-review` optionally followed by raw script flags (e.g. `-c "focus text"`, `-s ./reviews`, `-e xhigh`). Presents the verdict, summary, and findings.
 argument-hint: "[raw flags, e.g. -c \"focus text\" | -s ./reviews | -e xhigh]"
+allowed-tools: Bash(bash:*)
 disable-model-invocation: true
 ---
 

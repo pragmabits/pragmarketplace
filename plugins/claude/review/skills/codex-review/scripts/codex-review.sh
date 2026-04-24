@@ -117,7 +117,7 @@ default_review_filename() {
   timestamp="$(date +%Y%m%d-%H%M%S)"
   extension="$(output_extension)"
 
-  printf 'codex-review-[%s-%s]-%s.%s\n' "$repo_name" "$branch_name" "$timestamp" "$extension"
+  printf 'codex-review-%s-%s-%s.%s\n' "$repo_name" "$branch_name" "$timestamp" "$extension"
 }
 
 resolve_save_file() {
