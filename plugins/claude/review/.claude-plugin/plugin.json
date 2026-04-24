@@ -1,6 +1,6 @@
 {
   "name": "review",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Independent Codex-based code review of the current git diff. Provides the /codex-review skill which runs codex-review.sh and presents the verdict, summary, and findings.",
   "author": {
     "name": "pragmabits",

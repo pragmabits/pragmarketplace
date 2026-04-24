@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Collection of Claude plugins for guidelines, agents, and skills focused on development.",
-    "version": "1.11.0"
+    "version": "1.11.1"
   },
   "plugins": [
     {
@@ -145,7 +145,7 @@
       "name": "review",
       "source": "./plugins/claude/review",
       "description": "Independent Codex-based code review of the current git diff. Provides the /codex-review skill which runs codex-review.sh and presents the verdict, summary, and findings.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": {
         "name": "pragmabits",
         "email": "leonardoleoncio96@gmail.com"
