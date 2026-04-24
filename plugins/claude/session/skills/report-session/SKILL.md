@@ -1,6 +1,7 @@
 ---
 name: report-session
 description: This skill should be used when the user asks to "finish", "generate session report", "write session report", "end session", "wrap up", or "summarize this session". Produces a structured markdown retrospective capturing work completed, issues, learnings, decisions, and pending items from the current conversation.
+allowed-tools: Bash(bash:*) Bash(git:*) Bash(date:*) Bash(echo:*)
 argument-hint: "[--lang xx-YY] [optional report title]"
 ---
 
@@ -49,9 +50,9 @@ Parse the arguments as follows:
 
 ## Output location
 
-**Output directory (already created):** !`dir="$({ git rev-parse --show-toplevel 2>/dev/null || pwd; })/.claude/sessions"; mkdir -p "$dir"; printf '%s' "$dir"`
+**Output directory (already created):** !`bash "${CLAUDE_SKILL_DIR}/scripts/ensure-sessions-dir.sh"`
 
-The directory above was resolved and created at skill-render time. Use that exact absolute path for the Write tool — do not call `mkdir` yourself, and do not recompute the path with `git rev-parse` or `pwd`.
+The directory above was resolved and created at skill-render time. Use that exact absolute path for the Write tool — do not call `mkdir` yourself, and do not recompute the path.
 
 **Filename template:** `<git-user>-<timestamp>.md`
 
