@@ -1,6 +1,6 @@
 ---
 name: commit-setup
-description: Configure recommended permission rules and install git hooks for commit and tag-it execution
+description: Configure recommended permission rules and install git hooks for commit execution
 argument-hint: "[--show | --apply]"
 ---
 
@@ -33,7 +33,6 @@ These are the permission rules this command configures:
       "Bash(git add *)",
       "Bash(git reset HEAD*)",
       "Bash(git commit *)",
-      "Bash(git tag *)",
       "Bash(git rev-parse *)",
       "Bash(test -x *)"
     ]
@@ -70,7 +69,7 @@ Check if `.git/hooks/commit-msg` exists and is executable. Report the current st
 If the hook is not installed, copy `${CLAUDE_PLUGIN_ROOT}/hooks/commit-msg` to `.git/hooks/commit-msg` and make it executable.
 
 If a `commit-msg` hook already exists:
-- Check if it was installed by this plugin (contains the marker comment `# commit-msg hook — validates commit message format.`)
+- Check if it was installed by this plugin (contains the marker comment `# commit-msg hook — validates commit messages against Conventional Commits format.`)
 - If it's from this plugin, report it as already up to date
 - If it's from another source, warn the user and ask (via AskUserQuestion) whether to overwrite or skip
 
@@ -78,23 +77,21 @@ Report what was installed.
 
 **Step 3 — Additional git hooks (optional):**
 
-First, detect which additional hooks are already installed by checking `.git/hooks/` for `pre-commit`, `prepare-commit-msg`, and `post-commit`. Report which are currently active.
+First, detect which additional hooks are already installed by checking `.git/hooks/` for `pre-commit` and `prepare-commit-msg`. Report which are currently active.
 
 Use AskUserQuestion to ask which additional hooks the user wants to install:
 
 1. **pre-commit (secret and file guard)** — Blocks secrets, large files, no-commit markers, and blocklisted file types from being committed. Works everywhere, not just in Claude Code.
 2. **prepare-commit-msg (smart drafting)** — Pre-populates commit messages with a conventional-commits draft based on staged files. Useful when committing from terminal or IDE.
-3. **post-commit (tag advisor)** — Tracks commits since last tag and writes a suggestion file when it's time to create a release tag.
-4. **All of the above**
-5. **Skip** — Don't install additional hooks.
+3. **All of the above**
+4. **Skip** — Don't install additional hooks.
 
 For each selected hook, copy from `${CLAUDE_PLUGIN_ROOT}/hooks/<hook-name>` to `.git/hooks/<hook-name>` and make executable.
 
 If any hook already exists and was NOT installed by this plugin, warn the user and ask whether to overwrite or skip. To determine if a hook was installed by this plugin, check for these marker comments near the top of each script:
-- `commit-msg`: `# commit-msg hook — validates commit message format.`
+- `commit-msg`: `# commit-msg hook — validates commit messages against Conventional Commits format.`
 - `pre-commit`: `# pre-commit hook — catches dangerous content before it enters history.`
 - `prepare-commit-msg`: `# prepare-commit-msg hook — drafts a conventional commit message from staged changes.`
-- `post-commit`: `# post-commit hook — tracks commits since last tag and suggests when to tag.`
 
 If the marker is present, report the hook as already up to date.
 

@@ -56,13 +56,6 @@ elif [[ "$style_count" -eq "$total_count" ]]; then
   commit_type="style"
 fi
 
-# Check if diff looks like a fix (contains common fix patterns)
-if git diff --cached | grep -qEi '(\bfix\b|bug|patch|correct|repair|resolve)'; then
-  if [[ "$commit_type" == "feat" ]]; then
-    commit_type="fix"
-  fi
-fi
-
 # --- Build draft message ---
 draft="${commit_type}: "
 

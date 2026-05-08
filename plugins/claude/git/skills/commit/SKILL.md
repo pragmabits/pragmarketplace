@@ -1,29 +1,41 @@
 ---
 name: commit
 description: "Strategic git commit skill with semantic analysis, whole-file staging, and hook-validated commits following Conventional Commits (type: description, no scope). Use this skill when the user wants to commit changes, create commits, split changes into atomic commits, organize staged/unstaged work into proper commits, or run /commit. Also use when the user mentions committing, staging for commit, conventional commits format, separating refactoring from feature commits, or wants help figuring out the right commit strategy for their changes."
+argument-hint: "[context or instruction] - e.g. \"complete feature\" or \"split by context\""
 ---
 
 # Strategic Git Commit
 
 Self-contained commit workflow. Analyzes the working tree, determines semantic boundaries, stages whole files, and commits with hook-validated messages. No sub-agent, no hunk-level staging, no Python scripts.
 
+## User Context
+
+```
+$ARGUMENTS
+```
+
+Use `$ARGUMENTS` as additional context for commit strategy decisions (e.g., `split by module` influences grouping, `amend` triggers amend mode). If `$ARGUMENTS` is exactly `--resolve-root`, output the plugin root path `${CLAUDE_PLUGIN_ROOT}` and stop without running the workflow.
+
 ## Commit Convention
 
-Format: `type: description`
+Format: subject line `type: description`, optionally followed by a blank line and a body.
 
-- Exactly one line — no body, no footer, no metadata
+- Subject on the first line, validated by the `commit-msg` git hook
 - No scope (parentheses forbidden)
 - Valid types: feat | fix | docs | style | refactor | test | chore | perf
 - Description starts with a lowercase letter or digit
-- Allowed characters: Unicode letters, digits, spaces, and `, . / + -`
+- Allowed characters in the description: Unicode letters, digits, spaces, and `, . / + - : ' # >`
 - Breaking change: `!` after type (e.g., `feat!: remove legacy API`)
+- Body is optional; when present, it must be separated from the subject by a single blank line. Use it for context, motivation, or anything that does not fit on the subject line.
+- Body content is unrestricted *except* for control and bidirectional Unicode characters: C0/C1 controls (other than tab/LF/CR), bidi formatting (`U+202A`–`U+202E`, `U+2066`–`U+2069`), zero-width characters (`U+200B`–`U+200F`, `U+2060`–`U+2064`), and the byte order mark (`U+FEFF`) are rejected by the `commit-msg` hook (Trojan Source / CVE-2021-42574 mitigation).
+- No signatures, no co-authored-by lines, no generation metadata
 - Merge, revert, squash, cherry-pick e mensagens `fixup!`/`squash!`/`amend!` geradas pelo git pulam a validação automaticamente (paridade com `commitlint defaultIgnores`).
 
 ## Rules
 
 ### No signatures or metadata
 
-Never append co-authored-by lines, generation metadata, or anything beyond the single-line message. The commit history stays clean.
+Never append co-authored-by lines, signatures, or generation metadata (e.g., "Generated with …" footers). A body that the user authored is allowed; injected attribution is not.
 
 ### No git -C flag
 
@@ -54,17 +66,6 @@ Write messages in the dominant language of the repository's existing commit hist
 ### Git configuration
 
 Use the existing git config as-is. Never run `git config user.name` or `git config user.email`.
-
-## Project Settings
-
-Check for `.claude/git.local.md` during analysis. If present, read its YAML frontmatter and apply:
-
-- **extra_types**: Additional commit types beyond the default set (e.g., `build`, `ci`, `revert`). The git hooks also read this setting.
-- **language**: Override commit message language detection.
-- **allow_body**: If `true`, allow multi-line commit messages. Default: `false`.
-- **max_length**: Maximum description length in characters. Default: no limit.
-
-If the file doesn't exist, use defaults. Do not ask the user about settings.
 
 ## Workflow
 

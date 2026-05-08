@@ -1,14 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
-# commit-msg hook — validates commit messages against Conventional Commits format:
-#   Format: type: description
-#   - Single line (unless allow_body is true)
-#   - No scope (parentheses forbidden)
-#   - Valid types: feat|fix|docs|style|refactor|test|chore|perf (+ extra_types)
-#   - Description starts with lowercase letter or digit
-#   - Allowed chars: Unicode letters, digits, spaces, and , . / + -
-#   - Breaking change marker (!) allowed after type
+# commit-msg hook — validates commit messages against Conventional Commits format.
+#   Subject (first line): type: description
+#     - No scope (parentheses forbidden)
+#     - Valid types: feat|fix|docs|style|refactor|test|chore|perf
+#     - Description starts with a lowercase letter or digit
+#     - Allowed chars in description: Unicode letters, digits, spaces, and , . / + - : ' # >
+#     - Breaking change marker (!) allowed after type
+#   Body (optional): separated from subject by a single blank line.
+#     - Blocks C0/C1 control chars (except tab/LF/CR), bidi formatting, zero-width chars, and BOM
+#       (CVE-2021-42574 / Trojan Source mitigation)
 #
 # Skips validation for git-generated messages (merge, revert, squash, cherry-pick,
 # fixup!/squash!/amend!) — mirrors @commitlint/is-ignored defaultIgnores.
@@ -40,59 +42,15 @@ fi
 
 # Fallback: textual prefixes (covers --amend after marker files are cleared).
 subject_first_line=$(echo "$message" | head -1)
-if [[ "$subject_first_line" =~ ^(Merge\ |Revert\ |Merged\ |fixup!|squash!|amend!) ]]; then
+if [[ "$subject_first_line" =~ ^(Merge\ |Revert\ |fixup!|squash!|amend!) ]]; then
   exit 0
 fi
 
-# --- Read project settings from .claude/git.local.md ---
-EXTRA_TYPES=""
-ALLOW_BODY="false"
-MAX_LENGTH=""
-
-# Find the repo root
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-SETTINGS_FILE="$REPO_ROOT/.claude/git.local.md"
-
-if [[ -f "$SETTINGS_FILE" ]]; then
-  # Extract YAML frontmatter (between --- delimiters)
-  frontmatter=$(sed -n '/^---$/,/^---$/p' "$SETTINGS_FILE" | sed '1d;$d')
-
-  # Parse extra_types (collect indented lines after extra_types:)
-  if echo "$frontmatter" | grep -q '^extra_types:'; then
-    EXTRA_TYPES=$(echo "$frontmatter" | sed -n '/^extra_types:/,/^[^ #]/{/^  /p}' | sed 's/^\s*//' | cut -d: -f1 | tr '\n' '|' | sed 's/|$//')
-  fi
-
-  # Parse allow_body
-  allow_body_val=$(echo "$frontmatter" | grep -E '^\s*allow_body:\s*' | head -1 | sed 's/.*:\s*//' | tr -d ' ' || true)
-  if [[ "$allow_body_val" == "true" ]]; then
-    ALLOW_BODY="true"
-  fi
-
-  # Parse max_length
-  max_length_val=$(echo "$frontmatter" | grep -E '^\s*max_length:\s*' | head -1 | sed 's/.*:\s*//' | tr -d ' ' || true)
-  if [[ -n "$max_length_val" ]] && [[ "$max_length_val" =~ ^[0-9]+$ ]]; then
-    MAX_LENGTH="$max_length_val"
-  fi
-fi
-
-# --- Build the valid types pattern ---
-DEFAULT_TYPES="feat|fix|docs|style|refactor|test|chore|perf"
-if [[ -n "$EXTRA_TYPES" ]]; then
-  ALL_TYPES="$DEFAULT_TYPES|$EXTRA_TYPES"
-else
-  ALL_TYPES="$DEFAULT_TYPES"
-fi
+# --- Valid types pattern ---
+ALL_TYPES="feat|fix|docs|style|refactor|test|chore|perf"
 
 # --- Extract subject line ---
 subject=$(echo "$message" | head -1)
-
-# Check for body when not allowed
-line_count=$(echo "$message" | wc -l)
-if [[ "$ALLOW_BODY" == "false" ]] && [[ "$line_count" -gt 1 ]]; then
-  echo "error: commit message must be a single line (no body or footer)" >&2
-  echo "  received: $subject" >&2
-  exit 1
-fi
 
 # --- Validate format: type(!?): description ---
 if ! echo "$subject" | grep -qE "^($ALL_TYPES)!?: .+$"; then
@@ -107,44 +65,55 @@ fi
 # --- Extract description (everything after "type(!?): ") ---
 description=$(echo "$subject" | sed -E "s/^($ALL_TYPES)!?: //")
 
-# --- Check max_length ---
-if [[ -n "$MAX_LENGTH" ]]; then
-  desc_len=${#description}
-  if [[ "$desc_len" -gt "$MAX_LENGTH" ]]; then
-    echo "error: description exceeds maximum length ($desc_len > $MAX_LENGTH)" >&2
-    echo "  received: $subject" >&2
-    exit 1
-  fi
-fi
-
-# --- Check description starts with lowercase letter or digit ---
-first_char="${description:0:1}"
-if ! echo "$first_char" | grep -qE '^[a-z0-9]$'; then
+# --- Check description starts with a lowercase letter, digit, or caseless letter ---
+# Unicode-aware: \p{Ll} = lowercase letter (ASCII + accented),
+#                \p{N}  = any digit,
+#                \p{Lo} = other letter (CJK, Hangul, etc. — no case distinction).
+# Excludes \p{Lu} (uppercase) and \p{Lt} (titlecase).
+if ! echo "$description" | grep -qP '^[\p{Ll}\p{N}\p{Lo}]'; then
   echo "error: description must start with a lowercase letter or digit" >&2
   echo "  received: $subject" >&2
   exit 1
 fi
 
 # --- Check allowed characters in description ---
-# Allowed: Unicode letters, digits, spaces, and , . / + -
-# Use a negative match: find any character that is NOT allowed
+# Allowed: Unicode letters, digits, spaces, and , . / + - : ' # >
 # Note: bash regex handles ASCII; for full Unicode support we use grep -P
-if echo "$description" | grep -qP '[^\p{L}\p{N} ,./+\-]'; then
-  # Find the offending character for a helpful error message
-  bad_char=$(echo "$description" | grep -oP '[^\p{L}\p{N} ,./+\-]' | head -1)
+if echo "$description" | grep -qP "[^\p{L}\p{N} ,./+\-:'#>]"; then
+  bad_char=$(echo "$description" | grep -oP "[^\p{L}\p{N} ,./+\-:'#>]" | head -1)
   echo "error: description contains disallowed character: '$bad_char'" >&2
   echo "  received: $subject" >&2
-  echo "  allowed: Unicode letters, digits, spaces, and , . / + -" >&2
+  echo "  allowed: Unicode letters, digits, spaces, and , . / + - : ' # >" >&2
   exit 1
 fi
 
-# --- Validate body format if present ---
-if [[ "$ALLOW_BODY" == "true" ]] && [[ "$line_count" -gt 1 ]]; then
+# --- Validate body separator if message is multi-line ---
+line_count=$(echo "$message" | wc -l)
+if [[ "$line_count" -gt 1 ]]; then
   second_line=$(echo "$message" | sed -n '2p')
   if [[ -n "$second_line" ]]; then
     echo "error: body must be separated from subject by a blank line" >&2
     echo "  received first body line: $second_line" >&2
     exit 1
+  fi
+
+  # --- Validate body characters (CVE-2021-42574 / Trojan Source mitigation) ---
+  # Forbidden codepoints in the body:
+  #   C0 controls (U+0000-U+001F) except tab (U+0009), LF (U+000A), CR (U+000D)
+  #   DEL + C1 controls (U+007F-U+009F)
+  #   Bidirectional formatting (U+202A-U+202E LRE/RLE/PDF/LRO/RLO,
+  #                             U+2066-U+2069 LRI/RLI/FSI/PDI)
+  #   Zero-width / invisible characters (U+200B-U+200F, U+2060-U+2064)
+  #   Byte order mark (U+FEFF)
+  body=$(echo "$message" | tail -n +3)
+  if [[ -n "$body" ]]; then
+    forbidden_body='[\x{0000}-\x{0008}\x{000B}\x{000C}\x{000E}-\x{001F}\x{007F}-\x{009F}\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2060}-\x{2064}\x{2066}-\x{2069}\x{FEFF}]'
+    if echo "$body" | grep -qP "$forbidden_body"; then
+      echo "error: body contains a disallowed control or bidirectional Unicode character" >&2
+      echo "  blocked: C0/C1 controls (except tab/LF/CR), bidi formatting (RLO/LRO/PDF/PDI), zero-width chars, byte order mark" >&2
+      echo "  reason: prevents Trojan Source-style spoofing (CVE-2021-42574) and invisible-character injection" >&2
+      exit 1
+    fi
   fi
 fi
 

@@ -6,30 +6,32 @@ Strategic commit tool with semantic analysis, whole-file staging, and hook-valid
 
 ```
 type: description
+
+optional body
 ```
 
-- Single line only — no body, no footer, no signatures (configurable via settings)
+- Subject on the first line — `type: description`
+- Optional body separated from the subject by a single blank line
 - No scope (parentheses forbidden)
-- Language follows the dominant language from repository commit history (overridable via settings)
+- No signatures, no co-authored-by lines, no generation metadata
+- Language follows the dominant language from repository commit history
 - Validated by git hooks on every commit
 
 Valid types: `feat` | `fix` | `docs` | `style` | `refactor` | `test` | `chore` | `perf`
 
-Additional types can be configured via project settings (see below).
-
 ## Architecture
 
 ```
-/commit (command) → commit skill (inline workflow) → git add + git commit
-                                                      ↑
-                                            git hooks (commit-msg, pre-commit)
-                                                      ↑
-                                            safety hook (PreToolUse)
+/commit (skill) → git add + git commit
+                   ↑
+                 git hooks (commit-msg, pre-commit)
+                   ↑
+                 safety hook (PreToolUse)
 ```
 
-1. User runs `/commit [context]`
+1. User runs `/commit [context]` — the `commit` skill is invoked directly
 2. Safety hook validates git commands (blocks `git add -p`, `git -C`, config changes)
-3. Commit skill runs inline — analyzes, stages, commits
+3. Skill runs inline — analyzes, stages, commits
 4. Git hooks validate messages and block dangerous content
 
 ## Features
@@ -43,7 +45,6 @@ Additional types can be configured via project settings (see below).
 - **Minimal interactivity**: Asks only when the commit strategy is genuinely ambiguous
 - **Amend mode**: Amend the last commit when explicitly requested
 - **Safety hooks**: PreToolUse hook blocks dangerous git patterns
-- **Project settings**: Per-project configuration via `.claude/git.local.md`
 
 ## Usage
 
@@ -66,12 +67,11 @@ Additional types can be configured via project settings (see below).
 The commit workflow runs inline (no sub-agent):
 
 1. **Analyzes** the repository — `git status`, `git diff HEAD`, `git diff --cached`, `git log`
-2. **Reads settings** — checks `.claude/git.local.md` for project-specific configuration
-3. **Performs semantic diff analysis** — determines commit type and boundaries
-4. **Plans partitioning** — groups files by semantic purpose
-5. **Stages** — whole files via `git add`
-6. **Commits** — git hooks validate the message; on failure, fixes and retries
-7. **Reports** — commits created, final status, any blocks
+2. **Performs semantic diff analysis** — determines commit type and boundaries
+3. **Plans partitioning** — groups files by semantic purpose
+4. **Stages** — whole files via `git add`
+5. **Commits** — git hooks validate the message; on failure, fixes and retries
+6. **Reports** — commits created, final status, any blocks
 
 ## Commit Convention
 
@@ -88,40 +88,11 @@ The commit workflow runs inline (no sub-agent):
 
 **Message rules:**
 - Description starts with a lowercase letter or digit
-- Allowed characters: Unicode letters, digits, spaces, and `, . / + -`
-- No scope, no body, no co-authored-by, no signatures
+- Allowed characters in the description: Unicode letters, digits, spaces, and `, . / + - : ' # >`
+- No scope, no co-authored-by, no signatures, no generation metadata
+- Body is optional; when present, separated from the subject by a single blank line
+- Body rejects control and bidirectional Unicode characters (C0/C1 controls except tab/LF/CR, bidi formatting `U+202A`–`U+202E` / `U+2066`–`U+2069`, zero-width chars `U+200B`–`U+200F` / `U+2060`–`U+2064`, and the BOM `U+FEFF`) — Trojan Source / CVE-2021-42574 mitigation
 - Breaking changes: use `!` after type (e.g., `feat!: remove legacy API`)
-
-## Project Settings
-
-Create `.claude/git.local.md` in your project root to customize behavior:
-
-```markdown
----
-extra_types:
-  build: build system or external dependencies
-  ci: continuous integration configuration
-  revert: revert a previous commit
-language: en
-allow_body: false
-max_length: 72
----
-```
-
-Available settings:
-- **extra_types**: Additional commit types beyond the default 8
-- **language**: Override commit message language (default: detected from git log)
-- **allow_body**: Allow multi-line commit messages (default: `false`)
-- **max_length**: Maximum description length in characters (default: no limit)
-
-After editing, restart Claude Code for changes to take effect.
-
-Add to `.gitignore`:
-```
-.claude/*.local.md
-```
-
-See `examples/git.local.md` for a complete template.
 
 ## Safety Hooks
 
@@ -138,7 +109,6 @@ The plugin includes native git hooks that enforce commit conventions at the git 
 - `commit-msg` — validates commit message format
 - `pre-commit` — blocks secrets, large files, no-commit markers, and blocklisted file types
 - `prepare-commit-msg` — drafts a conventional commit message from staged files
-- `post-commit` — tracks commits since last tag and suggests when to create a release
 
 **Installation:**
 
@@ -154,8 +124,6 @@ Choose your hooks when prompted.
 cp plugins/claude/git/hooks/commit-msg .git/hooks/commit-msg
 chmod +x .git/hooks/commit-msg
 ```
-
-The hooks read `.claude/git.local.md` for project-specific settings (extra_types, allow_body, max_length).
 
 ## Important Rules
 
@@ -201,9 +169,11 @@ Determines the strategy autonomously, only asking when genuinely ambiguous.
 
 ## Installation
 
-Place in plugins directory:
-- `~/.claude/plugins/git/` (global)
-- `<project>/.claude/plugins/git/` (local)
+```bash
+claude plugin add pragmabits/pragmarketplace --plugin git
+```
+
+Then run `/commit-setup --apply` to configure permission rules and install the git hooks.
 
 ## Version History
 
