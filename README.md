@@ -16,6 +16,7 @@ Pragmatic provides ready-to-install plugins that extend Claude Code with special
 | **frontend** | 1.8.0 | Frontend | `/frontend`, `/css`, `/tailwindcss`, `/vuejs`, `/nuxt`, `/shadcn`, `/fontawesome` | Cross-domain orchestrator bundling CSS, Tailwind CSS 4, Vue/Nuxt, shadcn/ui, and Font Awesome specialists |
 | **review** | 1.0.1 | Tools | `/codex-review` | Independent Codex-based code review of the current `git diff` — verdict, summary, and findings |
 | **session** | 1.0.1 | Tools | `/report-session` | Session retrospective — structured markdown report of work completed, issues, learnings, and pending items |
+| **pragmatic** | 1.0.1 | Output | — | Output style for evidence-driven engineering — user-governed material decisions, batched `AskUserQuestion` prompts, evidence-cited claims, terse responses |
 
 ## Installation
 
@@ -51,7 +52,7 @@ Once installed, plugins are available through slash commands in Claude Code:
 /report-session  # Generate a session retrospective report
 ```
 
-The **guideline** plugin has no slash command — it provides output style rules that shape how Claude formats responses when active.
+The **guideline** and **pragmatic** plugins have no slash commands — they provide output style rules that shape how Claude formats responses when active.
 
 ## Author
 
