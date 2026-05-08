@@ -15,7 +15,7 @@ Pragmatic provides ready-to-install plugins that extend Claude Code with special
 | **pragma-statusline** | 1.0.0 | Tools | `/pragma-status` | Custom Claude Code statusline with git and context metrics |
 | **frontend** | 1.8.0 | Frontend | `/frontend`, `/css`, `/tailwindcss`, `/vuejs`, `/nuxt`, `/shadcn`, `/fontawesome` | Cross-domain orchestrator bundling CSS, Tailwind CSS 4, Vue/Nuxt, shadcn/ui, and Font Awesome specialists |
 | **review** | 1.0.1 | Tools | `/codex-review` | Independent Codex-based code review of the current `git diff` — verdict, summary, and findings |
-| **session** | 1.0.1 | Tools | `/report-session` | Session retrospective — structured markdown report of work completed, issues, learnings, and pending items |
+| **session** | 2.0.0 | Tools | `/report`, `/recall` | Session handoff reports with fixed-numbered pending items (`/report`); list, filter, grep, and resume prior reports (`/recall`) |
 | **pragmatic** | 1.0.1 | Output | — | Output style for evidence-driven engineering — user-governed material decisions, batched `AskUserQuestion` prompts, evidence-cited claims, terse responses |
 
 ## Installation
@@ -49,7 +49,8 @@ Once installed, plugins are available through slash commands in Claude Code:
 /shadcn          # shadcn/ui component guidance
 /fontawesome     # Font Awesome icon guidance
 /codex-review    # Independent Codex-based review of the current git diff
-/report-session  # Generate a session retrospective report
+/report          # Generate a session handoff report
+/recall          # List, filter, grep, or resume prior session reports
 ```
 
 The **guideline** and **pragmatic** plugins have no slash commands — they provide output style rules that shape how Claude formats responses when active.
