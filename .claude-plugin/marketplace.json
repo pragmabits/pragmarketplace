@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Collection of Claude plugins for guidelines, agents, and skills focused on development.",
-    "version": "1.12.1"
+    "version": "1.13.0"
   },
   "plugins": [
     {
@@ -165,8 +165,8 @@
     {
       "name": "session",
       "source": "./plugins/claude/session",
-      "description": "Session lifecycle helpers for Claude Code. Provides the /report-session skill which generates a structured markdown retrospective of the current working session (work completed, issues, learnings, decisions, pending items) as a handoff document for future sessions.",
-      "version": "1.0.1",
+      "description": "Session lifecycle helpers for Claude Code. The /report skill writes a structured handoff report under .claude/sessions/ capturing the session contract, work completed, decisions, and fixed-numbered pending items. The /recall skill lists, filters, greps, and resumes prior reports so the next agent can pick up pending work without re-reading source code.",
+      "version": "2.0.0",
       "author": {
         "name": "pragmabits",
         "email": "leonardoleoncio96@gmail.com"
@@ -180,7 +180,10 @@
         "retrospective",
         "handoff",
         "summary",
-        "workflow"
+        "workflow",
+        "recall",
+        "resume",
+        "pending-items"
       ]
     },
     {
