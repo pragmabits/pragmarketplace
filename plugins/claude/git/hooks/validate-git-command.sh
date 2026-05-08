@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Validate git commands to prevent interactive or problematic patterns.
-# Blocks: git add -p (interactive), git -C (path issues with staging tool),
+# Blocks: git add -p (interactive), git -C (path resolution issues),
 # git config user.name/email (intrusive identity changes).
 
 if ! command -v jq &>/dev/null; then
@@ -31,20 +31,20 @@ if echo "$command" | grep -qE 'git\s+add\s+(.+\s+)?(-p|--patch)(\s|$)'; then
   "hookSpecificOutput": {
     "permissionDecision": "deny"
   },
-  "systemMessage": "git add -p is blocked because it requires interactive input. Use the staging tool (git-staging.pyz stage) for hunk-level staging instead."
+  "systemMessage": "git add -p is blocked because it requires interactive input. Use whole-file `git add <files>` — the commit workflow groups files by semantic intent rather than splitting hunks within a file."
 }
 EOF
   exit 2
 fi
 
-# Block git -C flag (causes path resolution issues with staging tool)
+# Block git -C flag (causes path resolution issues)
 if echo "$command" | grep -qE 'git\s+-C\s'; then
   cat >&2 <<'EOF'
 {
   "hookSpecificOutput": {
     "permissionDecision": "deny"
   },
-  "systemMessage": "git -C flag is blocked because it causes path resolution issues with the staging tool and validator. Run git commands from the repository working directory instead."
+  "systemMessage": "git -C flag is blocked because it causes path resolution issues. Run git commands from the repository working directory instead."
 }
 EOF
   exit 2
