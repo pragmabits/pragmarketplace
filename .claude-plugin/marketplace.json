@@ -5,44 +5,14 @@
     "email": "leonardoleoncio96@gmail.com"
   },
   "metadata": {
-    "description": "Collection of Claude plugins for guidelines, agents, and skills focused on development.",
-    "version": "1.13.0"
+    "description": "Collection of Claude plugins for output styles, agents, and skills focused on development.",
+    "version": "1.14.0"
   },
   "plugins": [
     {
-      "name": "guideline",
-      "source": "./plugins/claude/guideline",
-      "description": "A plugin that provides output styles based on predefined guidelines or rules to format the output of AI models according to specific standards.",
-      "version": "1.0.0",
-      "author": {
-        "name": "pragmabits",
-        "email": "leonardoleoncio96@gmail.com"
-      },
-      "homepage": "https://github.com/pragmabits/pragmarketplace",
-      "repository": "https://github.com/pragmabits/pragmarketplace",
-      "category": "output",
-      "outputStyles": "./styles/",
-      "keywords": [
-        "output",
-        "style",
-        "output-style",
-        "guidelines",
-        "guideline",
-        "rule",
-        "rules",
-        "formatting",
-        "format",
-        "AI",
-        "interaction",
-        "model",
-        "Claude",
-        "plugin"
-      ]
-    },
-    {
       "name": "git",
       "source": "./plugins/claude/git",
-      "description": "Strategic git commit plugin — semantic analysis, whole-file staging, hook-validated commits, version tagging, native git hooks, safety hooks, and per-project settings",
+      "description": "Strategic git commit plugin — semantic analysis, whole-file staging, hook-validated commits, native git hooks, and safety hooks",
       "version": "3.0.1",
       "author": {
         "name": "pragmabits",
@@ -60,35 +30,7 @@
         "workflow",
         "automation",
         "strategic-commits",
-        "patch-mode",
-        "agent",
-        "validation",
-        "tagging",
-        "semver"
-      ]
-    },
-    {
-      "name": "pragma-statusline",
-      "source": "./plugins/claude/pragma-statusline",
-      "description": "Install and configure a custom statusline for Claude Code via a slash command",
-      "version": "1.0.0",
-      "author": {
-        "name": "pragmabits",
-        "email": "leonardoleoncio96@gmail.com"
-      },
-      "homepage": "https://github.com/pragmabits/pragmarketplace",
-      "repository": "https://github.com/pragmabits/pragmarketplace",
-      "category": "tools",
-      "commands": "./command",
-      "keywords": [
-        "statusline",
-        "status",
-        "cli",
-        "claude-code",
-        "configuration",
-        "settings",
-        "customization",
-        "plugin"
+        "validation"
       ]
     },
     {

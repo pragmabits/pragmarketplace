@@ -10,9 +10,7 @@ Pragmatic provides ready-to-install plugins that extend Claude Code with special
 
 | Plugin | Version | Category | Slash Commands | Description |
 |--------|---------|----------|----------------|-------------|
-| **git** | 3.0.1 | Tools | `/commit`, `/tag-it`, `/commit-setup` | Semantic commits, whole-file staging, hook-validated messages, version tagging, native git hooks, and safety hooks |
-| **guideline** | 1.0.0 | Output | — | Output style formatting via predefined rules and standards |
-| **pragma-statusline** | 1.0.0 | Tools | `/pragma-status` | Custom Claude Code statusline with git and context metrics |
+| **git** | 3.0.1 | Tools | `/commit`, `/commit-setup` | Semantic commits, whole-file staging, hook-validated messages, native git hooks, and safety hooks |
 | **frontend** | 1.8.0 | Frontend | `/frontend`, `/css`, `/tailwindcss`, `/vuejs`, `/nuxt`, `/shadcn`, `/fontawesome` | Cross-domain orchestrator bundling CSS, Tailwind CSS 4, Vue/Nuxt, shadcn/ui, and Font Awesome specialists |
 | **review** | 1.0.1 | Tools | `/codex-review` | Independent Codex-based code review of the current `git diff` — verdict, summary, and findings |
 | **session** | 2.0.0 | Tools | `/report`, `/recall` | Session handoff reports with fixed-numbered pending items (`/report`); list, filter, grep, and resume prior reports (`/recall`) |
@@ -38,9 +36,7 @@ Once installed, plugins are available through slash commands in Claude Code:
 
 ```
 /commit          # Strategic git commit with semantic analysis
-/tag-it          # Suggest and create version tags
 /commit-setup    # Configure permission rules for prompt-free commits
-/pragma-status   # Install custom statusline
 /frontend        # Cross-domain frontend orchestrator
 /css             # CSS expert guidance
 /tailwindcss     # Tailwind CSS 4 guidance
@@ -53,7 +49,7 @@ Once installed, plugins are available through slash commands in Claude Code:
 /recall          # List, filter, grep, or resume prior session reports
 ```
 
-The **guideline** and **pragmatic** plugins have no slash commands — they provide output style rules that shape how Claude formats responses when active.
+The **pragmatic** plugin has no slash command — it provides an output style that shapes how Claude formats responses when active.
 
 ## Author
 
