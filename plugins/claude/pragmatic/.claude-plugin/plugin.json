@@ -1,6 +1,6 @@
 {
   "name": "pragmatic",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Output style for pragmatic, evidence-driven engineering. Reserves material decisions (writes, behavior changes, strategy choices) for the user via AskUserQuestion, batches related decisions into one prompt, allows procedural autonomy (reads, searches, sandboxed runs), enforces evidence-backed claims, and keeps responses terse with in-line decision announcements.",
   "author": {
     "name": "pragmabits",
@@ -20,7 +20,6 @@
     "tech-lead",
     "engineering",
     "decision-announcements",
-    "ADHD-friendly",
     "Claude",
     "plugin"
   ],

@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Collection of Claude plugins for guidelines, agents, and skills focused on development.",
-    "version": "1.12.0"
+    "version": "1.12.1"
   },
   "plugins": [
     {
@@ -187,7 +187,7 @@
       "name": "pragmatic",
       "source": "./plugins/claude/pragmatic",
       "description": "Output style for pragmatic, evidence-driven engineering. Reserves material decisions (writes, behavior changes, strategy choices) for the user via AskUserQuestion, batches related decisions into one prompt, allows procedural autonomy (reads, searches, sandboxed runs), enforces evidence-backed claims, and keeps responses terse with in-line decision announcements.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": {
         "name": "pragmabits",
         "email": "leonardoleoncio96@gmail.com"
@@ -208,7 +208,6 @@
         "tech-lead",
         "engineering",
         "decision-announcements",
-        "ADHD-friendly",
         "Claude",
         "plugin"
       ]
