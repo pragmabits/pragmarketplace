@@ -7,7 +7,7 @@ Session lifecycle helpers for Claude Code. Turns the current working session int
 The `session` plugin ships two skills:
 
 - **`/report`** — analyzes the current conversation and writes a structured markdown handoff report under `.claude/sessions/`. Optimized for the next session's agent: stable section anchors, fixed numbering, an explicit Session contract block (user goal + goal status), and typed pending items.
-- **`/recall`** — read-only retrieval over the same `.claude/sessions/` directory. Four subcommands — `list`, `filter`, `grep`, `resume`.
+- **`/recall`** — read-only retrieval over the same `.claude/sessions/` directory. Five subcommands — `list`, `filter`, `grep`, `resume`, `last`.
 
 Reports are saved to `<repo-root>/.claude/sessions/`. The directory is auto-created on first use; the location resolves via `$CLAUDE_PROJECT_DIR`, then `git rev-parse --show-toplevel`, falling back to the current directory.
 
@@ -52,17 +52,18 @@ Retrieve and resume work from prior session reports. Read-only.
 
 **Usage:**
 ```
-/recall <list | filter <criteria> | grep <pattern> | resume [<session-id>]>
+/recall <list | filter <criteria> | grep <pattern> | resume [<session-id>] | last [<n>]>
 ```
 
-All subcommands except `resume` accept `--limit N` (positive integer) to cap output. The pattern in `grep` is a literal string by default; prefix with `re:` for regex.
+`list`, `filter`, and `grep` accept `--limit N` (positive integer) to cap output. The pattern in `grep` is a literal string by default; prefix with `re:` for regex.
 
 | Subcommand | Output |
 |------------|--------|
 | `list` | Markdown table of all sessions, newest first (Session ID / Title / Timestamp / Branch / Status). |
 | `filter <criteria>` | Same format, filtered by AND'd `key:value` pairs: `user:`, `branch:`, `status:` (`achieved`, `partial`, `abandoned`, `redirected`), `since:YYYY-MM-DD`, `until:YYYY-MM-DD`. |
 | `grep <pattern>` | List of files containing the pattern, with up to 3 matching lines per file plus the surrounding `## N.` heading. |
-| `resume [<session-id>]` | Prints §6 Pending Items verbatim from the target session, then asks via `AskUserQuestion` which item to pick up. Default target: most recent session. |
+| `resume [<session-id>]` | Reads §6 Pending Items from the target session and asks via `AskUserQuestion` which item to pick up. Default target: most recent session. |
+| `last [<n>]` | Prints the full body of the `<n>` most recent reports verbatim, newest first. Default `<n>` is 1. |
 
 **Session ID conventions** for `resume`:
 - **Full ID** — e.g. `alice-2026-05-08T143022`.
@@ -85,6 +86,9 @@ All subcommands except `resume` accept `--limit N` (positive integer) to cap out
 
 # Resume a specific session
 /recall resume alice-2026-05-08T143022
+
+# Read back the 3 most recent reports verbatim
+/recall last 3
 ```
 
 ## Output Location
@@ -146,9 +150,12 @@ Tone is factual and direct. Specific over vague. References use backticked paths
 
 ### `/recall`
 1. The skill is invoked as `/recall <subcommand> [args]`.
-2. The shared `ensure-sessions-dir.sh` resolves the directory; the skill then dispatches on the first argument (`list` / `filter` / `grep` / `resume`).
-3. All file reads use the read-only Bash tools listed in `allowed-tools` (`ls`, `cat`, `grep`, `head`, `tail`, `awk`, `sed`, `sort`, `find`, `wc`). No writes.
-4. For `resume`, after extracting §6 Pending Items, the skill issues an `AskUserQuestion` listing each pending item plus a final **None — just printing for reference** option, and stops. The user's selection becomes the input to the next turn.
+2. A render-time `!`-block invokes the bundled dispatcher `${CLAUDE_SKILL_DIR}/scripts/recall.sh` with the user's `$ARGUMENTS` quoted as a single string. The script performs all directory walking, metadata extraction, sorting, filtering, and rendering, then prints to stdout.
+3. The dispatcher's output is injected into the prompt:
+   - For `list` / `filter` / `grep` / `last`: ready-to-print markdown that the model emits verbatim.
+   - For `resume`: a JSON object describing the target session's §6 Pending Items.
+4. For `resume`, the skill parses the JSON and issues an `AskUserQuestion` listing each pending item plus a final **None — just printing for reference** option, then stops. The user's selection becomes the input to the next turn. If the JSON has `"empty": true`, it prints `Session <id> has no pending items.` and stops without asking.
+5. The dispatcher is split across two files: `scripts/recall.sh` (subcommand routing + per-command formatting) and `scripts/lib/sessions.sh` (sourced helpers: directory resolution, ISO 8601 sort, anchor extraction, ID resolution).
 
 ## Architecture
 
@@ -162,19 +169,30 @@ session/
     ├── report/
     │   └── SKILL.md                   # Report generator with metadata !-exec blocks and the fixed template
     └── recall/
-        └── SKILL.md                   # Read-only retrieval (list / filter / grep / resume)
+        ├── SKILL.md                   # Thin dispatcher that relays scripts/recall.sh output
+        └── scripts/
+            ├── recall.sh              # Subcommand router (list / filter / grep / resume / last)
+            └── lib/
+                └── sessions.sh        # Sourced helpers: directory, sort, extraction, ID resolution
 ```
 
-The `ensure-sessions-dir.sh` script is referenced by both skills as `${CLAUDE_PLUGIN_ROOT}/scripts/ensure-sessions-dir.sh`, so there is exactly one copy of the directory-resolution logic.
+The plugin-level `ensure-sessions-dir.sh` is referenced by both skills as `${CLAUDE_PLUGIN_ROOT}/scripts/ensure-sessions-dir.sh`, so there is exactly one copy of the directory-resolution logic. The recall-specific `scripts/` directory contains the dispatcher and library used only by `/recall`.
 
 ## Permissions
 
 Both skills are pre-authorized via their `SKILL.md` `allowed-tools` frontmatter so end users get no permission prompt:
 
 - `/report` — `Bash(bash:*) Bash(git:*) Bash(date:*) Bash(echo:*)` (metadata collection + script exec).
-- `/recall` — `Bash(ls:*) Bash(cat:*) Bash(grep:*) Bash(head:*) Bash(tail:*) Bash(awk:*) Bash(sed:*) Bash(sort:*) Bash(find:*) Bash(wc:*)` (read-only retrieval only).
+- `/recall` — `Bash(bash:*)` (single dispatcher invocation; the script handles all internal `ls`/`grep`/`awk`/`sort` calls).
 
 ## Version History
+
+### v2.1.0 — May 2026
+- Added `last [<n>]` subcommand to `/recall` — prints the full body of the `<n>` most recent reports verbatim, newest first; `<n>` defaults to 1.
+- Moved all directory walking, metadata extraction, sorting, filtering, and rendering for `/recall` into a bundled bash dispatcher (`scripts/recall.sh` + sourced `scripts/lib/sessions.sh`). The skill prompt now relays the script's output verbatim instead of having the model parse files inline — substantially fewer tokens per invocation.
+- `/recall` `allowed-tools` tightened from ten Bash matchers to just `Bash(bash:*)`.
+- Sort order for all `/recall` subcommands now keys on the ISO 8601 timestamp suffix in filenames, so the git-user prefix never dominates ordering.
+- For `resume`, the script emits structured JSON; the skill parses it to build the `AskUserQuestion` options. JSON schema is documented inline in `recall/SKILL.md`.
 
 ### v2.0.0 — May 2026
 - **Breaking:** renamed the `/report-session` slash command to `/report` and the underlying skill directory to `skills/report/`.
