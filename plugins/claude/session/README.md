@@ -187,6 +187,10 @@ Both skills are pre-authorized via their `SKILL.md` `allowed-tools` frontmatter 
 
 ## Version History
 
+### v2.1.1 — May 2026
+- Fix `/recall` reporting `No sessions found in .claude/sessions/` inside the Claude Code harness when `CLAUDE_PLUGIN_ROOT` is not exported into the `!`-block subshell. `lib/sessions.sh` now derives the plugin root from `BASH_SOURCE` as a fallback, so the dispatcher can locate `ensure-sessions-dir.sh` regardless of how the harness propagates env vars. The previous failure mode silently masked an exit-127 from `bash /scripts/ensure-sessions-dir.sh` (literal slash) as an empty-result notice.
+- Reorder `ensure-sessions-dir.sh` precedence to `git toplevel → CLAUDE_PROJECT_DIR → pwd`. Fixes the case where the harness sets `CLAUDE_PROJECT_DIR=$HOME` while the user is operating inside an unrelated git repo, which previously routed `/recall` and `/report` to `$HOME/.claude/sessions/` instead of the repo's `.claude/sessions/`. Worktrees and explicit non-git `CLAUDE_PROJECT_DIR` overrides still work as fallbacks.
+
 ### v2.1.0 — May 2026
 - Added `last [<n>]` subcommand to `/recall` — prints the full body of the `<n>` most recent reports verbatim, newest first; `<n>` defaults to 1.
 - Moved all directory walking, metadata extraction, sorting, filtering, and rendering for `/recall` into a bundled bash dispatcher (`scripts/recall.sh` + sourced `scripts/lib/sessions.sh`). The skill prompt now relays the script's output verbatim instead of having the model parse files inline — substantially fewer tokens per invocation.

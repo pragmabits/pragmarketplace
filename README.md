@@ -13,7 +13,7 @@ Pragmatic provides ready-to-install plugins that extend Claude Code with special
 | **git** | 3.0.1 | Tools | `/commit`, `/commit-setup` | Semantic commits, whole-file staging, hook-validated messages, native git hooks, and safety hooks |
 | **frontend** | 1.8.0 | Frontend | `/frontend`, `/css`, `/tailwindcss`, `/vuejs`, `/nuxt`, `/shadcn`, `/fontawesome` | Cross-domain orchestrator bundling CSS, Tailwind CSS 4, Vue/Nuxt, shadcn/ui, and Font Awesome specialists |
 | **review** | 1.0.1 | Tools | `/codex-review` | Independent Codex-based code review of the current `git diff` — verdict, summary, and findings |
-| **session** | 2.1.0 | Tools | `/report`, `/recall` | Session handoff reports with fixed-numbered pending items (`/report`); list, filter, grep, resume, and read back prior reports via five `/recall` subcommands (`list`, `filter`, `grep`, `resume`, `last`) |
+| **session** | 2.1.1 | Tools | `/report`, `/recall` | Session handoff reports with fixed-numbered pending items (`/report`); list, filter, grep, resume, and read back prior reports via five `/recall` subcommands (`list`, `filter`, `grep`, `resume`, `last`) |
 | **pragmatic** | 1.0.1 | Output | — | Output style for evidence-driven engineering — user-governed material decisions, batched `AskUserQuestion` prompts, evidence-cited claims, terse responses |
 
 ## Installation
