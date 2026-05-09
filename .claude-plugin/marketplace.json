@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Collection of Claude plugins for output styles, agents, and skills focused on development.",
-    "version": "1.15.1"
+    "version": "1.16.2"
   },
   "plugins": [
     {
@@ -156,6 +156,29 @@
         "Claude",
         "plugin"
       ]
+    },
+    {
+      "name": "architect",
+      "source": "./plugins/claude/architect",
+      "description": "Decision-support and scaffolding for sub-agents and loops in Claude Code. Surveys existing projects, prioritizes existing capabilities (in-session tools/skills/agents and installed pragmatic plugins) before scaffolding, and refuses to generate loops without verifiers or sub-agents without one-sentence roles. Distributed via the pragmatic marketplace.",
+      "version": "0.1.2",
+      "author": {
+        "name": "pragmabits",
+        "email": "leonardoleoncio96@gmail.com"
+      },
+      "homepage": "https://github.com/pragmabits/pragmarketplace",
+      "repository": "https://github.com/pragmabits/pragmarketplace",
+      "category": "productivity",
+      "commands": "./commands",
+      "keywords": [
+        "agents",
+        "sub-agents",
+        "loops",
+        "orchestration",
+        "architecture",
+        "scaffolding"
+      ]
     }
   ]
 }
+
