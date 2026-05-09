@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ -n "${CLAUDE_PROJECT_DIR:-}" && -d "$CLAUDE_PROJECT_DIR" ]]; then
-  root="$CLAUDE_PROJECT_DIR"
-elif root="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+if root="$(git rev-parse --show-toplevel 2>/dev/null)"; then
   :
+elif [[ -n "${CLAUDE_PROJECT_DIR:-}" && -d "$CLAUDE_PROJECT_DIR" ]]; then
+  root="$CLAUDE_PROJECT_DIR"
 else
   root="$(pwd)"
 fi

@@ -7,9 +7,23 @@
 # Lex-descending sort on filenames == timestamp-descending sort.
 
 # Resolve the sessions directory. Delegates to the plugin-scoped resolver so
-# both report and recall agree on the location (CLAUDE_PROJECT_DIR > git toplevel > pwd).
+# both report and recall agree on the location.
+#
+# Falls back to a BASH_SOURCE-derived plugin root when CLAUDE_PLUGIN_ROOT
+# is not exported into the subshell that runs this script. Without this
+# fallback, the harness's !-block context (which expands CLAUDE_SKILL_DIR
+# but does not always export CLAUDE_PLUGIN_ROOT) makes the bash invocation
+# below resolve to "/scripts/ensure-sessions-dir.sh", failing with exit 127
+# and silently masking as "No sessions found" upstream.
 sessions_dir() {
-  bash "${CLAUDE_PLUGIN_ROOT}/scripts/ensure-sessions-dir.sh"
+  local plugin_root="${CLAUDE_PLUGIN_ROOT:-}"
+  if [[ -z "$plugin_root" ]]; then
+    local lib_dir
+    lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    # lib_dir is <plugin>/skills/recall/scripts/lib; strip the trailing 4 segments.
+    plugin_root="${lib_dir%/skills/recall/scripts/lib}"
+  fi
+  bash "${plugin_root}/scripts/ensure-sessions-dir.sh"
 }
 
 # Print absolute paths of *.md files in the sessions dir, newest first.
