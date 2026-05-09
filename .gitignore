@@ -26,3 +26,6 @@ Thumbs.db
 *-workspace/
 git.local.md
 tag-suggestion
+
+# Architect plugin local test fixtures
+.architect-test/
