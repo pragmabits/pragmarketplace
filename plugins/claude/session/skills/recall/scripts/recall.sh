@@ -3,12 +3,15 @@
 #
 # Usage: recall.sh <list|filter|grep|resume|last> [args]
 #
-# Output: markdown for list/filter/grep/last (model emits verbatim).
-#         JSON for resume (model parses to construct AskUserQuestion).
+# Output:
+#   list/filter/grep — markdown (model emits verbatim).
+#   last             — file paths, one per line (model Reads each, then summarizes).
+#   resume           — JSON (model Reads file_path, then drives AskUserQuestion).
 #
 # resume JSON schema:
 #   { "session_id": str,
 #     "title": str,
+#     "file_path": str,
 #     "subsections": {
 #       "in_progress": [{ "label": str, "raw": str }, ...],
 #       "promised":    [{ "label": str, "raw": str }, ...],
@@ -16,7 +19,7 @@
 #     }
 #   }
 # When §6 is absent or all three subsections are "none":
-#   { "session_id": str, "title": str, "empty": true }
+#   { "session_id": str, "title": str, "file_path": str, "empty": true }
 
 set -euo pipefail
 
@@ -337,7 +340,8 @@ cmd_resume() {
   section6="$(extract_section "$file" 6)"
 
   if [[ -z "$section6" ]]; then
-    jq -n --arg id "$id" --arg title "$title" '{session_id: $id, title: $title, empty: true}'
+    jq -n --arg id "$id" --arg title "$title" --arg file "$file" \
+      '{session_id: $id, title: $title, file_path: $file, empty: true}'
     return 0
   fi
 
@@ -363,19 +367,22 @@ cmd_resume() {
   known="$(extract_subsection_items "$body_63")"
 
   if [[ "$in_progress" == "[]" ]] && [[ "$promised" == "[]" ]] && [[ "$known" == "[]" ]]; then
-    jq -n --arg id "$id" --arg title "$title" '{session_id: $id, title: $title, empty: true}'
+    jq -n --arg id "$id" --arg title "$title" --arg file "$file" \
+      '{session_id: $id, title: $title, file_path: $file, empty: true}'
     return 0
   fi
 
   jq -n \
     --arg id "$id" \
     --arg title "$title" \
+    --arg file "$file" \
     --argjson in_progress "$in_progress" \
     --argjson promised "$promised" \
     --argjson known "$known" \
     '{
       session_id: $id,
       title: $title,
+      file_path: $file,
       subsections: {
         in_progress: $in_progress,
         promised: $promised,
@@ -411,21 +418,12 @@ cmd_last() {
     fi
   done <<< "$files"
 
-  local first=1
   for f in "${selected[@]}"; do
-    if [[ $first -eq 0 ]]; then
-      printf '\n---\n\n'
-    fi
-    first=0
-    local id
-    id="$(basename "$f" .md)"
-    printf '**Session:** %s\n\n' "$id"
-    cat "$f"
-    printf '\n'
+    printf '%s\n' "$f"
   done
 
   if [[ $n -gt $total ]]; then
-    printf '\nOnly %d session(s) available; all shown.\n' "$total"
+    printf '\nOnly %d session(s) available; all paths shown.\n' "$total"
   fi
 }
 
