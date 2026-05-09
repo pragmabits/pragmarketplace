@@ -1,7 +1,7 @@
 ---
 name: recall
 description: Retrieve, search, and resume work from past session reports stored in .claude/sessions. Invoked explicitly via subcommands (list, filter, grep, resume) when the user wants to find a prior session or pick up pending work without manually browsing files.
-allowed-tools: Bash(ls:*) Bash(cat:*) Bash(grep:*) Bash(head:*) Bash(tail:*) Bash(awk:*) Bash(sed:*) Bash(sort:*) Bash(find:*) Bash(wc:*)
+allowed-tools: Bash(bash:*) Bash(ls:*) Bash(cat:*) Bash(grep:*) Bash(head:*) Bash(tail:*) Bash(awk:*) Bash(sed:*) Bash(sort:*) Bash(find:*) Bash(wc:*)
 argument-hint: "list [--limit N] | filter <criteria> [--limit N] | grep <pattern> [--limit N] | resume [<session-id>]"
 ---
 
