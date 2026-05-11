@@ -1,8 +1,8 @@
 ---
 name: report
-description: This skill should be used when the user asks to "finish", "generate session report", "write session report", "end session", "wrap up", or "summarize this session". Produces a structured markdown handoff report capturing session contract, work completed, decisions, and pending items — optimized for the next session's agent to resume without re-investigation.
+description: This skill should be used when the user asks to "finish", "generate session report", "write session report", "end session", "wrap up", or "summarize this session". Produces a structured markdown handoff report capturing session contract, work completed, decisions, and pending items — optimized for the next session's agent to resume without re-investigation. After writing the file, the skill commits it in a single subject-only `chore:` commit isolated to the report path; pass `--no-commit` to skip.
 allowed-tools: Bash(bash:*) Bash(git:*) Bash(date:*) Bash(echo:*)
-argument-hint: "[--lang xx-YY] [optional report title]"
+argument-hint: "[--lang xx-YY] [--no-commit] [optional report title]"
 ---
 
 # Session Report Generator
@@ -47,6 +47,7 @@ Parse the arguments as follows:
 
 - If `$ARGUMENTS` contains `--lang xx` or `--lang xx-YY` (e.g. `--lang pt-BR`), use that as the report language.
 - Otherwise, write in the language the user used during the session. If the session was mixed, default to the most frequent. Technical terms stay in English regardless.
+- If `$ARGUMENTS` contains `--no-commit`, skip the commit step in §4 (the report file is still written normally).
 - Any remaining non-flag text in `$ARGUMENTS` may be used as a hint for the report title.
 
 ## Output location
@@ -201,6 +202,32 @@ If empty: `none`
 ### 3. Save the file
 
 Write the rendered report to the absolute path resolved in "Output location" above, using the Write tool. Do not run `mkdir`, `git rev-parse`, or `pwd` — those were handled by the `!` injection.
+
+### 4. Commit the report
+
+Unless `$ARGUMENTS` contained `--no-commit`, commit the report file in a single isolated commit immediately after step 3. The commit must:
+
+- contain **only** the report file just written — never co-commit other staged or unstaged work;
+- carry a subject-only message — no body, no emojis, no scope, no trailers.
+
+Use the Bash tool to run **one** command, substituting the values resolved at render time:
+
+```bash
+git commit -m "chore: add session report <timestamp>" -- "<absolute-report-path>"
+```
+
+- `<timestamp>` — the injected no-Z UTC timestamp (e.g. `2026-05-11T143022`). Same value used in the filename.
+- `<absolute-report-path>` — the exact path passed to the Write tool in step 3.
+
+`git commit -- <path>` is partial-commit mode: it commits only `<path>` from the working tree and leaves any other staged or unstaged changes untouched. This is intentional — the report is workflow metadata and must not entangle with the user's in-progress work.
+
+**Failure handling.** If the command exits non-zero (no git repo, hook rejection, merge in progress, identity not configured, etc.):
+
+1. Do **not** delete, rewrite, or unstage anything. The report file remains exactly as Write left it.
+2. Tell the user in a single line that the commit failed, and include the git error output verbatim so they can act on it.
+3. Do **not** retry, do **not** propose alternate commit messages, and do **not** stage anything else.
+
+**Opt-out.** If `$ARGUMENTS` contained `--no-commit`, skip this step entirely and tell the user the report was written without a commit. Do not stage the file in any other way.
 
 ## What makes a good handoff report
 

@@ -6,7 +6,7 @@ Session lifecycle helpers for Claude Code. Turns the current working session int
 
 The `session` plugin ships two skills:
 
-- **`/report`** — analyzes the current conversation and writes a structured markdown handoff report under `.claude/sessions/`. Optimized for the next session's agent: stable section anchors, fixed numbering, an explicit Session contract block (user goal + goal status), and typed pending items.
+- **`/report`** — analyzes the current conversation, writes a structured markdown handoff report under `.claude/sessions/`, and commits the new file in a single isolated `chore:` commit. Optimized for the next session's agent: stable section anchors, fixed numbering, an explicit Session contract block (user goal + goal status), and typed pending items. Pass `--no-commit` to write without committing.
 - **`/recall`** — read-only retrieval over the same `.claude/sessions/` directory. Five subcommands — `list`, `filter`, `grep`, `resume`, `last`.
 
 Reports are saved to `<repo-root>/.claude/sessions/`. The directory is auto-created on first use; the location resolves via `$CLAUDE_PROJECT_DIR`, then `git rev-parse --show-toplevel`, falling back to the current directory.
@@ -24,19 +24,22 @@ Generate a handoff report for the current session.
 
 **Usage:**
 ```
-/report [--lang xx-YY] [optional report title]
+/report [--lang xx-YY] [--no-commit] [optional report title]
 ```
 
 | Argument | Description |
 |----------|-------------|
 | `--lang xx` / `--lang xx-YY` | Force the report language (e.g. `--lang pt-BR`, `--lang en-US`). |
+| `--no-commit` | Write the report file without committing it. |
 | *(remaining text)* | Free-form hint for the report title. |
 
 **Language default:** if `--lang` is not passed, the report is written in the language the user used during the session. If the session was mixed, the most frequent language wins. Technical terms stay in English regardless.
 
+**Auto-commit.** After writing the file, the skill issues exactly one command — `git commit -m "chore: add session report <timestamp>" -- <absolute-report-path>` — committing only the report file. This is git's partial-commit mode, so any other staged or unstaged work in the worktree is left untouched. The subject is fixed-format, contains no body, no emojis, and no scope, so it composes cleanly with most Conventional-Commits hooks in consumer repos. If the commit fails (no git repo, hook rejection, merge in progress, identity not configured, etc.), the skill reports the failure verbatim and leaves the written report intact for you to handle manually. Pass `--no-commit` to skip the commit step entirely.
+
 **Examples:**
 ```bash
-# Default report — language auto-detected from the session
+# Default report — language auto-detected, then auto-committed
 /report
 
 # Force Portuguese (Brazil)
@@ -44,6 +47,9 @@ Generate a handoff report for the current session.
 
 # Force English with a title hint
 /report --lang en-US auth middleware rewrite
+
+# Write the report without committing it
+/report --no-commit
 ```
 
 ### `/recall`
@@ -147,6 +153,7 @@ Tone is factual and direct. Specific over vague. References use backticked paths
 2. Before the skill content reaches Claude, several `!` shell-exec blocks collect repo metadata: git user, current branch, latest commit, two UTC timestamps (with `Z` for the header, without `Z` for the filename), recent commits, `git diff --stat`, and `git status --short`.
 3. Another `!` block invokes the shared `ensure-sessions-dir.sh` script via `${CLAUDE_PLUGIN_ROOT}` to resolve and create the output directory.
 4. Claude analyzes the conversation, applies the fixed template, fills `none` for empty sections, and writes the report to the pre-resolved absolute path using the Write tool.
+5. Unless `--no-commit` was passed, Claude invokes one Bash command — `git commit -m "chore: add session report <timestamp>" -- <absolute-report-path>` — committing only the report file. On non-zero exit, the failure is reported back verbatim and the file is left in place.
 
 ### `/recall`
 1. The skill is invoked as `/recall <subcommand> [args]`.
@@ -186,6 +193,11 @@ Both skills are pre-authorized via their `SKILL.md` `allowed-tools` frontmatter 
 - `/recall` — `Bash(bash:*)` (single dispatcher invocation; the script handles all internal `ls`/`grep`/`awk`/`sort` calls).
 
 ## Version History
+
+### v2.3.0 — May 2026
+- `/report` now commits the generated report file by itself, in a single isolated commit, immediately after writing it. The command is `git commit -m "chore: add session report <timestamp>" -- <absolute-report-path>` — subject-only, no body, no emojis, no scope, and partial-commit mode so any other staged or unstaged work in the worktree is preserved untouched.
+- Added a `--no-commit` flag to opt out of the auto-commit step. The report file is still written normally.
+- Commit failures (no git repo, hook rejection, merge in progress, missing identity, etc.) are reported back to the user verbatim and the report file is left intact for manual handling.
 
 ### v2.1.1 — May 2026
 - Fix `/recall` reporting `No sessions found in .claude/sessions/` inside the Claude Code harness when `CLAUDE_PLUGIN_ROOT` is not exported into the `!`-block subshell. `lib/sessions.sh` now derives the plugin root from `BASH_SOURCE` as a fallback, so the dispatcher can locate `ensure-sessions-dir.sh` regardless of how the harness propagates env vars. The previous failure mode silently masked an exit-127 from `bash /scripts/ensure-sessions-dir.sh` (literal slash) as an empty-result notice.

@@ -21,7 +21,7 @@ The repo runs sessions under its own output style: `.claude/settings.json` sets 
 | `git` | 3.0.1 | `/commit` (skill), `/commit-setup` (command) | Inline commit workflow + Conventional Commits validation. Native git hooks installed by `/commit-setup --apply`. |
 | `frontend` | 1.8.0 | `/frontend`, `/css`, `/tailwindcss`, `/vuejs`, `/nuxt`, `/shadcn`, `/fontawesome`, `/material-design`, `/htmx-go` | Orchestrator + 8 specialist agents + 35 skills across 8 domains. PreToolUse Write/Edit hook lints TW3→TW4 patterns. |
 | `review` | 1.0.1 | `/codex-review` (skill) | Wraps `scripts/codex-review.sh`. Requires the external `codex` CLI plus `jq`. |
-| `session` | 2.2.0 | `/report`, `/recall` (skills) | Writes/reads handoff reports under `<repo>/.claude/sessions/`. The `/recall` `last` and `resume` subcommands return file pointers; the agent uses `Read` to ingest reports rather than dumping them into the chat. |
+| `session` | 2.3.0 | `/report`, `/recall` (skills) | Writes/reads handoff reports under `<repo>/.claude/sessions/`. `/report` auto-commits the new file with a subject-only `chore:` message using `git commit -- <path>` (partial commit; other staged work untouched); pass `--no-commit` to skip. The `/recall` `last` and `resume` subcommands return file pointers; the agent uses `Read` to ingest reports rather than dumping them into the chat. |
 | `pragmatic` | 1.0.1 | — | Output style only (`pragmatic-autonomy`). Active in this repo via `.claude/settings.json`. |
 
 ## Slash entries: commands vs skills

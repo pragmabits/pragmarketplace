@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Collection of Claude plugins for output styles, agents, and skills focused on development.",
-    "version": "1.17.0"
+    "version": "1.18.0"
   },
   "plugins": [
     {
@@ -107,8 +107,8 @@
     {
       "name": "session",
       "source": "./plugins/claude/session",
-      "description": "Session lifecycle helpers for Claude Code. The /report skill writes a structured handoff report under .claude/sessions/ capturing the session contract, work completed, decisions, and fixed-numbered pending items. The /recall skill retrieves, searches, and resumes prior reports via five subcommands (list, filter, grep, resume, last) so the next agent can pick up pending work without re-reading source code.",
-      "version": "2.2.0",
+      "description": "Session lifecycle helpers for Claude Code. The /report skill writes a structured handoff report under .claude/sessions/ capturing the session contract, work completed, decisions, and fixed-numbered pending items, then commits the file in a single isolated subject-only chore: commit (opt out with --no-commit). The /recall skill retrieves, searches, and resumes prior reports via five subcommands (list, filter, grep, resume, last) so the next agent can pick up pending work without re-reading source code.",
+      "version": "2.3.0",
       "author": {
         "name": "pragmabits",
         "email": "leonardoleoncio96@gmail.com"
