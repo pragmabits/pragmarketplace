@@ -1,0 +1,20 @@
+# Project-local Codex policy for pragmarketplace.
+#
+# The Claude plugin marketplace is intentionally readable but not writable from
+# Codex. Codex-owned work should live in AGENTS.md, .codex/, or plugins/codex/.
+
+sandbox_mode = "workspace-write"
+default_permissions = "pragmarketplace_workspace"
+
+[permissions.pragmarketplace_workspace.filesystem]
+glob_scan_max_depth = 8
+
+[permissions.pragmarketplace_workspace.filesystem.":project_roots"]
+"." = "write"
+"CLAUDE.md" = "read"
+".claude" = "read"
+".claude/**" = "read"
+".claude-plugin" = "read"
+".claude-plugin/**" = "read"
+"plugins/claude" = "read"
+"plugins/claude/**" = "read"

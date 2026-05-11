@@ -1,0 +1,102 @@
+# Extra guardrails for commands Codex asks to run outside the sandbox.
+#
+# Path-specific filesystem protection lives in .codex/config.toml. These rules
+# add a conservative exec-policy layer for common write/destructive commands and
+# shell wrappers that could otherwise bypass path intent during escalation.
+
+prefix_rule(
+    pattern = ["rm"],
+    decision = "forbidden",
+    justification = "Claude plugin space is read-only for Codex; use read-only inspection commands such as rg, find, sed -n, or git diff.",
+    match = [
+        "rm plugins/claude/git/README.md",
+        "rm -rf plugins/claude/frontend",
+    ],
+)
+
+prefix_rule(
+    pattern = ["mv"],
+    decision = "forbidden",
+    justification = "Codex must not move Claude plugin files; inspect them read-only instead.",
+    match = [
+        "mv plugins/claude/git plugins/claude/git-old",
+    ],
+)
+
+prefix_rule(
+    pattern = ["cp"],
+    decision = "forbidden",
+    justification = "Codex must not copy over Claude plugin files; create Codex-owned files under .codex or plugins/codex instead.",
+    match = [
+        "cp AGENTS.md plugins/claude/git/README.md",
+    ],
+)
+
+prefix_rule(
+    pattern = ["install"],
+    decision = "forbidden",
+    justification = "Codex must not install or overwrite files in the Claude plugin space.",
+    match = [
+        "install -m 0644 AGENTS.md plugins/claude/git/README.md",
+    ],
+)
+
+prefix_rule(
+    pattern = ["truncate"],
+    decision = "forbidden",
+    justification = "Codex must not truncate files in the Claude plugin space.",
+    match = [
+        "truncate -s 0 plugins/claude/git/README.md",
+    ],
+)
+
+prefix_rule(
+    pattern = ["tee"],
+    decision = "forbidden",
+    justification = "Codex must not write files with tee; use apply_patch only for Codex-owned files.",
+    match = [
+        "tee plugins/claude/git/README.md",
+    ],
+)
+
+prefix_rule(
+    pattern = ["sed", "-i"],
+    decision = "forbidden",
+    justification = "Codex must not rewrite Claude plugin files with in-place shell edits.",
+    match = [
+        "sed -i s/foo/bar/ plugins/claude/git/README.md",
+    ],
+)
+
+prefix_rule(
+    pattern = ["perl", "-pi"],
+    decision = "forbidden",
+    justification = "Codex must not rewrite Claude plugin files with in-place shell edits.",
+    match = [
+        "perl -pi -e s/foo/bar/ plugins/claude/git/README.md",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", ["checkout", "restore", "reset", "clean", "rm"]],
+    decision = "forbidden",
+    justification = "Codex must not use git commands that can overwrite, delete, or restore Claude plugin files.",
+    match = [
+        "git checkout -- plugins/claude/git/README.md",
+        "git restore plugins/claude/git/README.md",
+        "git reset --hard",
+        "git clean -fd",
+        "git rm plugins/claude/git/README.md",
+    ],
+)
+
+prefix_rule(
+    pattern = [["bash", "sh", "zsh"], ["-lc", "-c"]],
+    decision = "forbidden",
+    justification = "Shell wrappers can hide writes via redirection or expansion; use direct read-only inspection commands instead.",
+    match = [
+        "bash -lc cat plugins/claude/git/README.md",
+        "sh -c find plugins/claude -maxdepth 2 -type f",
+        "zsh -lc rg commit plugins/claude/git",
+    ],
+)

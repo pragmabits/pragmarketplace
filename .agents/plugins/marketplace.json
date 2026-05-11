@@ -1,0 +1,32 @@
+{
+  "name": "pragmatic",
+  "interface": {
+    "displayName": "Pragmabits Codex Plugins"
+  },
+  "plugins": [
+    {
+      "name": "git",
+      "source": {
+        "source": "local",
+        "path": "./plugins/codex/git"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "session",
+      "source": {
+        "source": "local",
+        "path": "./plugins/codex/session"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
