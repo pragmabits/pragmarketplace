@@ -1,0 +1,114 @@
+# Codex exec-policy rules for the git commit workflow.
+#
+# These rules are copied into .codex/rules/git-commit.rules by commit-setup.
+# They are intentionally conservative around mutating commands. Read-only git
+# inspection is allowed; staging and committing prompt unless the user changes
+# the policy locally.
+
+prefix_rule(
+    pattern = ["git", "status"],
+    decision = "allow",
+    justification = "Read-only repository status is safe for commit planning.",
+)
+
+prefix_rule(
+    pattern = ["git", "diff"],
+    decision = "allow",
+    justification = "Read-only diffs are required for semantic commit planning.",
+)
+
+prefix_rule(
+    pattern = ["git", "log"],
+    decision = "allow",
+    justification = "Recent commit history is needed to match message language and style.",
+)
+
+prefix_rule(
+    pattern = ["git", "rev-parse"],
+    decision = "allow",
+    justification = "Read-only repository metadata is safe for hook and merge-state detection.",
+)
+
+prefix_rule(
+    pattern = ["git", "rev-list"],
+    decision = "allow",
+    justification = "Read-only history checks are safe for amend safety detection.",
+)
+
+prefix_rule(
+    pattern = ["git", "branch"],
+    decision = "allow",
+    justification = "Read-only branch inspection is safe for amend safety detection.",
+)
+
+prefix_rule(
+    pattern = ["git", "ls-files"],
+    decision = "allow",
+    justification = "Read-only index inspection is safe for commit planning.",
+)
+
+prefix_rule(
+    pattern = ["test", "-x"],
+    decision = "allow",
+    justification = "Executable hook checks are safe and needed before committing.",
+)
+
+prefix_rule(
+    pattern = ["git", "add"],
+    decision = "prompt",
+    justification = "Staging changes mutates the index; prompt unless the user chooses a looser local policy.",
+)
+
+prefix_rule(
+    pattern = ["git", "commit"],
+    decision = "prompt",
+    justification = "Creating commits mutates repository history; prompt unless the user chooses a looser local policy.",
+)
+
+prefix_rule(
+    pattern = ["git", "reset", "HEAD"],
+    decision = "prompt",
+    justification = "Unstaging changes mutates the index and should be user-visible.",
+)
+
+prefix_rule(
+    pattern = ["git", "-C"],
+    decision = "forbidden",
+    justification = "Run git commands from the active repository working directory instead of changing directories implicitly.",
+)
+
+prefix_rule(
+    pattern = ["git", "add", "-p"],
+    decision = "forbidden",
+    justification = "Interactive patch staging is blocked; use whole-file staging.",
+)
+
+prefix_rule(
+    pattern = ["git", "add", "--patch"],
+    decision = "forbidden",
+    justification = "Interactive patch staging is blocked; use whole-file staging.",
+)
+
+prefix_rule(
+    pattern = ["git", "commit", "--no-verify"],
+    decision = "forbidden",
+    justification = "Hook bypass is blocked; fix the hook rejection instead.",
+)
+
+prefix_rule(
+    pattern = ["git", "commit", "-n"],
+    decision = "forbidden",
+    justification = "Hook bypass is blocked; fix the hook rejection instead.",
+)
+
+prefix_rule(
+    pattern = ["git", "config", "user.name"],
+    decision = "forbidden",
+    justification = "Codex must not change the user's git identity.",
+)
+
+prefix_rule(
+    pattern = ["git", "config", "user.email"],
+    decision = "forbidden",
+    justification = "Codex must not change the user's git identity.",
+)

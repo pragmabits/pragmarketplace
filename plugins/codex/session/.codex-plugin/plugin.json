@@ -1,0 +1,45 @@
+{
+  "name": "session",
+  "version": "0.1.0",
+  "description": "Agent-agnostic session handoff reports and recall helpers for Codex. Writes structured reports under the project root .sessions directory and retrieves prior work through list, filter, grep, resume, and last workflows.",
+  "author": {
+    "name": "pragmabits",
+    "email": "leonardoleoncio96@gmail.com",
+    "url": "https://github.com/pragmabits"
+  },
+  "homepage": "https://github.com/pragmabits/pragmarketplace/tree/main/plugins/codex/session",
+  "repository": "https://github.com/pragmabits/pragmarketplace",
+  "license": "Proprietary",
+  "keywords": [
+    "session",
+    "report",
+    "recall",
+    "handoff",
+    "summary",
+    "resume",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Session Handoff",
+    "shortDescription": "Write and recall agent-agnostic session reports",
+    "longDescription": "Create structured handoff reports and retrieve previous work through deterministic local scripts. Reports are stored in the project root .sessions directory so future agents can resume without tying the handoff store to any vendor, product, or plugin runtime.",
+    "developerName": "pragmabits",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/pragmabits/pragmarketplace",
+    "privacyPolicyURL": "https://github.com/pragmabits/pragmarketplace",
+    "termsOfServiceURL": "https://github.com/pragmabits/pragmarketplace",
+    "defaultPrompt": [
+      "Write a session report for this work.",
+      "Recall the last session report.",
+      "List recent Codex session reports."
+    ],
+    "brandColor": "#2563EB",
+    "screenshots": []
+  }
+}

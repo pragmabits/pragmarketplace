@@ -1,0 +1,46 @@
+{
+  "name": "git",
+  "version": "0.1.0",
+  "description": "Codex-native strategic git commit workflow with semantic commit planning, project exec-policy rules, Codex lifecycle hooks, and native git hook installation.",
+  "author": {
+    "name": "pragmabits",
+    "email": "leonardoleoncio96@gmail.com",
+    "url": "https://github.com/pragmabits"
+  },
+  "homepage": "https://github.com/pragmabits/pragmarketplace/tree/main/plugins/codex/git",
+  "repository": "https://github.com/pragmabits/pragmarketplace",
+  "license": "Proprietary",
+  "keywords": [
+    "git",
+    "commit",
+    "codex",
+    "conventional-commits",
+    "hooks",
+    "workflow",
+    "version-control"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Git Commit Workflow",
+    "shortDescription": "Plan and create semantic commits from Codex",
+    "longDescription": "A Codex-native git workflow that analyzes working-tree changes, groups files by semantic intent, creates Conventional Commits, and installs optional project guardrails through Codex rules, Codex hooks, and native git hooks.",
+    "developerName": "pragmabits",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write",
+      "Hooks"
+    ],
+    "websiteURL": "https://github.com/pragmabits/pragmarketplace",
+    "privacyPolicyURL": "https://github.com/pragmabits/pragmarketplace",
+    "termsOfServiceURL": "https://github.com/pragmabits/pragmarketplace",
+    "defaultPrompt": [
+      "Commit my current changes with semantic commits.",
+      "Set up the Codex git commit workflow in this repo.",
+      "Amend my last commit with these changes."
+    ],
+    "brandColor": "#F05032",
+    "screenshots": []
+  }
+}

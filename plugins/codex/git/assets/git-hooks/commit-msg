@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+# codex-git-plugin: commit-msg
+"""Validate Conventional Commit messages for the Codex git plugin."""
+
+from __future__ import annotations
+
+import re
+import subprocess
+import sys
+import unicodedata
+from pathlib import Path
+
+
+TYPES = ("feat", "fix", "docs", "style", "refactor", "test", "chore", "perf")
+SUBJECT_RE = re.compile(rf"^({'|'.join(TYPES)})(!)?: (.+)$")
+ALLOWED_ASCII = set(" ,./+-:'#>")
+
+
+def fail(message: str) -> int:
+    print(f"error: {message}", file=sys.stderr)
+    return 1
+
+
+def git_dir() -> Path:
+    result = subprocess.run(
+        ["git", "rev-parse", "--git-dir"],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    return Path(result.stdout.strip() or ".git")
+
+
+def should_skip(subject: str) -> bool:
+    markers = ("MERGE_HEAD", "SQUASH_MSG", "CHERRY_PICK_HEAD", "REVERT_HEAD")
+    directory = git_dir()
+    if any((directory / marker).exists() for marker in markers):
+        return True
+    return subject.startswith(("Merge ", "Revert ", "fixup!", "squash!", "amend!"))
+
+
+def visible_message(path: Path) -> str:
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    return "\n".join(line for line in lines if not line.startswith("#"))
+
+
+def valid_description_char(char: str) -> bool:
+    if char in ALLOWED_ASCII:
+        return True
+    category = unicodedata.category(char)
+    return category.startswith("L") or category.startswith("N")
+
+
+def valid_start(char: str) -> bool:
+    category = unicodedata.category(char)
+    return char.isdigit() or char.islower() or category == "Lo"
+
+
+def forbidden_body_char(char: str) -> bool:
+    codepoint = ord(char)
+    if codepoint in (0x09, 0x0A, 0x0D):
+        return False
+    return (
+        0x0000 <= codepoint <= 0x001F
+        or 0x007F <= codepoint <= 0x009F
+        or 0x200B <= codepoint <= 0x200F
+        or 0x202A <= codepoint <= 0x202E
+        or 0x2060 <= codepoint <= 0x2064
+        or 0x2066 <= codepoint <= 0x2069
+        or codepoint == 0xFEFF
+    )
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) != 2:
+        return fail("usage: commit-msg <commit-message-file>")
+
+    path = Path(argv[1])
+    if not path.is_file():
+        return fail(f"commit message file not found: {path}")
+
+    message = visible_message(path)
+    if not message.strip():
+        return fail("commit message is empty")
+
+    lines = message.splitlines()
+    subject = lines[0] if lines else ""
+    if should_skip(subject):
+        return 0
+
+    match = SUBJECT_RE.match(subject)
+    if not match:
+        return fail(
+            "commit message must match 'type: description' with type one of "
+            + ", ".join(TYPES)
+        )
+
+    description = match.group(3)
+    if not description:
+        return fail("description is required")
+    if not valid_start(description[0]):
+        return fail("description must start with a lowercase letter or digit")
+
+    bad_chars = [char for char in description if not valid_description_char(char)]
+    if bad_chars:
+        return fail(
+            "description contains disallowed character "
+            + repr(bad_chars[0])
+            + "; allowed: Unicode letters, digits, spaces, and , . / + - : ' # >"
+        )
+
+    if len(lines) > 1 and lines[1] != "":
+        return fail("body must be separated from subject by a blank line")
+
+    if len(lines) > 2:
+        body = "\n".join(lines[2:])
+        if any(forbidden_body_char(char) for char in body):
+            return fail(
+                "body contains a blocked control, bidirectional, zero-width, or byte-order character"
+            )
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

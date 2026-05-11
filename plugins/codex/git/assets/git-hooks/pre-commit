@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+# codex-git-plugin: pre-commit
+"""Block common dangerous content before it enters git history."""
+
+from __future__ import annotations
+
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+
+MAX_BYTES = 1024 * 1024
+BLOCKED_FILE_RE = re.compile(r"(\.(pyc|pyo|swp|swo|DS_Store)$|^\.env($|\.(?!.*example)))")
+SECRET_RES = [
+    re.compile(pattern, re.IGNORECASE)
+    for pattern in (
+        r"ANTHROPIC_API_KEY\s*=",
+        r"OPENAI_API_KEY\s*=",
+        r"AWS_SECRET_ACCESS_KEY\s*=",
+        r"AWS_ACCESS_KEY_ID\s*=",
+        r"PRIVATE_KEY\s*=",
+        r"-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----",
+        r"ghp_[A-Za-z0-9]{36}",
+        r"sk-[A-Za-z0-9]{48}",
+        r"password\s*=\s*['\"][^'\"]{8,}",
+    )
+]
+MARKER_PHRASES = (
+    "DO" + " NOT " + "COMMIT",
+    "FIXME" + ": remove before merge",
+    "XXX" + ": temporary",
+    "HACK" + ": remove",
+)
+MARKER_RE = re.compile("|".join(MARKER_PHRASES), re.I)
+
+
+def git_output(*args: str) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if result.returncode != 0:
+        return ""
+    return result.stdout
+
+
+def staged_files() -> list[str]:
+    output = git_output("diff", "--cached", "--name-only", "--diff-filter=ACM")
+    return [line for line in output.splitlines() if line]
+
+
+def staged_diff(path: str) -> str:
+    return git_output("diff", "--cached", "--", path)
+
+
+def main() -> int:
+    errors: list[str] = []
+    for file_name in staged_files():
+        path = Path(file_name)
+        if BLOCKED_FILE_RE.search(file_name):
+            errors.append(f"blocklisted file type: {file_name}")
+        if path.is_file() and path.stat().st_size > MAX_BYTES:
+            size_kb = path.stat().st_size // 1024
+            errors.append(f"file too large ({size_kb}KB > 1024KB): {file_name}")
+
+        diff = staged_diff(file_name)
+        if not diff:
+            continue
+        if any(pattern.search(diff) for pattern in SECRET_RES):
+            errors.append(f"possible secret in staged changes: {file_name}")
+        if MARKER_RE.search(diff):
+            errors.append(f"no-commit marker in staged changes: {file_name}")
+
+    if errors:
+        print("error: pre-commit checks failed:", file=sys.stderr)
+        for error in errors:
+            print(f"  - {error}", file=sys.stderr)
+        print("Fix the staged content instead of bypassing hooks.", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
