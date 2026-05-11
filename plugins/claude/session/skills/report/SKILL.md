@@ -210,22 +210,23 @@ Unless `$ARGUMENTS` contained `--no-commit`, commit the report file in a single 
 - contain **only** the report file just written — never co-commit other staged or unstaged work;
 - carry a subject-only message — no body, no emojis, no scope, no trailers.
 
-Use the Bash tool to run **one** command, substituting the values resolved at render time:
+Use the Bash tool to run the following **two** commands in order, substituting the values resolved at render time:
 
 ```bash
+git add -- "<absolute-report-path>"
 git commit -m "chore: add session report <timestamp>" -- "<absolute-report-path>"
 ```
 
 - `<timestamp>` — the injected no-Z UTC timestamp (e.g. `2026-05-11T143022`). Same value used in the filename.
 - `<absolute-report-path>` — the exact path passed to the Write tool in step 3.
 
-`git commit -- <path>` is partial-commit mode: it commits only `<path>` from the working tree and leaves any other staged or unstaged changes untouched. This is intentional — the report is workflow metadata and must not entangle with the user's in-progress work.
+The `git add` is required because the report file is brand-new and therefore untracked; `git commit -- <path>` is partial-commit mode that only operates on tracked paths and would otherwise fail with `pathspec ... did not match any files`. After the add, partial-commit mode commits only `<path>` and leaves any other staged or unstaged changes for unrelated paths untouched. This is intentional — the report is workflow metadata and must not entangle with the user's in-progress work.
 
-**Failure handling.** If the command exits non-zero (no git repo, hook rejection, merge in progress, identity not configured, etc.):
+**Failure handling.** If either command exits non-zero (no git repo, hook rejection, merge in progress, identity not configured, etc.):
 
-1. Do **not** delete, rewrite, or unstage anything. The report file remains exactly as Write left it.
-2. Tell the user in a single line that the commit failed, and include the git error output verbatim so they can act on it.
-3. Do **not** retry, do **not** propose alternate commit messages, and do **not** stage anything else.
+1. Do **not** delete or rewrite the report. It remains exactly as Write left it. Do **not** run `git reset` or `git restore --staged` to unstage it either — leave the staged state as-is so the user can inspect what `git add` produced.
+2. Tell the user in a single line which command failed (`git add` or `git commit`) and include the git error output verbatim so they can act on it.
+3. Do **not** retry, do **not** propose alternate commit messages, and do **not** stage anything else. If `git add` failed, do not proceed to `git commit`.
 
 **Opt-out.** If `$ARGUMENTS` contained `--no-commit`, skip this step entirely and tell the user the report was written without a commit. Do not stage the file in any other way.
 
