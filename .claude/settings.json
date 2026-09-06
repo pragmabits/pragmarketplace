@@ -1,5 +1,4 @@
 {
-  "outputStyle": "pragmatic:pragmatic-autonomy",
   "permissions": {
     "allow": [
       "Bash(git add *)",

@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Collection of Claude plugins for output styles, agents, and skills focused on development.",
-    "version": "1.18.1"
+    "version": "1.19.0"
   },
   "plugins": [
     {
@@ -31,56 +31,6 @@
         "automation",
         "strategic-commits",
         "validation"
-      ]
-    },
-    {
-      "name": "frontend",
-      "source": "./plugins/claude/frontend",
-      "description": "Frontend development orchestrator — coordinates CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, Material Design 3, HTMX + Go, and frontend design specialists for cross-domain frontend tasks",
-      "version": "1.8.0",
-      "author": {
-        "name": "pragmabits",
-        "email": "leonardoleoncio96@gmail.com"
-      },
-      "homepage": "https://github.com/pragmabits/pragmarketplace",
-      "repository": "https://github.com/pragmabits/pragmarketplace",
-      "category": "frontend",
-      "commands": "./commands",
-      "agents": [
-        "./agents/frontend.md",
-        "./agents/css.md",
-        "./agents/tailwindcss.md",
-        "./agents/vuejs.md",
-        "./agents/shadcn.md",
-        "./agents/fontawesome.md",
-        "./agents/material-design.md",
-        "./agents/htmx-go.md"
-      ],
-      "keywords": [
-        "frontend",
-        "orchestrator",
-        "css",
-        "tailwindcss",
-        "vuejs",
-        "nuxt",
-        "shadcn",
-        "fontawesome",
-        "material-design",
-        "md3",
-        "design-tokens",
-        "design",
-        "ui",
-        "components",
-        "responsive",
-        "animation",
-        "theming",
-        "agent",
-        "htmx",
-        "go",
-        "golang",
-        "templ",
-        "server-side-rendering",
-        "hypermedia"
       ]
     },
     {
@@ -129,10 +79,10 @@
       ]
     },
     {
-      "name": "pragmatic",
-      "source": "./plugins/claude/pragmatic",
-      "description": "Output style for pragmatic, evidence-driven engineering. Reserves material decisions (writes, behavior changes, strategy choices) for the user via AskUserQuestion, batches related decisions into one prompt, allows procedural autonomy (reads, searches, sandboxed runs), enforces evidence-backed claims, and keeps responses terse with in-line decision announcements.",
-      "version": "1.0.1",
+      "name": "pragma",
+      "source": "./plugins/claude/pragma",
+      "description": "Standing working directives, injected as session context by a SessionStart hook rather than waiting to be invoked. Ships one rule: when the user says something is wrong, verify the claim before conceding it — if the user is right, fix it and move on; if the user is wrong, say so and cite where the evidence is. Conceding an error you did not make is ego-polishing by self-blame, and it destroys the signal value of every later agreement.",
+      "version": "0.1.0",
       "author": {
         "name": "pragmabits",
         "email": "leonardoleoncio96@gmail.com"
@@ -140,45 +90,18 @@
       "homepage": "https://github.com/pragmabits/pragmarketplace",
       "repository": "https://github.com/pragmabits/pragmarketplace",
       "category": "output",
-      "outputStyles": "./styles/",
       "keywords": [
-        "output-style",
-        "pragmatic",
-        "autonomy",
-        "evidence-based",
-        "AskUserQuestion",
-        "material-decisions",
-        "procedural-autonomy",
-        "concise",
-        "tech-lead",
-        "engineering",
-        "decision-announcements",
-        "Claude",
-        "plugin"
-      ]
-    },
-    {
-      "name": "architect",
-      "source": "./plugins/claude/architect",
-      "description": "Decision-support and scaffolding for sub-agents and loops in Claude Code. Surveys existing projects, prioritizes existing capabilities (in-session tools/skills/agents and installed pragmatic plugins) before scaffolding, and refuses to generate loops without verifiers or sub-agents without one-sentence roles. Distributed via the pragmatic marketplace.",
-      "version": "0.1.2",
-      "author": {
-        "name": "pragmabits",
-        "email": "leonardoleoncio96@gmail.com"
-      },
-      "homepage": "https://github.com/pragmabits/pragmarketplace",
-      "repository": "https://github.com/pragmabits/pragmarketplace",
-      "category": "productivity",
-      "commands": "./commands",
-      "keywords": [
-        "agents",
-        "sub-agents",
-        "loops",
-        "orchestration",
-        "architecture",
-        "scaffolding"
+        "directive",
+        "session-start",
+        "hook",
+        "context-injection",
+        "candor",
+        "pushback",
+        "evidence",
+        "no-sycophancy",
+        "verification",
+        "behavior"
       ]
     }
   ]
 }
-

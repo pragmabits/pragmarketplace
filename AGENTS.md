@@ -37,11 +37,9 @@ Do not use shell redirection, `tee`, `sed -i`, ad hoc scripts, formatters, code 
 Current marketplace entries:
 
 - `git` `3.0.1`: semantic commit workflow, Conventional Commits validation, native git hooks, safety hooks.
-- `frontend` `1.8.0`: frontend orchestrator with CSS, Tailwind CSS, Vue.js, Nuxt, shadcn/ui, Font Awesome, Material Design 3, HTMX + Go, and design specialists.
 - `review` `1.0.1`: `/codex-review`, backed by `codex-review.sh` and the external Codex CLI.
-- `session` `2.2.0`: `/report` and `/recall` handoff reports for Claude Code.
-- `pragmatic` `1.0.1`: pragmatic Claude output style.
-- `architect` `0.1.2`: decision-support and scaffolding for Claude sub-agents and loops.
+- `session` `2.3.1`: `/report` and `/recall` handoff reports for Claude Code.
+- `pragma` `0.1.0`: standing working directives injected by a `SessionStart` hook. No slash entry.
 
 Treat those entries as read-only inventory unless the project policy changes.
 
