@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Collection of Claude plugins for output styles, agents, and skills focused on development.",
-    "version": "1.19.0"
+    "version": "1.19.1"
   },
   "plugins": [
     {
@@ -81,8 +81,8 @@
     {
       "name": "pragma",
       "source": "./plugins/claude/pragma",
-      "description": "Standing working directives, injected as session context by a SessionStart hook rather than waiting to be invoked. Ships one rule: when the user says something is wrong, verify the claim before conceding it — if the user is right, fix it and move on; if the user is wrong, say so and cite where the evidence is. Conceding an error you did not make is ego-polishing by self-blame, and it destroys the signal value of every later agreement.",
-      "version": "0.1.0",
+      "description": "Standing working directives, injected as session context by a SessionStart hook rather than waiting to be invoked. Four rules: verify a disputed claim before conceding it and say when the user is wrong; treat a complaint as a question, not a request to build something; never present a dominated option as a live alternative; and never report a result that was not run, or work as done while a known inconsistency in it is open.",
+      "version": "0.2.0",
       "author": {
         "name": "pragmabits",
         "email": "leonardoleoncio96@gmail.com"

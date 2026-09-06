@@ -19,7 +19,7 @@ A Claude Code **plugin marketplace** (`pragmabits/pragmarketplace`). It contains
 | `git` | 3.0.1 | `/commit` (skill), `/commit-setup` (command) | Inline commit workflow + Conventional Commits validation. Native git hooks installed by `/commit-setup --apply`. |
 | `review` | 1.0.1 | `/codex-review` (skill) | Wraps `scripts/codex-review.sh`. Requires the external `codex` CLI plus `jq`. |
 | `session` | 2.3.1 | `/report`, `/recall` (skills) | Writes/reads handoff reports under `<repo>/.claude/sessions/`. `/report` auto-commits the new file by running `git add -- <path>` (so the brand-new file becomes tracked) then `git commit -m "chore: …" -- <path>` (partial commit; other staged work untouched); pass `--no-commit` to skip. The `/recall` `last` and `resume` subcommands return file pointers; the agent uses `Read` to ingest reports rather than dumping them into the chat. |
-| `pragma` | 0.1.0 | — | Standing working directives. No slash entry and nothing to invoke: a `SessionStart` hook emits `instructions.md` as session context. Ships one rule — verify a disputed claim before conceding it. |
+| `pragma` | 0.2.0 | — | Standing working directives. No slash entry and nothing to invoke: a `SessionStart` hook emits `instructions.md` as session context. Four rules: verify before conceding, a complaint is not a work order, a dominated option is not an option, verify before claiming. |
 
 ## Slash entries: commands vs skills
 

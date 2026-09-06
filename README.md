@@ -13,7 +13,7 @@ Pragmatic provides ready-to-install plugins that extend Claude Code with special
 | **git** | 3.0.1 | Tools | `/commit`, `/commit-setup` | Semantic commits, whole-file staging, hook-validated messages, native git hooks, and safety hooks |
 | **review** | 1.0.1 | Tools | `/codex-review` | Independent Codex-based code review of the current `git diff` — verdict, summary, and findings |
 | **session** | 2.3.1 | Tools | `/report`, `/recall` | Session handoff reports with fixed-numbered pending items (`/report`); list, filter, grep, resume, and read back prior reports via five `/recall` subcommands (`list`, `filter`, `grep`, `resume`, `last`) |
-| **pragma** | 0.1.0 | Output | — | Standing working directives injected at session start — currently one rule: verify a disputed claim before conceding it, and say so when the user is wrong |
+| **pragma** | 0.2.0 | Output | — | Standing working directives injected at session start — verify before conceding, a complaint is not a work order, a dominated option is not an option, verify before claiming |
 
 ## Installation
 

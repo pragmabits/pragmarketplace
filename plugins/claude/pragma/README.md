@@ -16,7 +16,7 @@ Enabling the plugin is the only step a hook needs.
 
 ## What it ships
 
-One rule, deliberately. See `instructions.md`.
+Four rules. See `instructions.md`.
 
 **Verify before conceding.** When the user says something is wrong, check, then
 report what the check found — fix it if they are right, say they are wrong if
@@ -24,8 +24,17 @@ they are not. Conceding an error you did not make is ego-polishing by self-blame
 once anything will be conceded, a real error is indistinguishable from a conceded
 one, and every agreement stops carrying information.
 
-The name is scoped wider than that single rule on purpose. Further standing
-directives belong in the same file.
+**A complaint is not a work order.** A description of something irritating is a
+question, not a request to build a tool for it.
+
+**A dominated option is not an option.** Offering an alternative that loses with
+no compensating trade asserts a decision exists where none does. A two-column
+comparison makes that claim by its shape.
+
+**Verify before claiming.** No result reported that was not run, and no work
+reported as done while a known inconsistency in it is open.
+
+Further standing directives belong in the same file rather than in a second one.
 
 ## Install
 

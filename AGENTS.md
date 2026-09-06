@@ -39,7 +39,7 @@ Current marketplace entries:
 - `git` `3.0.1`: semantic commit workflow, Conventional Commits validation, native git hooks, safety hooks.
 - `review` `1.0.1`: `/codex-review`, backed by `codex-review.sh` and the external Codex CLI.
 - `session` `2.3.1`: `/report` and `/recall` handoff reports for Claude Code.
-- `pragma` `0.1.0`: standing working directives injected by a `SessionStart` hook. No slash entry.
+- `pragma` `0.2.0`: standing working directives injected by a `SessionStart` hook. No slash entry.
 
 Treat those entries as read-only inventory unless the project policy changes.
 
