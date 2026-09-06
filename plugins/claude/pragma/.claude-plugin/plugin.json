@@ -1,0 +1,23 @@
+{
+  "name": "pragma",
+  "version": "0.1.0",
+  "description": "Standing working directives, injected as session context by a SessionStart hook rather than waiting to be invoked. Ships one rule: when the user says something is wrong, verify the claim before conceding it — if the user is right, fix it and move on; if the user is wrong, say so and cite where the evidence is. Conceding an error you did not make is ego-polishing by self-blame, and it destroys the signal value of every later agreement.",
+  "author": {
+    "name": "pragmabits",
+    "email": "leonardoleoncio96@gmail.com"
+  },
+  "homepage": "https://github.com/pragmabits/pragmarketplace",
+  "repository": "https://github.com/pragmabits/pragmarketplace",
+  "keywords": [
+    "directive",
+    "session-start",
+    "hook",
+    "context-injection",
+    "candor",
+    "pushback",
+    "evidence",
+    "no-sycophancy",
+    "verification",
+    "behavior"
+  ]
+}
