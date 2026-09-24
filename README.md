@@ -4,7 +4,7 @@ A curated collection of Claude Code plugins by [Pragmabits](https://github.com/p
 
 ## Overview
 
-Pragmatic provides ready-to-install plugins that extend Claude Code with specialized knowledge, tools, and workflows. Each plugin is focused on a specific domain — commit strategy, code review, session handoff — and reaches Claude Code either through the slash command system or, in `pragma`'s case, through a session hook.
+Pragmatic provides ready-to-install plugins that extend Claude Code with specialized knowledge, tools, and workflows. Each plugin is focused on a specific domain — commit strategy, code review, session handoff, the axio library — and reaches Claude Code through the slash command system, through a session hook in `pragma`'s case, or through skills Claude loads when the work calls for them in `axio`'s case.
 
 ## Plugins
 
@@ -14,19 +14,21 @@ Pragmatic provides ready-to-install plugins that extend Claude Code with special
 | **review** | 1.0.1 | Tools | `/codex-review` | Independent Codex-based code review of the current `git diff` — verdict, summary, and findings |
 | **session** | 2.3.1 | Tools | `/report`, `/recall` | Session handoff reports with fixed-numbered pending items (`/report`); list, filter, grep, resume, and read back prior reports via five `/recall` subcommands (`list`, `filter`, `grep`, `resume`, `last`) |
 | **pragma** | 0.2.0 | Output | — | Standing working directives injected at session start — verify before conceding, a complaint is not a work order, a dominated option is not an option, verify before claiming |
+| **axio** | 0.4.0 | Development | — | Skills for the [axio](https://github.com/pragmabits/axio) Go logging library: an entry skill for the whole API and a migration skill for code on `log`, `slog`, logrus, zerolog, zap or apex/log. Its source lives in the axio repository |
 
 ## Installation
 
-Install any plugin directly from the marketplace:
+Add the marketplace once, then install any plugin from it:
 
 ```bash
-claude plugin add pragmabits/pragmarketplace --plugin <plugin-name>
+claude plugin marketplace add pragmabits/pragmarketplace
+claude plugin install <plugin-name>@pragmatic
 ```
 
 For example, to install the git plugin:
 
 ```bash
-claude plugin add pragmabits/pragmarketplace --plugin git
+claude plugin install git@pragmatic
 ```
 
 ## Usage
@@ -42,6 +44,8 @@ Once installed, plugins are available through slash commands in Claude Code:
 ```
 
 The **pragma** plugin has no slash command and nothing to invoke — a `SessionStart` hook injects its directives as session context, so they are in force before the first answer.
+
+The **axio** plugin has no slash command either: its `axio` skill loads when the work involves axio, and its `migration` skill when code moves to axio from another logging library.
 
 ## Author
 

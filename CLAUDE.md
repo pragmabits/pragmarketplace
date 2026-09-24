@@ -4,12 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A Claude Code **plugin marketplace** (`pragmabits/pragmarketplace`). It contains no application code, no build, no test runner. The product is a tree of plugins (markdown + JSON + Bash) that other Claude Code instances install. Per-plugin install: `claude plugin add pragmabits/pragmarketplace --plugin <name>`.
+A Claude Code **plugin marketplace** (`pragmabits/pragmarketplace`). It contains no application code, no build, no test runner. The product is a tree of plugins (markdown + JSON + Bash) that other Claude Code instances install. Install: `claude plugin marketplace add pragmabits/pragmarketplace` once, then `claude plugin install <name>@pragmatic`.
 
 ## Repo layout
 
 - `.claude-plugin/marketplace.json` — central plugin registry. Source of truth for what's published.
 - `plugins/claude/<plugin>/.claude-plugin/plugin.json` — per-plugin manifest. Each carries its own `version`.
+- `axio` is the one plugin whose files live elsewhere: its entry has a `git-subdir` source, `path: plugin` of `pragmabits/axio` at `ref: main`, so its `plugin.json` and skills are edited in the axio repository, and users get a change once it is pushed there.
 - `.claude/settings.json` — project permission allowlist. Belongs to the user; do not modify unless explicitly asked.
 
 ## Registered plugins
@@ -20,6 +21,7 @@ A Claude Code **plugin marketplace** (`pragmabits/pragmarketplace`). It contains
 | `review` | 1.0.1 | `/codex-review` (skill) | Wraps `scripts/codex-review.sh`. Requires the external `codex` CLI plus `jq`. |
 | `session` | 2.3.1 | `/report`, `/recall` (skills) | Writes/reads handoff reports under `<repo>/.claude/sessions/`. `/report` auto-commits the new file by running `git add -- <path>` (so the brand-new file becomes tracked) then `git commit -m "chore: …" -- <path>` (partial commit; other staged work untouched); pass `--no-commit` to skip. The `/recall` `last` and `resume` subcommands return file pointers; the agent uses `Read` to ingest reports rather than dumping them into the chat. |
 | `pragma` | 0.2.0 | — | Standing working directives. No slash entry and nothing to invoke: a `SessionStart` hook emits `instructions.md` as session context. Four rules: verify before conceding, a complaint is not a work order, a dominated option is not an option, verify before claiming. |
+| `axio` | 0.4.0 | — | Skills for the axio Go logging library, loaded when the work calls for them: `axio`, the entry point covering the whole API, and `migration`, for code moving from another logging library. Sourced from `pragmabits/axio` (`plugin/`); its former agents and commands sit in `plugin/.stash/`, outside what Claude Code loads. |
 
 ## Slash entries: commands vs skills
 
@@ -93,7 +95,7 @@ Skill `evals/evals.json` files are test-case definitions only — there is no in
 
 Two version fields move together for any plugin change:
 
-1. `plugins/claude/<plugin>/.claude-plugin/plugin.json` → `version`
+1. `plugins/claude/<plugin>/.claude-plugin/plugin.json` → `version` (for `axio`, `plugin/.claude-plugin/plugin.json` in the axio repository)
 2. `.claude-plugin/marketplace.json` → `plugins[<n>].version` for that plugin
 
 If the marketplace itself changed (added/removed a plugin, registry-level metadata), also bump `.claude-plugin/marketplace.json` → `metadata.version`.

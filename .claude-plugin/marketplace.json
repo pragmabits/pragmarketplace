@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Collection of Claude plugins for output styles, agents, and skills focused on development.",
-    "version": "1.19.1"
+    "version": "1.20.0"
   },
   "plugins": [
     {
@@ -101,6 +101,35 @@
         "no-sycophancy",
         "verification",
         "behavior"
+      ]
+    },
+    {
+      "name": "axio",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/pragmabits/axio.git",
+        "path": "plugin",
+        "ref": "main"
+      },
+      "description": "Skills for using axio, the Go structured logging library. The axio skill is the entry point and covers the API end to end: logger, annotations, configuration, outputs, PII masking on by default, the audit hash chain, wide events, hooks, tracing and metrics, and the axio command. The migration skill moves code from log, slog, logrus, zerolog, zap or apex/log.",
+      "version": "0.4.0",
+      "author": {
+        "name": "pragmabits",
+        "email": "leonardoleoncio96@gmail.com"
+      },
+      "homepage": "https://github.com/pragmabits/axio",
+      "repository": "https://github.com/pragmabits/axio",
+      "category": "development",
+      "keywords": [
+        "go",
+        "golang",
+        "logging",
+        "structured-logging",
+        "axio",
+        "pii",
+        "audit",
+        "opentelemetry",
+        "migration"
       ]
     }
   ]

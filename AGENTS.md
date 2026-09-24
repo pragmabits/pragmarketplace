@@ -40,6 +40,7 @@ Current marketplace entries:
 - `review` `1.0.1`: `/codex-review`, backed by `codex-review.sh` and the external Codex CLI.
 - `session` `2.3.1`: `/report` and `/recall` handoff reports for Claude Code.
 - `pragma` `0.2.0`: standing working directives injected by a `SessionStart` hook. No slash entry.
+- `axio` `0.4.0`: `axio` and `migration` skills for the axio Go logging library. No slash entry; sourced by `git-subdir` from `pragmabits/axio` (`plugin/`), not from `plugins/claude/`.
 
 Treat those entries as read-only inventory unless the project policy changes.
 
