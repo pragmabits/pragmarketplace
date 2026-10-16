@@ -70,7 +70,7 @@ If the hook is not installed, copy `${CLAUDE_PLUGIN_ROOT}/hooks/commit-msg` to `
 
 If a `commit-msg` hook already exists:
 - Check if it was installed by this plugin (contains the marker comment `# commit-msg hook — validates commit messages against Conventional Commits format.`)
-- If it's from this plugin, report it as already up to date
+- If it's from this plugin, compare it with `${CLAUDE_PLUGIN_ROOT}/hooks/commit-msg` (`cmp -s`). Identical: report it as up to date. Different: it is an older copy from this plugin, so replace it with the current one, keep it executable, and report it as updated
 - If it's from another source, warn the user and ask (via AskUserQuestion) whether to overwrite or skip
 
 Report what was installed.
@@ -93,7 +93,7 @@ If any hook already exists and was NOT installed by this plugin, warn the user a
 - `pre-commit`: `# pre-commit hook — catches dangerous content before it enters history.`
 - `prepare-commit-msg`: `# prepare-commit-msg hook — drafts a conventional commit message from staged changes.`
 
-If the marker is present, report the hook as already up to date.
+If the marker is present, compare the installed hook with `${CLAUDE_PLUGIN_ROOT}/hooks/<hook-name>` (`cmp -s`). Identical: report it as up to date. Different: it is an older copy from this plugin, so replace it with the current one, keep it executable, and report it as updated.
 
 If the user did not select a hook that is currently installed, use AskUserQuestion to ask whether to remove it. This keeps the setup clean — the user should be in control of which hooks are active.
 

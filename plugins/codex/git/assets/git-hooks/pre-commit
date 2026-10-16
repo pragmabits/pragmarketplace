@@ -34,6 +34,11 @@ MARKER_PHRASES = (
     "HACK" + ": remove",
 )
 MARKER_RE = re.compile("|".join(MARKER_PHRASES), re.I)
+# Session reports written by the session plugins
+# (.harness/sessions/<user>-<YYYY-MM-DDTHHMMSS>[-N].md) record conversations, so
+# a quoted no-commit phrase is content there, not a marker. They skip the
+# marker check only; the other checks still apply to them.
+SESSION_REPORT_RE = re.compile(r"^\.harness/sessions/([^/]*-)?\d{4}-\d{2}-\d{2}T\d{6}(-\d+)?\.md$")
 
 
 def git_output(*args: str) -> str:
@@ -55,7 +60,15 @@ def staged_files() -> list[str]:
 
 
 def staged_diff(path: str) -> str:
-    return git_output("diff", "--cached", "--", path)
+    """Lines the staged change adds. Removed and context lines are left out, so
+    that removing a leaked secret or an old marker, or editing next to one, passes."""
+    added, in_hunk = [], False
+    for line in git_output("diff", "--cached", "-U0", "--", path).splitlines():
+        if line.startswith("@@"):
+            in_hunk = True
+        elif in_hunk and line.startswith("+"):
+            added.append(line[1:])
+    return "\n".join(added)
 
 
 def main() -> int:
@@ -73,7 +86,7 @@ def main() -> int:
             continue
         if any(pattern.search(diff) for pattern in SECRET_RES):
             errors.append(f"possible secret in staged changes: {file_name}")
-        if MARKER_RE.search(diff):
+        if MARKER_RE.search(diff) and not SESSION_REPORT_RE.match(file_name):
             errors.append(f"no-commit marker in staged changes: {file_name}")
 
     if errors:

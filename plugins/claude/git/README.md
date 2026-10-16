@@ -107,7 +107,7 @@ The plugin includes native git hooks that enforce commit conventions at the git 
 
 **Available hooks:**
 - `commit-msg` — validates commit message format
-- `pre-commit` — blocks secrets, large files, no-commit markers, and blocklisted file types
+- `pre-commit` — blocks secrets, large files, no-commit markers, and blocklisted file types. Session reports written by the `session` plugins (`.harness/sessions/<user>-<YYYY-MM-DDTHHMMSS>[-N].md` at the repository root) skip the no-commit marker check, because they quote conversations, where a no-commit phrase is content rather than a marker; the other checks still apply to them. The secret and marker checks look only at the lines a commit adds, so removing a secret or a marker is never blocked.
 - `prepare-commit-msg` — drafts a conventional commit message from staged files
 
 **Installation:**
@@ -176,6 +176,11 @@ claude plugin add pragmabits/pragmarketplace --plugin git
 Then run `/commit-setup --apply` to configure permission rules and install the git hooks.
 
 ## Version History
+
+### v3.0.2 — October 2026
+- `pre-commit`: session reports in `.harness/sessions/` whose name matches `<user>-<YYYY-MM-DDTHHMMSS>[-N].md` skip the no-commit marker check (it matches case-insensitively, so ordinary prose in a report tripped it). Secret, size and file-type checks still apply to them.
+- `pre-commit`: the secret and marker checks look only at lines the commit adds. Removed and context lines used to count too, so removing a leaked secret or an old marker, or editing within three lines of one, was blocked.
+- `/commit-setup --apply` now replaces a hook it installed earlier when the plugin's copy has changed, instead of reporting it as up to date; this is how already-installed repositories get the change above.
 
 ### v3.0.1 — April 2026
 - `commit-msg` hook agora pula validação para commits gerados pelo git (merge, revert, squash, cherry-pick, `fixup!`/`squash!`/`amend!`) — paridade com `@commitlint/is-ignored defaultIgnores`
