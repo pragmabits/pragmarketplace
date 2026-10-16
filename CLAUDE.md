@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A Claude Code **plugin marketplace** (`pragmabits/pragmarketplace`). It contains no application code, no build, no test runner. The product is a tree of plugins (markdown + JSON + Bash) that other Claude Code instances install. Install: `claude plugin marketplace add pragmabits/pragmarketplace` once, then `claude plugin install <name>@pragmatic`.
+A Claude Code **plugin marketplace** (`pragmabits/pragmarketplace`). It contains no application code and no build; the only tests are the `session` plugins' script suites (see *Working in this repo*). The product is a tree of plugins (markdown + JSON + Bash) that other Claude Code instances install. Install: `claude plugin marketplace add pragmabits/pragmarketplace` once, then `claude plugin install <name>@pragmatic`.
 
 ## Repo layout
 
@@ -17,9 +17,9 @@ A Claude Code **plugin marketplace** (`pragmabits/pragmarketplace`). It contains
 
 | Plugin | Version | Slash entries | What it is |
 |--------|---------|--------------|-----|
-| `git` | 3.0.1 | `/commit` (skill), `/commit-setup` (command) | Inline commit workflow + Conventional Commits validation. Native git hooks installed by `/commit-setup --apply`. |
+| `git` | 3.0.2 | `/commit` (skill), `/commit-setup` (command) | Inline commit workflow + Conventional Commits validation. Native git hooks installed by `/commit-setup --apply`. |
 | `review` | 1.0.1 | `/codex-review` (skill) | Wraps `scripts/codex-review.sh`. Requires the external `codex` CLI plus `jq`. |
-| `session` | 2.3.1 | `/report`, `/recall` (skills) | Writes/reads handoff reports under `<repo>/.claude/sessions/`. `/report` auto-commits the new file by running `git add -- <path>` (so the brand-new file becomes tracked) then `git commit -m "chore: …" -- <path>` (partial commit; other staged work untouched); pass `--no-commit` to skip. The `/recall` `last` and `resume` subcommands return file pointers; the agent uses `Read` to ingest reports rather than dumping them into the chat. |
+| `session` | 3.0.0 | `/report`, `/recall` (skills) | Writes/reads handoff reports under `<repo>/.harness/sessions/`, the directory shared with the Codex plugin in `plugins/codex/session/` (same report contract; both readers give identical output). `/report` triggers only on explicit report requests; it copies the authorship lines (`Harness`, `Report generator`) from `scripts/report-origin.sh`; there is no `Model` line because Claude Code documents no model source for skills, and after writing the file runs `scripts/commit-report.sh`, which checks the report, stages it by path, commits it with `git commit --only` (other staged and unstaged work untouched), verifies the commit, and unstages the report again if the commit fails; `--no-commit`, or a request in words that does not ask for a commit, skips it. `/recall` is read-only (it never creates the directory); `last` and `resume` get JSON excerpts from `recall.sh` + `lib/report.jq`, so reports are read in full only when needed. Tests: `bash plugins/claude/session/tests/run.sh`. |
 | `pragma` | 0.2.0 | — | Standing working directives. No slash entry and nothing to invoke: a `SessionStart` hook emits `instructions.md` as session context. Four rules: verify before conceding, a complaint is not a work order, a dominated option is not an option, verify before claiming. |
 | `axio` | 0.4.0 | — | Skills for the axio Go logging library, loaded when the work calls for them: `axio`, the entry point covering the whole API, and `migration`, for code moving from another logging library. Sourced from `pragmabits/axio` (`plugin/`); its former agents and commands sit in `plugin/.stash/`, outside what Claude Code loads. |
 
@@ -37,7 +37,7 @@ Frontmatter that affects behavior: `name`, `description` (drives skill auto-disc
 Path expansions inside command/skill bodies:
 - `${CLAUDE_PLUGIN_ROOT}` — plugin absolute root. Used in commands and `hooks/hooks.json`.
 - `${CLAUDE_SKILL_DIR}` — skill absolute root. Used inside SKILL.md bodies (e.g., `review/skills/codex-review/SKILL.md`).
-- `!`-prefixed fenced blocks inside a SKILL.md are shell-executed at render time and the output is substituted into the prompt (e.g., `session/skills/report/SKILL.md` injects git metadata this way; `session/scripts/ensure-sessions-dir.sh` resolves the sessions directory via `$CLAUDE_PROJECT_DIR` → `git rev-parse --show-toplevel` → `pwd`).
+- `!`-prefixed fenced blocks inside a SKILL.md are shell-executed at render time and the output is substituted into the prompt (e.g., `session/skills/report/SKILL.md` injects the output of `scripts/prepare-report.sh` this way; `session/scripts/lib/sessions-dir.sh` resolves the sessions directory via `git rev-parse --show-toplevel` → `$CLAUDE_PROJECT_DIR` → `pwd` without creating it; only `ensure-sessions-dir.sh`, run at the report save step, creates it).
 
 ## Validation hooks
 
@@ -66,12 +66,12 @@ indistinguishable from a plugin that was never enabled.
 Installed by `/commit-setup --apply` into the consumer repo's `.git/hooks/`. Each script carries a marker comment used by `commit-setup` to detect plugin-installed hooks vs third-party hooks; preserve those comments verbatim when editing.
 
 - `commit-msg` — enforces `type: description` (`feat|fix|docs|style|refactor|test|chore|perf`), lowercase/digit first char, the explicit allowed-character set (Unicode letters, digits, spaces, and `, . / + - : ' # >`), single blank line before any body, and a Trojan-Source / CVE-2021-42574 ban on bidi/zero-width/control codepoints in the body. Skips merge / revert / squash / cherry-pick / `fixup!` / `squash!` / `amend!` messages.
-- `pre-commit` — blocks staged secrets, files >1MB, and blocklisted file types (`.pyc`, `.pyo`, `.DS_Store`, `.swp`, `.swo`, `.env`).
+- `pre-commit` — blocks staged secrets, files >1MB, no-commit markers, and blocklisted file types (`.pyc`, `.pyo`, `.DS_Store`, `.swp`, `.swo`, `.env`). Session reports (`.harness/sessions/<user>-<YYYY-MM-DDTHHMMSS>[-N].md` at the repo root) skip the marker check only, since they quote conversations. Secret and marker checks read only the lines a commit adds. `/commit-setup --apply` replaces a plugin-installed hook whose content differs from the current one.
 - `prepare-commit-msg` — drafts a Conventional Commits subject from staged files. Type detection is path-pattern only and falls back to `feat:` whenever staged files don't all match a single non-feat category — drafts can mis-classify and are intended to be edited.
 
 ## Working in this repo
 
-There is no build/test pipeline. Verification is structural:
+There is no build pipeline. Verification is structural, plus the script suites of the `session` plugins (Claude and Codex):
 
 ```bash
 # Validate the marketplace JSON
@@ -82,6 +82,10 @@ jq . plugins/claude/<plugin>/.claude-plugin/plugin.json
 
 # Smoke-test a hook with a fake tool input on stdin
 echo '{"tool_input":{"command":"git add -p ."}}' | bash plugins/claude/git/hooks/validate-git-command.sh
+
+# Run the session plugins' script tests (temporary repos only)
+bash plugins/claude/session/tests/run.sh
+python3 -I plugins/codex/session/tests/test_session.py
 
 # Install a plugin from the local checkout
 claude plugin add ./plugins/claude/<plugin>

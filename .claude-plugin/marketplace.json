@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Collection of Claude plugins for output styles, agents, and skills focused on development.",
-    "version": "1.20.0"
+    "version": "1.21.0"
   },
   "plugins": [
     {
       "name": "git",
       "source": "./plugins/claude/git",
       "description": "Strategic git commit plugin — semantic analysis, whole-file staging, hook-validated commits, native git hooks, and safety hooks",
-      "version": "3.0.1",
+      "version": "3.0.2",
       "author": {
         "name": "pragmabits",
         "email": "leonardoleoncio96@gmail.com"
@@ -57,8 +57,8 @@
     {
       "name": "session",
       "source": "./plugins/claude/session",
-      "description": "Session lifecycle helpers for Claude Code. The /report skill writes a structured handoff report under .claude/sessions/ capturing the session contract, work completed, decisions, and fixed-numbered pending items, then commits the file in a single isolated subject-only chore: commit (opt out with --no-commit). The /recall skill retrieves, searches, and resumes prior reports via five subcommands (list, filter, grep, resume, last) so the next agent can pick up pending work without re-reading source code.",
-      "version": "2.3.1",
+      "description": "Session lifecycle helpers for Claude Code. The /report skill writes a handoff report under .harness/sessions/, the directory shared with the Codex session plugin, that keeps verified work, pending verification, hypotheses and missing information apart, records who made each decision and which tool wrote the report, and lists pending items with their origin and evidence; /report commits the new file in an isolated, verified chore: commit unless --no-commit is given. The /recall skill lists, filters, searches and resumes reports from any tool that follows the same contract through five read-only subcommands (list, filter, grep, resume, last), and checks the current state of pending items before offering them as work.",
+      "version": "3.0.0",
       "author": {
         "name": "pragmabits",
         "email": "leonardoleoncio96@gmail.com"

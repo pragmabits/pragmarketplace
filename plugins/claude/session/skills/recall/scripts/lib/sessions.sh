@@ -1,130 +1,127 @@
 #!/usr/bin/env bash
-# lib/sessions.sh — sourced helpers for the recall skill.
-# Reads session report files written by the report skill and exposes
-# extraction primitives. Anchors mirror plugins/claude/session/skills/report/SKILL.md.
+# lib/sessions.sh — sourced helpers for recall.sh.
 #
-# Filename pattern: <git-user>-YYYY-MM-DDTHHMMSS.md (UTC, no Z).
-# Lex-descending sort on filenames == timestamp-descending sort.
+# Read-only: nothing here creates a directory or writes a file. Resolution goes
+# through the plugin's scripts/lib/sessions-dir.sh, the same resolver the report
+# skill uses, but without its mkdir step.
+#
+# Report filename: <user>-<YYYY-MM-DDTHHMMSS>[-N].md (UTC, no Z). The optional
+# -N suffix is added by prepare-report.sh when the plain name is taken. Order is
+# by the timestamp, then by N, never by the user prefix.
 
-# Resolve the sessions directory. Delegates to the plugin-scoped resolver so
-# both report and recall agree on the location.
-#
-# Falls back to a BASH_SOURCE-derived plugin root when CLAUDE_PLUGIN_ROOT
-# is not exported into the subshell that runs this script. Without this
-# fallback, the harness's !-block context (which expands CLAUDE_SKILL_DIR
-# but does not always export CLAUDE_PLUGIN_ROOT) makes the bash invocation
-# below resolve to "/scripts/ensure-sessions-dir.sh", failing with exit 127
-# and silently masking as "No sessions found" upstream.
+RECALL_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# <plugin>/skills/recall/scripts/lib → <plugin>. Derived from this file's own
+# location rather than CLAUDE_PLUGIN_ROOT, which the !-block subshell does not
+# always export.
+RECALL_PLUGIN_ROOT="${RECALL_LIB_DIR%/skills/recall/scripts/lib}"
+
+SESSION_NAME_RE='^((.*)-)?([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{6})(-([0-9]+))?$'
+
+SESSIONS_DIR=""
+SESSION_FILES=()
+
+# Print the sessions directory path without creating it.
 sessions_dir() {
-  local plugin_root="${CLAUDE_PLUGIN_ROOT:-}"
-  if [[ -z "$plugin_root" ]]; then
-    local lib_dir
-    lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    # lib_dir is <plugin>/skills/recall/scripts/lib; strip the trailing 4 segments.
-    plugin_root="${lib_dir%/skills/recall/scripts/lib}"
+  local resolver="${RECALL_PLUGIN_ROOT}/scripts/lib/sessions-dir.sh"
+  if [[ ! -r "$resolver" ]]; then
+    printf 'error: the sessions directory resolver is missing from the plugin (scripts/lib/sessions-dir.sh)\n' >&2
+    return 1
   fi
-  bash "${plugin_root}/scripts/ensure-sessions-dir.sh"
+  # shellcheck source=../../../../scripts/lib/sessions-dir.sh
+  if ! source "$resolver"; then
+    printf 'error: the sessions directory resolver failed to load\n' >&2
+    return 1
+  fi
+  if ! resolve_sessions_dir; then
+    printf 'error: the sessions directory could not be resolved\n' >&2
+    return 1
+  fi
 }
 
-# Print absolute paths of *.md files in the sessions dir, newest first.
-# Sort key is the YYYY-MM-DDTHHMMSS suffix in the filename so that the user
-# prefix never dominates the order. Files without that suffix are skipped here
-# (they are not valid session reports — distinct from "malformed but valid name").
-list_session_files() {
+# Fill SESSION_FILES with report paths, newest first, and SESSIONS_DIR.
+# Returns 0 when the directory was read (SESSION_FILES may be empty), 3 when
+# the directory does not exist, 1 on any other problem (message on stderr).
+# A directory that exists but cannot be read is an error, not "no reports".
+load_session_files() {
+  SESSION_FILES=()
   local dir
   dir="$(sessions_dir)" || return 1
-  [[ -d "$dir" ]] || return 1
+  SESSIONS_DIR="$dir"
+  if [[ ! -e "$dir" && ! -L "$dir" ]]; then
+    return 3
+  fi
+  if [[ ! -d "$dir" ]]; then
+    printf 'error: .harness/sessions exists but is not a directory\n' >&2
+    return 1
+  fi
+  if [[ ! -r "$dir" || ! -x "$dir" ]]; then
+    printf 'error: cannot read .harness/sessions/: permission denied\n' >&2
+    return 1
+  fi
+
+  local had_nullglob=0 f base rows="" line
+  shopt -q nullglob && had_nullglob=1
   shopt -s nullglob
-  local f base ts
   for f in "$dir"/*.md; do
-    base="$(basename "$f" .md)"
-    ts="$(printf '%s' "$base" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{6}$' || true)"
-    [[ -z "$ts" ]] && continue
-    printf '%s\t%s\n' "$ts" "$f"
-  done | sort -r | cut -f2-
-  shopt -u nullglob
+    base="${f##*/}"
+    base="${base%.md}"
+    if [[ "$base" =~ $SESSION_NAME_RE ]]; then
+      rows+="${BASH_REMATCH[3]}"$'\t'"${BASH_REMATCH[5]:-1}"$'\t'"$f"$'\n'
+    fi
+  done
+  [[ $had_nullglob -eq 1 ]] || shopt -u nullglob
+
+  [[ -z "$rows" ]] && return 0
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    SESSION_FILES+=("${line#*$'\t'*$'\t'}")
+  done < <(printf '%s' "$rows" | sort -t $'\t' -k1,1r -k2,2nr)
+  return 0
 }
 
-# Extract one TSV metadata row: session_id<TAB>title<TAB>timestamp<TAB>branch<TAB>status
-extract_meta() {
-  local file="$1"
-  local id title timestamp branch status
-  id="$(basename "$file" .md)"
-  title="$(grep -m1 '^# Session Report: ' "$file" | sed 's/^# Session Report: //')"
-  timestamp="$(grep -m1 '^\*\*Timestamp (UTC):\*\* ' "$file" | sed 's/^\*\*Timestamp (UTC):\*\* //')"
-  branch="$(grep -m1 '^\*\*Branch:\*\* ' "$file" | sed 's/^\*\*Branch:\*\* //; s/`//g')"
-  status="$(awk '
-    /^## Session contract/ { in_block = 1; next }
-    in_block && /^\*\*Goal status:\*\*/ {
-      sub(/^\*\*Goal status:\*\* */, "")
-      print
-      exit
-    }
-    in_block && /^## / { exit }
-  ' "$file")"
-  printf '%s\t%s\t%s\t%s\t%s\n' "$id" "$title" "$timestamp" "$branch" "$status"
+# Session ID (filename without .md) of a report path.
+session_id() {
+  local base="${1##*/}"
+  printf '%s' "${base%.md}"
 }
 
-# Return 0 if the file is missing required anchors (title or timestamp), else 1.
-is_malformed() {
-  local file="$1"
-  if ! grep -q '^# Session Report: ' "$file"; then return 0; fi
-  if ! grep -q '^\*\*Timestamp (UTC):\*\* ' "$file"; then return 0; fi
-  return 1
-}
-
-# Resolve an ID reference (full ID, timestamp-only, or substring) to an absolute path.
-# 0: unique match (path on stdout). 1: no match. 2: ambiguous (candidates on stderr).
+# Resolve a reference (full ID, timestamp, or any unique substring) against
+# SESSION_FILES. An exact ID wins over substring matches.
+# 0: unique match, path on stdout. 1: no match. 2: ambiguous, candidates on stderr.
 resolve_id() {
-  local ref="$1"
-  ref="${ref%.md}"
-  local dir
-  dir="$(sessions_dir)" || return 1
-  [[ -d "$dir" ]] || return 1
-  local matches=()
-  while IFS= read -r f; do
-    local base
-    base="$(basename "$f" .md)"
-    if [[ "$base" == "$ref" ]] || [[ "$base" == *"$ref"* ]]; then
+  local ref="${1%.md}" f id matches=()
+  for f in ${SESSION_FILES[@]+"${SESSION_FILES[@]}"}; do
+    if [[ "$(session_id "$f")" == "$ref" ]]; then
+      printf '%s\n' "$f"
+      return 0
+    fi
+  done
+  for f in ${SESSION_FILES[@]+"${SESSION_FILES[@]}"}; do
+    id="$(session_id "$f")"
+    if [[ "$id" == *"$ref"* ]]; then
       matches+=("$f")
     fi
-  done < <(ls -1 "$dir"/*.md 2>/dev/null)
+  done
   case "${#matches[@]}" in
     0) return 1 ;;
     1) printf '%s\n' "${matches[0]}"; return 0 ;;
     *)
       printf 'Ambiguous reference "%s" matches:\n' "$ref" >&2
-      for m in "${matches[@]}"; do
-        printf '  %s\n' "$(basename "$m" .md)" >&2
+      for f in "${matches[@]}"; do
+        printf '  %s\n' "$(session_id "$f")" >&2
       done
       return 2
       ;;
   esac
 }
 
-# Print the body of section ## N. (numeric N) up to the next "## " heading.
-extract_section() {
-  local file="$1"
-  local n="$2"
-  awk -v n="$n" '
-    $0 ~ "^## " n "\\." { capture = 1; next }
-    capture && /^## / { exit }
-    capture { print }
-  ' "$file"
-}
-
-# Print the "## N. <title>" heading that contains a given line number.
+# Print the "## ..." heading that contains a given line number, ignoring
+# headings inside fenced code blocks.
 section_for_line() {
-  local file="$1"
-  local target="$2"
+  local file="$1" target="$2"
   awk -v target="$target" '
-    /^## [0-9]/ { last = $0 }
+    /^[[:space:]]*(```|~~~)/ { fence = !fence }
+    !fence && /^## / { last = $0 }
     NR == target { print last; exit }
   ' "$file"
-}
-
-# Extract git user (filename prefix before the timestamp).
-session_user() {
-  local id="$1"
-  echo "$id" | sed -E 's/-[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{6}$//'
 }
