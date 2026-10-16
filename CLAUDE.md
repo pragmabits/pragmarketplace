@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A Claude Code **plugin marketplace** (`pragmabits/pragmarketplace`). It contains no application code and no build; the only tests are the `session` plugins' script suites (see *Working in this repo*). The product is a tree of plugins (markdown + JSON + Bash) that other Claude Code instances install. Install: `claude plugin marketplace add pragmabits/pragmarketplace` once, then `claude plugin install <name>@pragmatic`.
+A Claude Code **plugin marketplace** (`pragmabits/pragmarketplace`). It contains no application code and no build; the only tests are the `session` plugins' script suites and the `pragma` review gate's suites (see *Working in this repo*). The product is a tree of plugins (markdown + JSON + Bash, plus the Python standard library for the `pragma` gate and the Codex `session` plugin) that other Claude Code instances install. Install: `claude plugin marketplace add pragmabits/pragmarketplace` once, then `claude plugin install <name>@pragmatic`.
 
 ## Repo layout
 
@@ -20,7 +20,7 @@ A Claude Code **plugin marketplace** (`pragmabits/pragmarketplace`). It contains
 | `git` | 3.0.2 | `/commit` (skill), `/commit-setup` (command) | Inline commit workflow + Conventional Commits validation. Native git hooks installed by `/commit-setup --apply`. |
 | `review` | 1.0.1 | `/codex-review` (skill) | Wraps `scripts/codex-review.sh`. Requires the external `codex` CLI plus `jq`. |
 | `session` | 3.0.0 | `/report`, `/recall` (skills) | Writes/reads handoff reports under `<repo>/.harness/sessions/`, the directory shared with the Codex plugin in `plugins/codex/session/` (same report contract; both readers give identical output). `/report` triggers only on explicit report requests; it copies the authorship lines (`Harness`, `Report generator`) from `scripts/report-origin.sh`; there is no `Model` line because Claude Code documents no model source for skills, and after writing the file runs `scripts/commit-report.sh`, which checks the report, stages it by path, commits it with `git commit --only` (other staged and unstaged work untouched), verifies the commit, and unstages the report again if the commit fails; `--no-commit`, or a request in words that does not ask for a commit, skips it. `/recall` is read-only (it never creates the directory); `last` and `resume` get JSON excerpts from `recall.sh` + `lib/report.jq`, so reports are read in full only when needed. Tests: `bash plugins/claude/session/tests/run.sh`. |
-| `pragma` | 0.2.0 | — | Standing working directives. No slash entry and nothing to invoke: a `SessionStart` hook emits `instructions.md` as session context. Four rules: verify before conceding, a complaint is not a work order, a dominated option is not an option, verify before claiming. |
+| `pragma` | 0.3.0 | — | Standing working directives plus a review gate. No slash entry and nothing to invoke: a `SessionStart` hook emits `instructions.md` (and, while the gate is on, `gate/contract.md`) as session context. Four rules: verify before conceding, a complaint is not a work order, a dominated option is not an option, verify before claiming. The gate (`gate/`, Python, stdlib only) hooks `UserPromptSubmit`, `PreToolUse` on `AskUserQuestion` and `Stop`: an isolated `claude -p --safe-mode --tools ""` reviewer judges the question or the turn end against the transcript, and a proven pending obligation is returned to the agent, within two budgets per request (questions and turn ends, 3 evaluations and 2 returns each). Failures release with a one-line `systemMessage`, never as approval. State lives in `~/.local/state/pragma/gate/`; `{"enabled": false}` in `~/.config/pragma/gate.json` turns only the gate off. Tests: `python3 -B -I plugins/claude/pragma/tests/test_gate.py` (deterministic, fake reviewer) and `tests/behavior.py` (calls the model). |
 | `axio` | 0.4.0 | — | Skills for the axio Go logging library, loaded when the work calls for them: `axio`, the entry point covering the whole API, and `migration`, for code moving from another logging library. Sourced from `pragmabits/axio` (`plugin/`); its former agents and commands sit in `plugin/.stash/`, outside what Claude Code loads. |
 
 ## Slash entries: commands vs skills
@@ -61,6 +61,13 @@ escaping. It exits non-zero when `instructions.md` or `jq` is missing rather tha
 emitting nothing — a context hook that silently produces empty output is
 indistinguishable from a plugin that was never enabled.
 
+The `pragma` gate's hooks (`gate/hook.py`, run as `python3 -B -I`, so no bytecode lands in the plugin directory) answer in Claude
+Code's documented stdout format instead: `{"decision": "block", "reason": ...}`
+on `Stop`, `permissionDecision: "deny"` with `permissionDecisionReason` on
+`PreToolUse`, and `systemMessage` for the user. They always exit 0, so a
+failure of the gate can never block a session; their timeouts are 90 s because
+a review calls a model.
+
 ## Native git hooks
 
 Installed by `/commit-setup --apply` into the consumer repo's `.git/hooks/`. Each script carries a marker comment used by `commit-setup` to detect plugin-installed hooks vs third-party hooks; preserve those comments verbatim when editing.
@@ -71,7 +78,7 @@ Installed by `/commit-setup --apply` into the consumer repo's `.git/hooks/`. Eac
 
 ## Working in this repo
 
-There is no build pipeline. Verification is structural, plus the script suites of the `session` plugins (Claude and Codex):
+There is no build pipeline. Verification is structural, plus the script suites of the `session` plugins (Claude and Codex) and of the `pragma` gate:
 
 ```bash
 # Validate the marketplace JSON
@@ -86,6 +93,12 @@ echo '{"tool_input":{"command":"git add -p ."}}' | bash plugins/claude/git/hooks
 # Run the session plugins' script tests (temporary repos only)
 bash plugins/claude/session/tests/run.sh
 python3 -I plugins/codex/session/tests/test_session.py
+
+# Run the pragma gate's deterministic tests (fake reviewer, no model calls)
+python3 -B -I plugins/claude/pragma/tests/test_gate.py
+
+# Run the gate's behavior scenarios against the real reviewer (calls the model)
+python3 -B -I plugins/claude/pragma/tests/behavior.py --repeat 3
 
 # Install a plugin from the local checkout
 claude plugin add ./plugins/claude/<plugin>
