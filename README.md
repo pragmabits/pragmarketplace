@@ -10,10 +10,10 @@ Pragmatic provides ready-to-install plugins that extend Claude Code with special
 
 | Plugin | Version | Category | Slash Commands | Description |
 |--------|---------|----------|----------------|-------------|
-| **git** | 3.0.2 | Tools | `/commit`, `/commit-setup` | Semantic commits, whole-file staging, hook-validated messages, native git hooks, and safety hooks |
+| **git** | 3.1.0 | Tools | `/commit`, `/commit-setup` | Semantic commits, whole-file staging, hook-validated messages, native git hooks, and safety hooks |
 | **review** | 1.0.1 | Tools | `/codex-review` | Independent Codex-based code review of the current `git diff` — verdict, summary, and findings |
 | **session** | 3.0.0 | Tools | `/report`, `/recall` | Session handoff reports with fixed-numbered pending items (`/report`); list, filter, grep, resume, and read back prior reports via five `/recall` subcommands (`list`, `filter`, `grep`, `resume`, `last`) |
-| **pragma** | 0.2.0 | Output | — | Standing working directives injected at session start — verify before conceding, a complaint is not a work order, a dominated option is not an option, verify before claiming |
+| **pragma** | 0.3.1 | Output | — | Standing working directives injected at session start — verify before conceding, a complaint is not a work order, a dominated option is not an option, verify before claiming — and a review gate that holds the agent to them |
 | **axio** | 0.4.0 | Development | — | Skills for the [axio](https://github.com/pragmabits/axio) Go logging library: an entry skill for the whole API and a migration skill for code on `log`, `slog`, logrus, zerolog, zap or apex/log. Its source lives in the axio repository |
 
 ## Installation
@@ -43,7 +43,7 @@ Once installed, plugins are available through slash commands in Claude Code:
 /recall          # List, filter, grep, or resume prior session reports
 ```
 
-The **pragma** plugin has no slash command and nothing to invoke — a `SessionStart` hook injects its directives as session context, so they are in force before the first answer.
+The **pragma** plugin has no slash command and nothing to invoke — a `SessionStart` hook injects its directives as session context, so they are in force before the first answer. Its review gate has an isolated reviewer check each `AskUserQuestion` and each turn end against the request and the transcript, and returns a proven pending obligation to the agent; `{"enabled": false}` in `~/.config/pragma/gate.json` turns the gate off and keeps the directives.
 
 The **axio** plugin has no slash command either: its `axio` skill loads when the work involves axio, and its `migration` skill when code moves to axio from another logging library.
 

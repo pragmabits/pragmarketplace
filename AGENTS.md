@@ -4,7 +4,11 @@ Guidance for Codex agents working in `pragmabits/pragmarketplace`.
 
 ## Project Identity
 
-This repository is a plugin marketplace. It currently publishes Claude Code plugins under `plugins/claude/` and keeps the marketplace registry in `.claude-plugin/marketplace.json`. There is no application code, build pipeline or package manager workflow. The only in-repo tests are the `session` plugins' script suites: `bash plugins/claude/session/tests/run.sh` (it also exercises the Codex scripts and checks that both readers agree) and `python3 -I plugins/codex/session/tests/test_session.py`.
+This repository is a plugin marketplace. It publishes Claude Code plugins under `plugins/claude/`, registered in `.claude-plugin/marketplace.json`, and Codex plugins under `plugins/codex/`, registered in `.agents/plugins/marketplace.json`. There is no application code, build pipeline or package manager workflow. The only in-repo tests are script suites:
+
+- the `session` plugins': `bash plugins/claude/session/tests/run.sh` (it also exercises the Codex scripts and checks that both readers agree) and `python3 -I plugins/codex/session/tests/test_session.py`;
+- the `git` plugins' guards: `bash plugins/claude/git/tests/run.sh` and `python3 -I plugins/codex/git/tests/test_git_command_policy.py`;
+- the `pragma` review gate's: `python3 -B -I plugins/claude/pragma/tests/test_gate.py` (deterministic), and `plugins/claude/pragma/tests/behavior.py`, which calls the model.
 
 Codex-specific work belongs outside the Claude plugin space. Use `AGENTS.md`, `.codex/`, and `plugins/codex/` for Codex instructions, rules, experiments, and future Codex plugin content.
 
@@ -25,7 +29,7 @@ Do not use shell redirection, `tee`, `sed -i`, ad hoc scripts, formatters, code 
 
 - `.claude-plugin/marketplace.json`: central Claude plugin registry and published version source of truth.
 - `plugins/claude/<plugin>/.claude-plugin/plugin.json`: per-plugin Claude manifest.
-- `plugins/codex/`: reserved Codex plugin space.
+- `plugins/codex/<plugin>/.codex-plugin/plugin.json`: per-plugin Codex manifest. Current Codex plugins: `git` `0.2.0` and `session` `0.2.0`.
 - `.agents/plugins/marketplace.json`: Codex marketplace metadata for repo-local Codex plugins.
 - `.harness/sessions/`: session handoff reports, shared by the Claude Code and Codex `session` plugins. This belongs to the user project, not to Claude, Codex, `.agents`, or any plugin runtime.
 - `.codex/config.toml`: project-local Codex configuration and filesystem permission profile.
@@ -36,10 +40,10 @@ Do not use shell redirection, `tee`, `sed -i`, ad hoc scripts, formatters, code 
 
 Current marketplace entries:
 
-- `git` `3.0.2`: semantic commit workflow, Conventional Commits validation, native git hooks, safety hooks.
+- `git` `3.1.0`: semantic commit workflow, Conventional Commits validation, native git hooks, safety hooks.
 - `review` `1.0.1`: `/codex-review`, backed by `codex-review.sh` and the external Codex CLI.
 - `session` `3.0.0`: `/report` and `/recall` handoff reports for Claude Code.
-- `pragma` `0.2.0`: standing working directives injected by a `SessionStart` hook. No slash entry.
+- `pragma` `0.3.1`: standing working directives injected by a `SessionStart` hook, plus a review gate on `AskUserQuestion` and turn ends. No slash entry.
 - `axio` `0.4.0`: `axio` and `migration` skills for the axio Go logging library. No slash entry; sourced by `git-subdir` from `pragmabits/axio` (`plugin/`), not from `plugins/claude/`.
 
 Treat those entries as read-only inventory unless the project policy changes.
