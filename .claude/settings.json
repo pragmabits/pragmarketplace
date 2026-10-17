@@ -15,6 +15,30 @@
       "Bash(git tag -a *)",
       "Bash(git tag -l *)",
       "Bash(test -x *)"
+    ],
+    "deny": [
+      "Bash(git push *)",
+      "Bash(git -c * push)",
+      "Bash(git -c * push *)",
+      "Bash(git send-pack *)",
+      "Bash(git subtree push *)",
+      "Bash(git lfs push *)",
+      "Bash(git add . *)",
+      "Bash(git add * .)",
+      "Bash(git add -A *)",
+      "Bash(git add --all *)",
+      "Bash(git add -u *)",
+      "Bash(git add --update *)",
+      "Bash(git add --no-ignore-removal *)",
+      "Bash(git add :/ *)",
+      "Bash(git stage . *)",
+      "Bash(git stage * .)",
+      "Bash(git stage -A *)",
+      "Bash(git stage --all *)",
+      "Bash(git stage -u *)",
+      "Bash(git stage --update *)",
+      "Bash(git stage --no-ignore-removal *)",
+      "Bash(git stage :/ *)"
     ]
   }
 }
