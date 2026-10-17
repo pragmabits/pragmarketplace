@@ -74,7 +74,7 @@ prefix_rule(
 prefix_rule(
     pattern = ["git", "-C"],
     decision = "forbidden",
-    justification = "Run git commands from the active repository working directory instead of changing directories implicitly.",
+    justification = "Run git commands from the repository root instead of changing directories implicitly.",
 )
 
 prefix_rule(

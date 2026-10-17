@@ -12,6 +12,7 @@ Create semantic git commits from the current repository state.
 - One commit represents one semantic change.
 - Stage whole files only with `git add -- <files>`.
 - Never use `git add -p`, `git add --patch`, `git -C`, `git config user.name`, `git config user.email`, `git commit --no-verify`, or `git commit -n`.
+- Run every git command from the repository root (see *Repository Root*), never with a `cd` prefix.
 - Keep the user's existing git identity and config unchanged.
 - Do not sign, attribute, or add generated-by metadata.
 - Match the dominant language of recent commit subjects from `git log --oneline -10`.
@@ -35,6 +36,14 @@ Rules:
 - A breaking change may use `!` after the type, for example `feat!: remove legacy API`.
 - Optional bodies must be separated from the subject by one blank line.
 - Do not add co-author footers or model attribution.
+
+## Repository Root
+
+Codex starts each command in the session directory, or in the directory its `workdir` names, and a `cd` does not carry over to the next command.
+
+Before the first git command, run `git rev-parse --show-toplevel --show-prefix`. The first line is the repository root; the second is the session directory relative to it, empty at the root. When the second line is not empty, give every later command the root as its `workdir`.
+
+Never write `cd <dir> && git …` or put any other command before `git`: the Codex hook blocks a `cd` before git in one command.
 
 ## Initial Analysis
 

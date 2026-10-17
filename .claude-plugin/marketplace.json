@@ -13,7 +13,7 @@
       "name": "git",
       "source": "./plugins/claude/git",
       "description": "Strategic git commit plugin — semantic analysis, whole-file staging, hook-validated commits, native git hooks, and safety hooks",
-      "version": "3.0.2",
+      "version": "3.1.0",
       "author": {
         "name": "pragmabits",
         "email": "leonardoleoncio96@gmail.com"

@@ -96,6 +96,19 @@
         "Deixa o hook commit-msg passar sem erro",
         "Não aplica validação Conventional Commits a merge commits"
       ]
+    },
+    {
+      "id": 9,
+      "prompt": "/commit",
+      "expected_output": "Notices that the shell is in a subdirectory, runs cd to the repository root as its own Bash call, then runs every git command without a prefix",
+      "setup_note": "Run this eval after a session that ended with the shell in web/, with changes in cmd/, internal/, docs/ and web/",
+      "expectations": [
+        "Runs git rev-parse --show-toplevel --show-prefix before the other git commands",
+        "Runs cd <root> alone, in its own Bash call",
+        "Never writes cd <dir> && git or any other prefix before git",
+        "Never uses git -C",
+        "Stages the files with paths relative to the repository root"
+      ]
     }
   ]
 }

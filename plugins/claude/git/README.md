@@ -30,7 +30,7 @@ Valid types: `feat` | `fix` | `docs` | `style` | `refactor` | `test` | `chore` |
 ```
 
 1. User runs `/commit [context]` — the `commit` skill is invoked directly
-2. Safety hook validates git commands (blocks `git add -p`, `git -C`, config changes)
+2. Safety hook validates git commands (blocks `git add -p`, `git -C`, config changes, `cd` before git, git below the repository root)
 3. Skill runs inline — analyzes, stages, commits
 4. Git hooks validate messages and block dangerous content
 
@@ -100,6 +100,10 @@ The plugin includes a PreToolUse hook that blocks:
 - `git add -p` / `--patch` — interactive, fails in headless environments
 - `git -C` — causes path resolution issues
 - `git config user.name/email` — intrusive identity modifications
+- `cd <dir> && git …` (a `cd` or `pushd` before git in one command) — Claude Code asks for approval for a command that changes directory before running git, even when the permission rules allow the git command
+- a git command run below the repository root — the commit workflow's paths are relative to the root. The message names the root, to be reached with `cd <root>` as a call of its own. `git rev-parse --show-toplevel --show-prefix`, which finds the root, is allowed anywhere. This check applies only when the root is inside the project directory (`CLAUDE_PROJECT_DIR`): Claude Code refuses a `cd` outside it, so a session opened in a subdirectory of the repository keeps running git where it is
+
+The hook reads the directory a command will run in from the `cwd` field of its input, which Claude Code keeps up to date after a `cd`.
 
 ## Git Hooks (Native Validation)
 
@@ -129,7 +133,7 @@ chmod +x .git/hooks/commit-msg
 
 1. **Git config preserved** — never modifies `user.name` or `user.email`
 2. **Hook-based validation** — git hooks validate every message on commit
-3. **No git -C flag** — all commands run in current working directory
+3. **No git -C flag** — all commands run from the repository root, reached with a `cd <root>` of its own, never a `cd` prefix
 4. **Refactor/behavior separation** — pure refactoring and behavioral changes go in separate commits when separable at the file level
 5. **Message accuracy** — the message must accurately describe the staged changes
 6. **Amend only on request** — never amends automatically
@@ -176,6 +180,12 @@ claude plugin add pragmabits/pragmarketplace --plugin git
 Then run `/commit-setup --apply` to configure permission rules and install the git hooks.
 
 ## Version History
+
+### v3.1.0 — October 2026
+- The commit workflow runs from the repository root. It checks with `git rev-parse --show-toplevel --show-prefix` and, when the shell is in a subdirectory, runs `cd <root>` as a call of its own. It used to say nothing about the directory, and from a subdirectory each command came out as `cd <root> && git …`, which Claude Code asked approval for every time.
+- The safety hook blocks a `cd` before git in one command, and a git command run below the repository root. Both messages say how to reach the root.
+- `/commit-setup` explains that its rules match only commands that start with `git`.
+- New test suite for the safety hook: `bash plugins/claude/git/tests/run.sh`.
 
 ### v3.0.2 — October 2026
 - `pre-commit`: session reports in `.harness/sessions/` whose name matches `<user>-<YYYY-MM-DDTHHMMSS>[-N].md` skip the no-commit marker check (it matches case-insensitively, so ordinary prose in a report tripped it). Secret, size and file-type checks still apply to them.

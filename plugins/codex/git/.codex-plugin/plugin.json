@@ -1,6 +1,6 @@
 {
   "name": "git",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Codex-native strategic git commit workflow with semantic commit planning, project exec-policy rules, Codex lifecycle hooks, and native git hook installation.",
   "author": {
     "name": "pragmabits",

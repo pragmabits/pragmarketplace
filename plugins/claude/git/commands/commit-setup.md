@@ -16,7 +16,9 @@ $ARGUMENTS
 
 The commit workflow runs several Bash commands per commit (git status, git diff, git add, git commit, git log). Without permission rules, each one prompts for approval.
 
-This command adds targeted allow rules to your project's `.claude/settings.json` so these specific commands run without prompts. The safety hook (`validate-git-command.sh`) still blocks dangerous patterns (git add -p, git -C, git config user.name/email).
+This command adds targeted allow rules to your project's `.claude/settings.json` so these specific commands run without prompts. The safety hook (`validate-git-command.sh`) still blocks dangerous patterns (git add -p, git -C, git config user.name/email, `cd` before git in one command, git run below the repository root).
+
+The rules match commands that start with `git`. A command that changes directory first (`cd <dir> && git …`) asks for approval even with them in place, so the commit workflow runs from the repository root: when the shell is below it, the workflow runs `cd <root>` as its own call, then every git command without a prefix.
 
 ## Recommended rules
 
@@ -58,7 +60,7 @@ Tell the user they can run `/commit-setup --apply` to apply permissions and inst
 1. Check if `.claude/settings.json` exists
 2. If it exists, read it and merge the `permissions.allow` rules (do not duplicate existing rules, do not remove existing rules)
 3. If it does not exist, create `.claude/settings.json` with only the permissions block
-4. Report what was added
+4. Report what was added, and tell the user that the rules match only commands that start with `git`, which is why the commit workflow runs from the repository root (see *What this does*)
 
 Use Bash to read and write the JSON file. Use `jq` for safe JSON manipulation.
 

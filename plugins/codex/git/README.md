@@ -34,6 +34,8 @@ Valid types are `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, and
 
 The workflow stages whole files only. It does not use hunk staging, interactive patch mode, `git -C`, `git config user.name`, `git config user.email`, or `git commit --no-verify`.
 
+Git commands run from the repository root. When the session directory is below the root, the workflow gives each command the root as its `workdir`, never a `cd <root> &&` prefix, which the Codex hook blocks.
+
 ## Setup
 
 The setup skill runs `scripts/install_hooks.py`.
@@ -65,3 +67,7 @@ Existing third-party git hooks are not overwritten unless `--force` is passed.
 ## Design Notes
 
 The plugin keeps the model responsible for semantic analysis and commit grouping, while deterministic checks live in Codex rules, Codex hooks, and native git hooks. This gives Codex room to reason about intent without trusting the model to enforce command safety or commit-message syntax by memory.
+
+One rule has no deterministic check: running git from the repository root. Codex hands a hook the session directory as `cwd` and only the command text as `tool_input`, not the command's `workdir`, so the hook cannot tell where a command will run. It blocks what the command itself shows, a `cd` before git, and the `commit` skill carries the rest. The Claude Code plugin's hook, which receives the directory, also blocks git run below the root.
+
+Tests: `python3 -I plugins/codex/git/tests/test_git_command_policy.py`.

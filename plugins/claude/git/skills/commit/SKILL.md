@@ -39,7 +39,15 @@ Never append co-authored-by lines, signatures, or generation metadata (e.g., "Ge
 
 ### No git -C flag
 
-All git commands run in the current working directory. The `-C` flag causes path resolution issues.
+All git commands run from the repository root (see *Run from the repository root*). The `-C` flag causes path resolution issues.
+
+### Run from the repository root
+
+Before the first git command, run `git rev-parse --show-toplevel --show-prefix`. The first line is the repository root; the second is the current directory relative to it, empty at the root.
+
+If the second line is not empty, run `cd <root>` alone, as its own Bash call, and only then the git commands. Never write `cd <dir> && git …` or put any other command before `git`: Claude Code asks for approval for a command that changes directory before running git, even when the permission rules allow the git command. The safety hook blocks both a `cd` before git and a git command run below the root; its message names the root.
+
+If Claude Code refuses the `cd` because the root is outside the session's working directories (the session was opened in a subdirectory of the repository), stay where you are and write paths relative to the current directory. The safety hook allows git there.
 
 ### No hunk-level staging
 
@@ -71,7 +79,7 @@ Use the existing git config as-is. Never run `git config user.name` or `git conf
 
 ### 1. Analyze
 
-Run these four commands as **separate, parallel Bash calls** (not chained with `&&`). This ensures each matches its permission rule individually:
+First make sure the shell is at the repository root (see *Run from the repository root*). Then run these four commands as **separate, parallel Bash calls** (not chained with `&&`). This ensures each matches its permission rule individually:
 
 - `git status`
 - `git diff HEAD`

@@ -5,13 +5,16 @@ from __future__ import annotations
 
 import json
 import shlex
+import subprocess
 import sys
+from pathlib import Path
 from typing import Any
 
 
 CONTROL_TOKENS = {"&&", "||", ";", "|"}
 SHELLS = {"bash", "sh", "zsh"}
 SHELL_FLAGS = {"-c", "-lc"}
+DIRECTORY_CHANGES = {"cd", "pushd"}
 
 
 def load_payload() -> dict[str, Any]:
@@ -73,12 +76,45 @@ def first_git_segment(segment: list[str]) -> list[str] | None:
     return segment[index:]
 
 
+def directory_change(segment: list[str]) -> list[str] | None:
+    """Return the segment from its cd or pushd on, or None when it starts with neither."""
+    start = 0
+    while start < len(segment) and segment[start] == "(":
+        start += 1
+    if start < len(segment) and segment[start] in DIRECTORY_CHANGES:
+        return segment[start:]
+    return None
+
+
+def repository_root(cwd: Any) -> str | None:
+    if not isinstance(cwd, str) or not Path(cwd).is_dir():
+        return None
+    result = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        cwd=cwd,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    root = result.stdout.strip()
+    return root if result.returncode == 0 and root else None
+
+
+def directory_change_reason(root: str | None) -> str:
+    target = f"the repository root ({root})" if root else "the repository root"
+    return (
+        "cd before git in one command is blocked; run git with the command's working directory "
+        f"(workdir) set to {target} instead. A cd does not carry over to the next command."
+    )
+
+
 def git_command_reason(git_tokens: list[str]) -> str | None:
     if len(git_tokens) < 2:
         return None
 
     if "-C" in git_tokens[1:]:
-        return "git -C is blocked; run git from the active repository working directory."
+        return "git -C is blocked; run git from the repository root."
 
     subcommand_index = 1
     while subcommand_index < len(git_tokens) and git_tokens[subcommand_index].startswith("-"):
@@ -151,10 +187,23 @@ def main() -> int:
         print(json.dumps(deny_payload(event, reason)))
         return 0
 
+    # Codex hands hooks the session directory, not the command's workdir, so a
+    # git command run below the root cannot be told apart here; only a cd
+    # before git, which the command itself shows, is blocked.
+    moved = False
     for segment in split_segments(tokens):
+        change = directory_change(segment)
+        # A newline does not split segments: "cd web\ngit status" is one, and
+        # the token after cd is its target, not a command.
+        if change is not None:
+            moved = True
+            segment = change[2:]
         git_tokens = first_git_segment(segment)
         if not git_tokens:
             continue
+        if moved:
+            print(json.dumps(deny_payload(event, directory_change_reason(repository_root(payload.get("cwd"))))))
+            return 0
         reason = git_command_reason(git_tokens)
         if reason:
             print(json.dumps(deny_payload(event, reason)))
