@@ -63,7 +63,21 @@ How it works:
   `Stop` build an evidence package and ask for a verdict.
 - `gate/transcript.py` keeps an incremental index of the transcript —
   references and byte offsets only, never text — and reads back what a package
-  needs. Thinking blocks are never included.
+  needs. Thinking blocks are never included. At a turn end, Claude Code writes
+  the final response, and any of the turn's last steps still unwritten, a
+  fraction of a second after `Stop` starts; the review waits up to
+  `stop_wait_s` for the transcript to hold the final response. If it does not
+  arrive, the package says the last steps may be missing, and their absence is
+  not treated as proven.
+- `gate/display.py` covers what the transcript lacks when a question is
+  reviewed. Claude Code writes the transcript asynchronously, and the message
+  that holds the question — with the text the agent wrote right before it — is
+  usually not in the file when its `PreToolUse` runs. A `MessageDisplay` hook
+  keeps the lines shown on screen, and the question review adds the ones the
+  transcript does not hold yet to the package, after waiting up to
+  `display_wait_s` for the end of the message. Without that capture, the
+  package says the text may be missing, and a missing explanation is not
+  treated as proven.
 - `gate/evidence.py` builds the package (64 KiB by default): the request and
   the files attached to it, the user's earlier messages and answers, this
   turn's tool calls and results, the question or the final response, and the
@@ -92,9 +106,10 @@ Limits, per user request and adjustable:
 
 Any failure of the gate lets the moment through and is never recorded as
 approval: timeouts, reviewer errors, invalid replies, an `unknown` verdict, a
-missing transcript and exhausted budgets each produce, at most once per
-request, a one-line `systemMessage` to the user with the reason and the log
-path.
+missing transcript, a request the transcript does not hold yet (judging then
+would mean judging against an earlier request) and exhausted budgets each
+produce, at most once per request, a one-line `systemMessage` to the user with
+the reason and the log path.
 
 What it does not cover:
 
@@ -105,6 +120,9 @@ What it does not cover:
 - The gate controls questions and turn ends, not every action before them.
   Permissions stay necessary.
 - The verdict is a model's judgment and can be wrong in either direction.
+- The capture needs a Claude Code that delivers `MessageDisplay`. Without it,
+  a question that presumes an explanation is let through with an inconclusive
+  verdict instead of being returned.
 - `AskUserQuestion` does not exist in `claude -p`, so in print mode only turn
   ends are reviewed. A session without a saved transcript (for example
   `--no-session-persistence`) is not reviewed.
@@ -123,6 +141,8 @@ or the path in `PRAGMA_GATE_CONFIG`) overrides any of:
   "budgets": {"question": {"evaluations": 3, "returns": 2},
               "stop": {"evaluations": 3, "returns": 2}},
   "package_limit_bytes": 65536,
+  "display_wait_s": 1.5,
+  "stop_wait_s": 2,
   "retention_days": 14
 }
 ```
@@ -137,6 +157,12 @@ project: per session, the requests with their counters and cached verdicts,
 the transcript index, and `log.jsonl` with one line per decision — outcome,
 categories and references, durations and token usage, never message text.
 Sessions untouched for 14 days are removed at session start.
+
+The one file with message text is `shown.json`, the text shown on screen that
+the transcript did not hold yet. It never outlives the request it belongs to:
+a new prompt and every session start empty it, every review drops what the
+transcript already holds, and it keeps at most the 6 newest messages, each cut
+to 6,000 characters (head and tail).
 
 ### Turning the gate off
 

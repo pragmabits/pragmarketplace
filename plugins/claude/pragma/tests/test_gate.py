@@ -8,8 +8,9 @@ temporary directory, with a fake reviewer (fake_claude.py) in place of
 `claude -p`, so no model is called. Covered: budgets per request and per
 moment, concurrency, cache, isolation between sessions and from subagents,
 reviewer failures and timeouts, invalid replies, malformed input, the
-reviewer's isolation flags, non-recursion, cleanup, retention and the
-evidence package itself.
+reviewer's isolation flags, non-recursion, cleanup, retention, the
+evidence package itself, and the text shown on screen that the transcript does
+not hold yet when a question is reviewed.
 """
 
 from __future__ import annotations
@@ -33,7 +34,7 @@ sys.path.insert(0, str(PLUGIN))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fixture import Transcript  # noqa: E402
-from gate import evaluator, evidence, state, transcript  # noqa: E402
+from gate import display, evaluator, evidence, state, transcript  # noqa: E402
 
 
 class GateCase(unittest.TestCase):
@@ -106,6 +107,20 @@ class GateCase(unittest.TestCase):
 
     def answer(self, prompt_id, n, question, choice):
         self.tr.answer(prompt_id, n, question, choice)
+
+    def display(self, prompt_id, delta, message_id="m1", index=0, final=True, session=None, **kw):
+        """One MessageDisplay batch, as Claude Code sends it while a message is shown."""
+        payload = dict(self.base(prompt_id, session), hook_event_name="MessageDisplay", turn_id="turn-1",
+                       message_id=message_id, index=index, final=final, delta=delta)
+        payload.update(kw)
+        return self.hook("message-display", payload)
+
+    def shown(self, session=None):
+        path = self.state_dir / "sessions" / (session or self.session) / "shown.json"
+        return json.loads(path.read_text()) if path.exists() else None
+
+    def package(self, n=-1):
+        return json.loads((self.fake_log / f"package-{self.calls()[n]['n']}.json").read_text())
 
     def calls(self):
         return sorted((json.loads(p.read_text()) for p in self.fake_log.glob("call-*.json")), key=lambda c: c["n"])
@@ -271,6 +286,32 @@ class Failures(GateCase):
         self.assertIsNone(self.hook("stop", json.dumps(["no", "session"])))
         self.assertIsNone(self.hook("bogus-event", self.base("p1")))
         self.assertEqual(self.calls(), [])
+
+    def test_request_not_in_the_transcript_yet_skips_the_call(self):
+        """A lagging transcript must not get the turn judged against the previous request."""
+        self.write_config({"timeout_s": 5, "lock_wait_s": 20, "stop_wait_s": 0.2})
+        self.submit("Pedido anterior.", "p0")
+        self.tr.assistant("Feito.")
+        self.hook("user-prompt-submit", dict(self.base("p1"), hook_event_name="UserPromptSubmit", prompt="Novo."))
+        out = self.hook("stop", dict(self.base("p1"), last_assistant_message="pronto", background_tasks=[]))
+        self.assertIn("current request is not in the transcript yet", out["systemMessage"])
+        self.assertIsNone(self.ask("p1", "Qual?"))  # once per request
+        self.assertEqual(self.calls(), [])
+        self.assertEqual([r["outcome"] for r in self.log()], ["no_request", "no_request"])
+
+    def test_request_found_through_any_item_of_its_turn(self):
+        self.submit("Rode os testes.", "p1")
+        self.tr._write({"type": "user", "promptId": "p2", "origin": {"kind": "task-notification"},
+                        "message": {"role": "user", "content": "<task-notification>tests done</task-notification>"}})
+        self.assertIsNone(self.stop("p2", "Os testes terminaram."))
+        self.assertEqual(len(self.calls()), 1)
+        self.assertEqual(self.package()["request"]["text"], "Rode os testes.")
+
+    def test_transcript_without_prompt_ids_falls_back_to_the_last_user_message(self):
+        self.tr._write({"type": "user", "origin": {"kind": "human"}, "message": {"role": "user", "content": "Faça."}})
+        self.assertIsNone(self.stop("p1", "feito"))
+        self.assertEqual(len(self.calls()), 1)
+        self.assertTrue(any("last user message" in n for n in self.package()["notes"]))
 
     def test_missing_transcript_skips_the_call(self):
         payload = {"session_id": self.session, "transcript_path": str(self.tmp / "nope.jsonl"),
@@ -489,6 +530,196 @@ class Package(GateCase):
         self.assertEqual([i["kind"] for i in idx["items"]], ["U", "A"])
         stored = (self.tmp / "index.json").read_text()
         self.assertNotIn("parcial", stored)  # references only, no text
+
+
+class Display(GateCase):
+    """Text shown on screen before the transcript holds it."""
+
+    REQUEST = "Explique as duas opções de migração e depois me pergunte qual eu prefiro."
+
+    def setUp(self):
+        super().setUp()
+        self.write_config({"timeout_s": 5, "lock_wait_s": 20, "display_wait_s": 0.5})
+
+    def base_turn(self):
+        self.submit(self.REQUEST, "p1")
+        self.tr.tool("toolu_r", "Read", {"file_path": "docs/migration.md"}, "## in-place\n## blue-green", "p1")
+
+    def shown_items(self, pkg):
+        return [i for i in pkg["turn"] if i["ref"].startswith("D")]
+
+    def test_explanation_shown_with_the_question_reaches_the_package(self):
+        """The measured case: neither the explanation nor the question is in the transcript yet."""
+        self.base_turn()
+        self.display("p1", "In-place: para a aplicação por 20 minutos.\n", index=0, final=False)
+        self.display("p1", "Blue-green: quase sem parada, mas o dobro de disco.", index=1, final=True)
+        self.assertIsNone(self.ask("p1", "Qual opção você prefere?"))
+        pkg = self.package()
+        items = self.shown_items(pkg)
+        self.assertEqual([(i["ref"], i["kind"]) for i in items], [("D1", "assistant")])
+        self.assertIn("In-place: para a aplicação", items[0]["text"])
+        self.assertIn("Blue-green: quase sem parada", items[0]["text"])
+        self.assertEqual(pkg["turn"][-1]["ref"], "D1")  # the newest of the turn
+        self.assertEqual(pkg["notes"], [])
+        record = self.log()[-1]["display"]
+        self.assertEqual((record["gap"], record["shown"]), (True, 1))
+
+    def test_missing_explanation_is_still_returned(self):
+        self.base_turn()
+        self.display("p1", "Li o documento de migração.")
+        self.plan([{"verdict": "revise", "category": "missing_explanation"}])
+        out = self.ask("p1", "Com base na explicação acima, qual opção você prefere?")
+        self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "deny")
+        self.assertIn("missing_explanation", out["hookSpecificOutput"]["permissionDecisionReason"])
+        pkg = self.package()
+        self.assertEqual([i["text"] for i in self.shown_items(pkg)], ["Li o documento de migração."])
+        self.assertEqual(pkg["notes"], [])  # nothing in the package excuses the missing explanation
+
+    def test_question_without_text_on_an_installation_that_captures(self):
+        self.display("p0", "texto de outra sessão", session="other")
+        self.base_turn()
+        self.ask("p1", "Qual opção você prefere?")
+        pkg = self.package()
+        self.assertEqual(self.shown_items(pkg), [])
+        self.assertEqual(pkg["notes"], [])
+
+    def test_waits_for_the_last_batch(self):
+        self.write_config({"timeout_s": 5, "lock_wait_s": 20, "display_wait_s": 5})
+        self.base_turn()
+        self.display("p1", "Primeira parte da explicação.\n", final=False)
+        thread = threading.Thread(target=self.ask, args=("p1", "Qual opção você prefere?"))
+        thread.start()
+        time.sleep(0.4)
+        self.display("p1", "Última parte, com a recomendação.", index=1, final=True)
+        thread.join()
+        pkg = self.package()
+        text = self.shown_items(pkg)[0]["text"]
+        self.assertIn("Primeira parte", text)
+        self.assertIn("com a recomendação", text)
+        self.assertEqual(pkg["notes"], [])
+        waited = self.log()[-1]["display"]["waited_ms"]
+        self.assertGreater(waited, 150)
+        self.assertLess(waited, 4000)  # ended by the last batch, not by the limit
+
+    def test_unfinished_text_is_declared(self):
+        self.base_turn()
+        self.display("p1", "Começo da explicação\n", final=False)
+        self.ask("p1", "Qual opção você prefere?")
+        pkg = self.package()
+        self.assertEqual(len(self.shown_items(pkg)), 1)
+        self.assertEqual(pkg["notes"], [display.INCOMPLETE])
+
+    def test_gap_without_capture_is_declared(self):
+        self.base_turn()
+        self.ask("p1", "Qual opção você prefere?")
+        pkg = self.package()
+        self.assertEqual(pkg["notes"], [display.NOT_CAPTURED])
+        self.assertEqual(self.log()[-1]["display"], {"gap": True, "waited_ms": 0, "shown": 0})
+
+    def test_transcript_holding_the_question_needs_no_capture(self):
+        self.base_turn()
+        self.display("p1", "In-place para 20 minutos;   blue-green quase não para.\n")
+        self.tr.assistant("In-place para 20 minutos; blue-green quase não para.")
+        self.tr._assistant({"type": "tool_use", "id": "toolu_q", "name": "AskUserQuestion", "input": {}})
+        self.ask("p1", "Qual opção você prefere?")
+        pkg = self.package()
+        self.assertEqual(self.shown_items(pkg), [])
+        self.assertEqual(self.log()[-1]["display"], {"gap": False, "waited_ms": 0, "shown": 0})
+        self.assertIsNone(self.shown())  # the transcript holds it: the copy is gone
+
+    def test_a_new_request_or_session_start_empties_it(self):
+        self.display("p1", "texto do pedido 1")
+        self.assertIsNotNone(self.shown())
+        self.submit("Novo pedido.", "p2")
+        self.assertIsNone(self.shown())
+        self.display("p2", "texto do pedido 2")
+        self.display("p3", "texto de um pedido sem prompt registrado", message_id="m9")
+        self.assertEqual([m["id"] for m in self.shown()["messages"]], ["m9"])
+        self.hook("session-start", {"session_id": self.session, "source": "resume"})
+        self.assertIsNone(self.shown())
+
+    def test_reviews_drop_what_the_transcript_holds(self):
+        self.submit("Faça.", "p1")
+        self.display("p1", "Vou rodar os testes.", message_id="m1")
+        self.display("p1", "Texto que o transcript não tem.", message_id="m2")
+        self.tr.tool("toolu_t", "Bash", {"command": "make test"}, "ok", "p1")
+        self.tr.assistant("Vou rodar os testes.")
+        self.stop("p1", "feito")
+        self.assertEqual([m["id"] for m in self.shown()["messages"]], ["m2"])
+
+    def test_capture_is_bounded(self):
+        for n in range(10):
+            self.display("p1", f"mensagem {n}", message_id=f"m{n}")
+        self.assertEqual([m["id"] for m in self.shown()["messages"]], [f"m{n}" for n in range(4, 10)])
+        big = "".join(f"{n:05d}\n" for n in range(5000))
+        chunks = [big[k:k + 3000] for k in range(0, len(big), 3000)]
+        for k, chunk in enumerate(chunks):
+            self.display("p1", chunk, message_id="big", index=k, final=k == len(chunks) - 1)
+        msgs = self.shown()["messages"]
+        self.assertEqual(len(msgs), display.MAX_MESSAGES)
+        msg = msgs[-1]
+        self.assertEqual(len(msg["head"]) + len(msg["tail"]), display.KEEP_CHARS)
+        self.assertEqual(len(msg["head"]) + msg["dropped"] + len(msg["tail"]), len(big))
+        self.assertTrue(big.startswith(msg["head"]) and big.endswith(msg["tail"]))
+        self.assertEqual(evidence.cut_parts(msg["head"], msg["dropped"], msg["tail"], evidence.CAP_ASSISTANT),
+                         evidence.cut(big, evidence.CAP_ASSISTANT))
+        size = (self.state_dir / "sessions" / self.session / "shown.json").stat().st_size
+        self.assertLess(size, display.MAX_MESSAGES * display.KEEP_CHARS * 1.2)
+
+    def test_capture_skips_subagents_and_a_disabled_gate_and_prints_nothing(self):
+        self.assertIsNone(self.display("p1", "texto de subagente", agent_id="agent-1"))
+        self.assertIsNone(self.shown())
+        self.write_config({"enabled": False})
+        self.assertIsNone(self.display("p1", "texto"))
+        self.assertIsNone(self.shown())
+        self.write_config({})
+        self.assertIsNone(self.display("p1", "texto"))  # no displayContent: the screen keeps the original
+        self.assertEqual(self.shown()["messages"][0]["head"], "texto")
+
+
+class TranscriptLag(GateCase):
+    """The turn's last steps reach the transcript with the final response, after Stop has started."""
+
+    def test_stop_waits_for_the_final_response(self):
+        """The measured case: the last tool calls arrive together with the final response."""
+        self.submit("Grave as duas notas.", "p1")
+        final = "Gravei as duas notas."
+
+        def late():
+            time.sleep(0.4)
+            self.tr.tool("toolu_w1", "Write", {"file_path": "a.md"}, "File created successfully", "p1")
+            self.tr.tool("toolu_w2", "Write", {"file_path": "b.md"}, "File created successfully", "p1")
+            self.tr.assistant(final)
+
+        writer = threading.Thread(target=late)
+        writer.start()
+        out = self.hook("stop", dict(self.base("p1"), last_assistant_message=final, background_tasks=[]))
+        writer.join()
+        self.assertIsNone(out)
+        pkg = self.package()
+        self.assertEqual([i["tool"] for i in pkg["turn"] if i["kind"] == "tool"], ["Write", "Write"])
+        self.assertEqual(len(pkg["final_response"]["same_as"]), 1)
+        self.assertEqual(pkg["notes"], [])
+        wait = self.log()[-1]["final_wait"]
+        self.assertTrue(wait["held"])
+        self.assertGreater(wait["waited_ms"], 200)
+        self.assertLess(wait["waited_ms"], 1900)  # ended by the write, not by the limit
+
+    def test_final_response_that_never_arrives_is_declared(self):
+        self.write_config({"timeout_s": 5, "lock_wait_s": 20, "stop_wait_s": 0.3})
+        self.submit("Faça.", "p1")
+        self.hook("stop", dict(self.base("p1"), last_assistant_message="feito", background_tasks=[]))
+        self.assertEqual(self.package()["notes"], [transcript.FINAL_MISSING])
+        wait = self.log()[-1]["final_wait"]
+        self.assertFalse(wait["held"])
+        self.assertGreaterEqual(wait["waited_ms"], 300)
+
+    def test_no_wait_when_the_transcript_already_holds_it(self):
+        self.submit("Faça.", "p1")
+        self.stop("p1", "feito")
+        wait = self.log()[-1]["final_wait"]
+        self.assertTrue(wait["held"])
+        self.assertLess(wait["waited_ms"], 50)
 
 
 class Validation(unittest.TestCase):

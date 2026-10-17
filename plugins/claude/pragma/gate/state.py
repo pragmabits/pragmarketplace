@@ -6,6 +6,8 @@ Layout under the state root (see config.state_root):
   sessions/<session>/log.jsonl    one line per hook decision: outcome, timing,
                                   usage, categories and refs; no message text
   sessions/<session>/lock         serializes evaluations within the session
+  sessions/<session>/shown.json   text shown on screen that the transcript may
+                                  not hold yet (display.py), kept only briefly
   evalbox/                        the reviewer's throwaway working directories
 """
 
@@ -31,9 +33,9 @@ def session_dir(root: Path, session_id: str) -> Path:
 
 
 @contextlib.contextmanager
-def locked(path: Path, wait_s: float):
-    """Hold an exclusive lock on <path>/lock; yields False if it never came."""
-    fh = open(path / "lock", "a+")
+def locked(path: Path, wait_s: float, name: str = "lock"):
+    """Hold an exclusive lock on <path>/<name>; yields False if it never came."""
+    fh = open(path / name, "a+")
     deadline = time.monotonic() + wait_s
     got = False
     try:

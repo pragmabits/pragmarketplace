@@ -1,7 +1,8 @@
 """Claude Code adapter: an incremental index over a session transcript (JSONL).
 
 The index keeps references only (kind, line, byte offset, length, ids), never
-message text, so the gate's state holds no copy of the conversation. Each hook
+message text, so the gate's state holds no copy of what the transcript holds
+(display.py keeps, briefly, text shown on screen that it does not). Each hook
 call parses only the bytes appended since the previous call; item text is read
 back from the transcript by offset when an evidence package is built.
 
@@ -19,11 +20,14 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from pathlib import Path
 
 INDEX_VERSION = 2
 STOP_FEEDBACK = "Stop hook feedback:"
 CONTEXT_TYPES = ("session_context", "environment", "date")
+FINAL_MISSING = ("the transcript did not hold the final response yet when this review ran: the tool calls and "
+                 "results of the turn's last steps may be missing")
 
 
 def _text_blocks(content) -> str:
@@ -154,6 +158,23 @@ def update_index(index_path: Path, transcript_path: str) -> dict:
     return index
 
 
+def holds_prompt(index: dict, prompt_id) -> bool:
+    """Whether the request `prompt_id` has reached the transcript.
+
+    False only when the transcript records prompt ids and none of its items
+    carries this one; without ids there is nothing to tell, and the evidence
+    package falls back to the last user message.
+    """
+    if not prompt_id:
+        return True
+    recorded = False
+    for item in index["items"]:
+        if item.get("prompt_id") == prompt_id:
+            return True
+        recorded = recorded or bool(item.get("prompt_id"))
+    return not recorded
+
+
 class Loader:
     """Reads an indexed item's content back from the transcript."""
 
@@ -205,3 +226,37 @@ class Loader:
         if kind == "H" and text.startswith(STOP_FEEDBACK):
             text = text[len(STOP_FEEDBACK):].lstrip()
         return {"text": text}
+
+
+def _flat(text: str) -> str:
+    return " ".join(text.split())
+
+
+def holds_final(index: dict, final: str) -> bool:
+    """Whether the newest assistant text in the transcript is part of the final response."""
+    last = next((i for i in reversed(index["items"]) if i["kind"] == "A"), None)
+    if last is None:
+        return False
+    with Loader(index["path"]) as loader:
+        text = _flat(loader.text(last).get("text", ""))
+    return bool(text) and text in _flat(final)
+
+
+def settle_final(index_path: Path, index: dict, final, wait_s: float) -> tuple[dict, dict]:
+    """Wait, up to wait_s, for the transcript to hold the final response; return (index, log record).
+
+    Claude Code writes the final response, and with it any of the turn's last
+    steps still unwritten, a fraction of a second after the Stop hook has
+    started: read at once, the transcript can lack the last tool calls. What
+    comes before the final response is written no later than it, so once the
+    transcript holds it, it holds the whole turn.
+    """
+    if not isinstance(final, str) or not final.strip():
+        return index, {"held": None, "waited_ms": 0}
+    started = time.monotonic()
+    held = holds_final(index, final)
+    while not held and time.monotonic() - started < wait_s:
+        time.sleep(0.05)
+        index = update_index(index_path, index["path"])
+        held = holds_final(index, final)
+    return index, {"held": held, "waited_ms": int((time.monotonic() - started) * 1000)}

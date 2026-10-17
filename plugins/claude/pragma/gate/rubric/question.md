@@ -16,6 +16,13 @@ Revise only when the evidence shows one of these:
   depends on, no `assistant` item presents it, and the question assumes it was
   given. Action: present the explanation before asking.
 
+Text the agent showed right before the question is often not in the
+transcript yet when this review runs. What was captured from the screen comes
+as `assistant` items whose refs start with `D`, after the rest of the turn; the
+user saw them like any other `assistant` item. When `notes` say that text
+shown with the question may be missing or incomplete, the absence of an
+explanation is not proven: if the verdict depends on it, it is `unknown`.
+
 Let real decisions through: scope choices the user has not made, preferences
 the evidence does not reveal, structural changes that depend on the user, and
 requests for access, credentials or human participation. Never answer the

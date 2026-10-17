@@ -24,6 +24,12 @@ DEFAULTS = {
         "stop": {"evaluations": 3, "returns": 2},
     },
     "package_limit_bytes": 64 * 1024,
+    # How long a question review waits for the end of the text being shown
+    # with the question, while the transcript does not hold it yet.
+    "display_wait_s": 1.5,
+    # How long a turn-end review waits for the transcript to hold the final
+    # response, which Claude Code writes after the Stop hook has started.
+    "stop_wait_s": 2.0,
     "retention_days": 14,
     "max_requests_kept": 30,
     "claude_bin": "claude",

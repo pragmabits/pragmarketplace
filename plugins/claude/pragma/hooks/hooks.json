@@ -1,5 +1,5 @@
 {
-  "description": "Injects the standing working instruction as session context at startup, /clear and compaction, and runs the review gate on AskUserQuestion and on turn ends",
+  "description": "Injects the standing working instruction as session context at startup, /clear and compaction, and runs the review gate on AskUserQuestion and on turn ends, keeping the text shown on screen until the transcript holds it",
   "hooks": {
     "SessionStart": [
       {
@@ -30,6 +30,17 @@
             "type": "command",
             "command": "python3 -B -I ${CLAUDE_PLUGIN_ROOT}/gate/hook.py user-prompt-submit",
             "timeout": 10
+          }
+        ]
+      }
+    ],
+    "MessageDisplay": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -B -I ${CLAUDE_PLUGIN_ROOT}/gate/hook.py message-display",
+            "timeout": 5
           }
         ]
       }

@@ -14,6 +14,7 @@ KIND_NAMES = {
     "U": "user", "N": "user_answer", "A": "assistant", "T": "tool",
     "H": "hook_feedback", "I": "interrupt", "S": "harness_message",
     "M": "user_file", "C": "harness_context",
+    "D": "assistant",  # shown on screen, not yet in the transcript (display.py)
 }
 # Per-item text caps (characters). The request, the question and the final
 # response get the largest share; tool output keeps its head and its tail,
@@ -42,14 +43,26 @@ def cut(text: str, cap: int) -> str:
     return f"{text[:head]}\n[... {len(text) - cap} characters cut here ...]\n{text[-tail:]}"
 
 
+def cut_parts(head: str, dropped: int, tail: str, cap: int) -> str:
+    """cut() for a text kept as its head and tail, with `dropped` characters already gone between them."""
+    if not dropped:
+        return cut(head + tail, cap)
+    keep = cap * 2 // 3
+    return (f"{head[:keep]}\n[... {len(head) + dropped + len(tail) - cap} characters cut here ...]\n"
+            f"{tail[-(cap - keep):]}")
+
+
 def _size(obj) -> int:
     return len(json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
 
 
 def _render(item: dict, loader, results: dict) -> dict:
     kind = item["kind"]
-    content = loader.text(item)
     out = {"ref": item["ref"], "kind": KIND_NAMES.get(kind, kind)}
+    if kind == "D":
+        out["text"] = cut_parts(item["head"], item["dropped"], item["tail"], CAP_ASSISTANT)
+        return out
+    content = loader.text(item)
     if kind == "T":
         raw_input = content.get("input")
         out["tool"] = content.get("tool") or item.get("name")
@@ -71,7 +84,7 @@ def _render(item: dict, loader, results: dict) -> dict:
 
 def build(event: str, items: list, loader, prompt_id: str | None, extras: dict, limit: int) -> tuple[dict, set, dict]:
     """Return (package, refs present, stats)."""
-    notes = []
+    notes = list(extras.get("notes") or [])
     results = {i.get("tool_id"): i for i in items if i["kind"] in ("R", "N") and i.get("tool_id")}
     visible = [i for i in items if i["kind"] not in ("R", "C")]  # results ride inside their tool call
     latest_context = {}
@@ -112,6 +125,8 @@ def build(event: str, items: list, loader, prompt_id: str | None, extras: dict, 
             room -= len(text)
             package["request"].setdefault("attached_files", []).append(
                 {"ref": item["ref"], "file": content.get("file"), "text": text})
+    # Text shown on screen that the transcript did not hold yet is the newest of the turn.
+    turn = turn + list(extras.get("shown") or [])
     if latest_context:
         package["context"] = [{"ref": i["ref"], "kind": "harness_context", "type": i.get("ctype"),
                                "text": cut(loader.text(i).get("text", ""), CAP_CONTEXT)}
@@ -144,13 +159,15 @@ def build(event: str, items: list, loader, prompt_id: str | None, extras: dict, 
             package["background_tasks"] = extras["background_tasks"]
     base = _size(package) + RESERVE
 
-    # Selection order: what the user said and decided, then this turn's
-    # actions, then earlier assistant text and actions. Newest first in each.
+    # Selection order: what the user said and decided, and the text shown with
+    # the question, then this turn's actions, then earlier assistant text and
+    # actions. Newest first in each.
     decisive = ("U", "N", "H", "I", "M")
+    first = decisive + ("D",)
     tiers = [
-        [i for i in turn if i["kind"] in decisive],
+        [i for i in turn if i["kind"] in first],
         [i for i in history if i["kind"] in decisive],
-        [i for i in turn if i["kind"] not in decisive],
+        [i for i in turn if i["kind"] not in first],
         [i for i in history if i["kind"] == "A"],
         [i for i in history if i["kind"] not in decisive and i["kind"] != "A"],
     ]
