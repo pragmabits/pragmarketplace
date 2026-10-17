@@ -33,6 +33,9 @@ How to read the evidence:
 - The agent's reasoning is not in the package. Only `assistant` items and the
   final response `F` were shown to the user. "I already explained" is a claim,
   not proof that the explanation appears.
+- An `assistant` item with `summarized: true` is the agent's narration: the
+  screen showed it as a summary, not word for word. It proves what the user
+  was told in substance, not the exact wording or the detail.
 - `hook_feedback` items are earlier returns from this same control, not user
   messages; so is an AskUserQuestion call whose result reads
   `PreToolUse:AskUserQuestion hook error: pragma question review ...` (that

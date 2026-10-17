@@ -9,8 +9,8 @@ temporary directory, with a fake reviewer (fake_claude.py) in place of
 moment, concurrency, cache, isolation between sessions and from subagents,
 reviewer failures and timeouts, invalid replies, malformed input, the
 reviewer's isolation flags, non-recursion, cleanup, retention, the
-evidence package itself, and the text shown on screen that the transcript does
-not hold yet when a question is reviewed.
+evidence package itself, narration, and the text shown on screen that the
+transcript does not hold yet when a question is reviewed.
 """
 
 from __future__ import annotations
@@ -442,7 +442,7 @@ class Package(GateCase):
 
     def test_kinds_and_exclusions(self):
         self.tr.user("Primeiro pedido", "p0")
-        self.tr.thinking("SEGREDO-DO-RACIOCINIO")
+        self.tr.reasoning()
         self.tr.assistant("Resposta antiga")
         self.tr.user("Pedido atual", "p1")
         self.answer("p1", 1, "Formato?", "JSON")
@@ -452,7 +452,6 @@ class Package(GateCase):
                         "message": {"content": [{"type": "text", "text": "SUBAGENTE"}]}})
         pkg, refs, _ = self.build(final_response="fim")
         dump = json.dumps(pkg, ensure_ascii=False)
-        self.assertNotIn("SEGREDO-DO-RACIOCINIO", dump)
         self.assertNotIn("SUBAGENTE", dump)
         self.assertNotIn("skill text", dump)
         self.assertEqual(pkg["request"]["text"], "Pedido atual")
@@ -462,6 +461,22 @@ class Package(GateCase):
         answer = next(i for i in pkg["turn"] if i["kind"] == "tool")
         self.assertIn("JSON", answer["result"]["text"])
         self.assertIn(answer["result"]["ref"], refs)
+
+    def test_narration_is_assistant_text_marked_summarized(self):
+        self.tr.user("Pedido antigo", "p0")
+        self.tr.narration("Resumo antigo: o primeiro arquivo está certo.")
+        self.tr.user("Pedido atual", "p1")
+        self.tr.reasoning(display="updates")
+        self.tr.narration("Resumo: li os dois arquivos, e o segundo tem o erro.", display="updates")
+        pkg, refs, _ = self.build(final_response="fim")
+        self.assertEqual(len(pkg["turn"]), 1)  # the reasoning block adds nothing
+        item = pkg["turn"][0]
+        self.assertEqual((item["kind"], item["summarized"]), ("assistant", True))
+        self.assertIn("o segundo tem o erro", item["text"])
+        self.assertTrue(item["ref"].startswith("G"))
+        self.assertIn(item["ref"], refs)
+        self.assertEqual([(i["kind"], i.get("summarized")) for i in pkg["history"]],
+                         [("user", None), ("assistant", True)])
 
     def test_attached_files_and_harness_context(self):
         self.tr.context("Git user: someone\nCurrent branch: main", email="private@example.com")
@@ -615,6 +630,42 @@ class Display(GateCase):
         pkg = self.package()
         self.assertEqual(pkg["notes"], [display.NOT_CAPTURED])
         self.assertEqual(self.log()[-1]["display"], {"gap": True, "waited_ms": 0, "shown": 0})
+
+    def test_narration_session_declares_that_shown_text_may_be_missing(self):
+        """The first refusal measured: the answers went into narration the transcript does not hold yet."""
+        self.display("p0", "texto de outra sessão", session="other")  # this installation delivers MessageDisplay
+        self.submit(self.REQUEST, "p1")
+        self.tr.narration("Vou ler o documento de migração.")
+        self.tr.tool("toolu_r", "Read", {"file_path": "docs/migration.md"}, "## in-place\n## blue-green", "p1")
+        self.answer("p1", 1, "Qual opção?", "Antes: dá para migrar sem parar? Quanto disco? Por que não blue-green?")
+        self.ask("p1", "Com isso respondido, qual opção você prefere?")
+        pkg = self.package()
+        self.assertEqual(self.shown_items(pkg), [])
+        self.assertEqual(pkg["notes"], [display.NARRATION_MISSING])
+
+    def test_narration_of_the_question_message_reaches_the_package(self):
+        """The second refusal measured: the narration is written, the call is not yet."""
+        self.display("p0", "texto de outra sessão", session="other")
+        self.base_turn()
+        self.tr.reasoning(display="updates")
+        self.tr.narration("In-place para 20 minutos; blue-green quase não para, mas usa o dobro de disco.",
+                          display="updates")
+        self.ask("p1", "Qual opção você prefere?")
+        pkg = self.package()
+        item = pkg["turn"][-1]
+        self.assertEqual((item["kind"], item.get("summarized")), ("assistant", True))
+        self.assertIn("blue-green quase não para", item["text"])
+        self.assertEqual(pkg["notes"], [display.NARRATION_MISSING])
+
+    def test_narration_note_needs_a_gap_and_no_other_note(self):
+        self.base_turn()
+        self.tr.narration("Resumo da explicação.")
+        self.ask("p1", "Qual opção você prefere?")
+        self.assertEqual(self.package()["notes"], [display.NOT_CAPTURED])  # no MessageDisplay: one note
+        self.display("p0", "texto de outra sessão", session="other")
+        self.tr._assistant({"type": "tool_use", "id": "toolu_q", "name": "AskUserQuestion", "input": {}})
+        self.ask("p1", "Qual opção você prefere?")
+        self.assertEqual(self.package()["notes"], [])  # the transcript holds the call: nothing is missing
 
     def test_transcript_holding_the_question_needs_no_capture(self):
         self.base_turn()

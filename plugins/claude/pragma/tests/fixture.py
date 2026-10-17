@@ -35,6 +35,21 @@ class Transcript:
     def thinking(self, text):
         self._assistant({"type": "thinking", "thinking": text})
 
+    def _thinking_entry(self, text, display):
+        entry = {"type": "assistant", "message": {"role": "assistant", "model": self.model, "content": [
+            {"type": "thinking", "thinking": text, "signature": "c2lnbmF0dXJl"}]}}
+        if display:
+            entry["thinkingDisplay"] = display
+        self._write(entry)
+
+    def reasoning(self, display=None):
+        """The agent's reasoning, as Claude Code records it: a thinking block with no text."""
+        self._thinking_entry("", display)
+
+    def narration(self, text, display=None):
+        """Narration: a thinking block with text, which the screen shows as a summary."""
+        self._thinking_entry(text, display)
+
     def tool(self, tool_id, name, tool_input, result, prompt_id, is_error=False):
         self._assistant({"type": "tool_use", "id": tool_id, "name": name, "input": tool_input})
         self._write({"type": "user", "promptId": prompt_id,

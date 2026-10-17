@@ -1,6 +1,6 @@
 {
   "name": "pragma",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Standing working directives, injected as session context by a SessionStart hook, and a review gate that holds the agent to them. Four rules: verify a disputed claim before conceding it and say when the user is wrong; treat a complaint as a question, not a request to build something; never present a dominated option as a live alternative; and never report a result that was not run, or work as done while a known inconsistency in it is open. The gate has an isolated, tool-less reviewer check each AskUserQuestion and each turn end against the user's request and the transcript, and returns proven pending obligations to the agent within a per-request budget.",
   "author": {
     "name": "pragmabits",

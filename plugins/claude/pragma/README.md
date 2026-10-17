@@ -63,7 +63,10 @@ How it works:
   `Stop` build an evidence package and ask for a verdict.
 - `gate/transcript.py` keeps an incremental index of the transcript —
   references and byte offsets only, never text — and reads back what a package
-  needs. Thinking blocks are never included. At a turn end, Claude Code writes
+  needs. The agent's reasoning, a thinking block with no text, is never
+  included. A thinking block with text is narration, which the screen shows as
+  a summary: it enters the package as an `assistant` item marked
+  `summarized`. At a turn end, Claude Code writes
   the final response, and any of the turn's last steps still unwritten, a
   fraction of a second after `Stop` starts; the review waits up to
   `stop_wait_s` for the transcript to hold the final response. If it does not
@@ -77,7 +80,10 @@ How it works:
   transcript does not hold yet to the package, after waiting up to
   `display_wait_s` for the end of the message. Without that capture, the
   package says the text may be missing, and a missing explanation is not
-  treated as proven.
+  treated as proven. Narration never reaches `MessageDisplay`: in a session
+  that shows narration, when the transcript does not hold the question's
+  message yet and nothing was captured, the package says narration shown with
+  the question may be missing.
 - `gate/evidence.py` builds the package (64 KiB by default): the request and
   the files attached to it, the user's earlier messages and answers, this
   turn's tool calls and results, the question or the final response, and the
@@ -122,7 +128,9 @@ What it does not cover:
 - The verdict is a model's judgment and can be wrong in either direction.
 - The capture needs a Claude Code that delivers `MessageDisplay`. Without it,
   a question that presumes an explanation is let through with an inconclusive
-  verdict instead of being returned.
+  verdict instead of being returned. The same holds, in a session that shows
+  narration, for a question asked before the transcript holds its message:
+  narration cannot be captured.
 - `AskUserQuestion` does not exist in `claude -p`, so in print mode only turn
   ends are reviewed. A session without a saved transcript (for example
   `--no-session-persistence`) is not reviewed.

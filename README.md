@@ -13,7 +13,7 @@ Pragmatic provides ready-to-install plugins that extend Claude Code with special
 | **git** | 3.1.0 | Tools | `/commit`, `/commit-setup` | Semantic commits, whole-file staging, hook-validated messages, native git hooks, and safety hooks |
 | **review** | 1.0.1 | Tools | `/codex-review` | Independent Codex-based code review of the current `git diff` — verdict, summary, and findings |
 | **session** | 3.0.0 | Tools | `/report`, `/recall` | Session handoff reports with fixed-numbered pending items (`/report`); list, filter, grep, resume, and read back prior reports via five `/recall` subcommands (`list`, `filter`, `grep`, `resume`, `last`) |
-| **pragma** | 0.3.1 | Output | — | Standing working directives injected at session start — verify before conceding, a complaint is not a work order, a dominated option is not an option, verify before claiming — and a review gate that holds the agent to them |
+| **pragma** | 0.3.2 | Output | — | Standing working directives injected at session start — verify before conceding, a complaint is not a work order, a dominated option is not an option, verify before claiming — and a review gate that holds the agent to them |
 | **axio** | 0.4.0 | Development | — | Skills for the [axio](https://github.com/pragmabits/axio) Go logging library: an entry skill for the whole API and a migration skill for code on `log`, `slog`, logrus, zerolog, zap or apex/log. Its source lives in the axio repository |
 
 ## Installation

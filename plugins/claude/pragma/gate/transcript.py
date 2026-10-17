@@ -13,7 +13,11 @@ Item kinds (the letter is the reference prefix; the number is the line):
   I  an interruption by the user        S  a message the harness injected
   M  a file the user attached with @    C  context the harness showed the agent
                                            (git status, environment, date)
-Thinking blocks and meta entries other than Stop hook feedback are skipped.
+  G  the assistant's narration, which the screen shows as a summary
+Claude Code records the agent's reasoning as a thinking block with no text; a
+thinking block that carries text is narration (so on every local transcript
+measured in October 2026). Reasoning and meta entries other than Stop hook
+feedback are skipped.
 """
 
 from __future__ import annotations
@@ -23,7 +27,7 @@ import os
 import time
 from pathlib import Path
 
-INDEX_VERSION = 2
+INDEX_VERSION = 3
 STOP_FEEDBACK = "Stop hook feedback:"
 CONTEXT_TYPES = ("session_context", "environment", "date")
 FINAL_MISSING = ("the transcript did not hold the final response yet when this review ran: the tool calls and "
@@ -70,6 +74,8 @@ def _classify(entry: dict, tool_names: dict) -> list[dict]:
                 continue
             if block.get("type") == "text" and block.get("text", "").strip():
                 items.append({"kind": "A", "block": pos})
+            elif block.get("type") == "thinking" and (block.get("thinking") or "").strip():
+                items.append({"kind": "G", "block": pos})
             elif block.get("type") == "tool_use":
                 tool_names[block.get("id")] = block.get("name")
                 items.append({"kind": "T", "block": pos, "tool_id": block.get("id"), "name": block.get("name")})
@@ -116,7 +122,7 @@ def update_index(index_path: Path, transcript_path: str) -> dict:
             or index.get("path") != transcript_path or index.get("inode") != st.st_ino
             or index.get("parsed_bytes", 0) > st.st_size):
         index = {"version": INDEX_VERSION, "path": transcript_path, "inode": st.st_ino,
-                 "parsed_bytes": 0, "lines": 0, "model": None, "items": [], "tool_names": {}}
+                 "parsed_bytes": 0, "lines": 0, "model": None, "narration": False, "items": [], "tool_names": {}}
     tool_names = index.setdefault("tool_names", {})
     with open(transcript_path, "rb") as fh:
         fh.seek(index["parsed_bytes"])
@@ -145,6 +151,9 @@ def update_index(index_path: Path, transcript_path: str) -> dict:
             if isinstance(model, str) and model and not model.startswith("<"):
                 index["model"] = model
         found = _classify(entry, tool_names)
+        # The session shows narration: text the agent writes may reach the screen only as a summary.
+        if entry.get("thinkingDisplay") or any(item["kind"] == "G" for item in found):
+            index["narration"] = True
         for n, item in enumerate(found, 1):
             suffix = f"-{n}" if len(found) > 1 else ""
             item.update({"ref": f"{item['kind']}{line}{suffix}", "line": line, "off": line_off, "len": len(raw)})
@@ -202,10 +211,12 @@ class Loader:
             return {"text": "[unreadable transcript entry]"}
         content = (entry.get("message") or {}).get("content")
         kind = item["kind"]
-        if kind in ("A", "T") and isinstance(content, list) and item.get("block", 0) < len(content):
+        if kind in ("A", "G", "T") and isinstance(content, list) and item.get("block", 0) < len(content):
             block = content[item["block"]]
             if kind == "A":
                 return {"text": block.get("text", "")}
+            if kind == "G":
+                return {"text": block.get("thinking") or ""}
             return {"tool": block.get("name"), "input": block.get("input")}
         if kind == "M":
             att = entry.get("attachment") or {}

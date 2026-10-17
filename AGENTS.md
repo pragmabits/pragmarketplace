@@ -43,7 +43,7 @@ Current marketplace entries:
 - `git` `3.1.0`: semantic commit workflow, Conventional Commits validation, native git hooks, safety hooks.
 - `review` `1.0.1`: `/codex-review`, backed by `codex-review.sh` and the external Codex CLI.
 - `session` `3.0.0`: `/report` and `/recall` handoff reports for Claude Code.
-- `pragma` `0.3.1`: standing working directives injected by a `SessionStart` hook, plus a review gate on `AskUserQuestion` and turn ends. No slash entry.
+- `pragma` `0.3.2`: standing working directives injected by a `SessionStart` hook, plus a review gate on `AskUserQuestion` and turn ends. No slash entry.
 - `axio` `0.4.0`: `axio` and `migration` skills for the axio Go logging library. No slash entry; sourced by `git-subdir` from `pragmabits/axio` (`plugin/`), not from `plugins/claude/`.
 
 Treat those entries as read-only inventory unless the project policy changes.

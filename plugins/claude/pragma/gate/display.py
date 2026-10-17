@@ -22,7 +22,9 @@ Layout under the state root:
                                  Claude Code waits on this hook to show a batch
   display.seen                   touched on every batch: this installation
                                  delivers MessageDisplay, so a message with
-                                 nothing captured had no text
+                                 nothing captured had no text, unless the
+                                 session shows narration, which
+                                 MessageDisplay does not receive
 """
 
 from __future__ import annotations
@@ -46,6 +48,9 @@ NOT_CAPTURED = ("the assistant message that holds this question is not in the tr
                 "on screen could be captured: text the agent showed with the question may be missing")
 INCOMPLETE = ("the last text shown on screen was still being displayed when this review ran: its end may be "
               "missing from the last D item")
+NARRATION_MISSING = ("the assistant message that holds this question is not in the transcript yet, and nothing shown "
+                     "on screen was captured; this session shows narration, which the screen summarizes and which "
+                     "cannot be captured: narration the agent showed with the question may be missing")
 
 
 def _load(sdir: Path) -> dict | None:
@@ -216,6 +221,8 @@ def for_question(root: Path, sdir: Path, cfg: dict, index: dict, tool_use_id, pr
     msgs = tidy(sdir, index, prompt_id)
     if msgs and not msgs[-1].get("final"):
         notes.append(INCOMPLETE)
+    if not notes and not msgs and index.get("narration") and not has_call(index):
+        notes.append(NARRATION_MISSING)
     items = [{"kind": "D", "ref": f"D{n}", "head": m["head"], "tail": m["tail"], "dropped": m["dropped"]}
              for n, m in enumerate(msgs, 1)]
     info["shown"] = len(items)

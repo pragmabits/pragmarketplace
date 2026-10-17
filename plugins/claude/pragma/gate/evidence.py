@@ -15,6 +15,7 @@ KIND_NAMES = {
     "H": "hook_feedback", "I": "interrupt", "S": "harness_message",
     "M": "user_file", "C": "harness_context",
     "D": "assistant",  # shown on screen, not yet in the transcript (display.py)
+    "G": "assistant",  # narration, shown on screen as a summary; marked `summarized`
 }
 # Per-item text caps (characters). The request, the question and the final
 # response get the largest share; tool output keeps its head and its tail,
@@ -77,7 +78,9 @@ def _render(item: dict, loader, results: dict) -> dict:
         return out
     if kind == "M":
         out["file"] = content.get("file")
-    cap = {"U": CAP_USER, "N": CAP_USER, "A": CAP_ASSISTANT, "H": CAP_HOOK}.get(kind, CAP_USER)
+    if kind == "G":
+        out["summarized"] = True
+    cap = {"U": CAP_USER, "N": CAP_USER, "A": CAP_ASSISTANT, "G": CAP_ASSISTANT, "H": CAP_HOOK}.get(kind, CAP_USER)
     out["text"] = cut(content.get("text", ""), cap)
     return out
 
@@ -168,8 +171,8 @@ def build(event: str, items: list, loader, prompt_id: str | None, extras: dict, 
         [i for i in turn if i["kind"] in first],
         [i for i in history if i["kind"] in decisive],
         [i for i in turn if i["kind"] not in first],
-        [i for i in history if i["kind"] == "A"],
-        [i for i in history if i["kind"] not in decisive and i["kind"] != "A"],
+        [i for i in history if i["kind"] in ("A", "G")],
+        [i for i in history if i["kind"] not in decisive + ("A", "G")],
     ]
     chosen = {}
     used = base
