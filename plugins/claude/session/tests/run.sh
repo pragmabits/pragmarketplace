@@ -171,6 +171,17 @@ recall_in() {
   OUT="$(cd "$dir" && bash "$RECALL" "$@" 2>&1)" || RC=$?
 }
 
+# Run the recall skill's !-block as Claude Code renders it, with the skill
+# directory and the arguments pasted into the command text. Sets OUT and RC.
+skill_block_in() {
+  local dir="$1" args="$2" block
+  block="$(awk '/^```!$/ { on = 1; next } on && /^```$/ { exit } on' "$PLUGIN/skills/recall/SKILL.md")"
+  block="${block//'${CLAUDE_SKILL_DIR}'/"$PLUGIN/skills/recall"}"
+  block="${block//'$ARGUMENTS'/"$args"}"
+  RC=0
+  OUT="$(cd "$dir" && bash -c "$block" 2>&1)" || RC=$?
+}
+
 install_fixture() { # fixture name, sessions dir, session id
   mkdir -p "$2"
   cp "$FIX/$1" "$2/$3.md"
@@ -182,7 +193,7 @@ test_D01() {
   local r before after cmd
   r="$(new_repo d01)"
   before="$(tree_state "$r")"
-  for cmd in "list" "list --limit 2" "filter status:partial" "grep anything" "resume" "resume alice" "last" "last 3"; do
+  for cmd in "" "list" "list --limit 2" "filter status:partial" "grep anything" "resume" "resume alice" "last" "last 3"; do
     recall_in "$r" "$cmd"
     assert_eq "$cmd: exit 0 without a sessions directory" 0 "$RC"
     assert_contains "$cmd: reports no sessions" "$OUT" "No sessions found"
@@ -395,7 +406,7 @@ test_D06() {
   local cmd
   for cmd in "last 0" "last abc" "last 2 3" "list --limit 0" "list --limit" "list --limit x" "list --bogus" \
              "resume a b" "resume --item" "resume --bogus" "filter" "filter status:done" "filter since:2026-5-1" "filter nokey" "filter color:red" \
-             "filter user:" "grep" "grep re:" "bogus" ""; do
+             "filter user:" "grep" "grep re:" "bogus" "''"; do
     recall_in "$r" "$cmd"
     check "'$cmd' is rejected with a non-zero exit" '[[ $RC -ne 0 ]]' "exit $RC, output: $OUT"
     assert_lacks "'$cmd' prints no table" "$OUT" "| Session ID |"
@@ -817,6 +828,113 @@ EOF
 }
 
 # check-report.sh findings beyond credentials: structure and privacy.
+test_D16() {
+  local r s direct id view cmd
+  r="$(new_repo d16)"
+  s="$r/.harness/sessions"
+  mkdir -p "$s"
+  write_report "$s/alice-2026-05-01T090000.md" 2026-05-01T090000Z "Oldest"
+  install_fixture new-items.md "$s" bob-2026-05-02T090000
+  install_fixture pending-none.md "$s" alice-2026-05-03T090000
+  install_fixture no-section6.md "$s" carol-2026-05-04T090000
+
+  recall_in "$r"
+  direct="$OUT"
+  assert_eq "no subcommand exits 0" 0 "$RC"
+  check "no subcommand prints JSON" 'printf "%s" "$OUT" | jq -e . >/dev/null' "$OUT"
+  assert_eq "the three newest reports, newest first" "carol-2026-05-04T090000 alice-2026-05-03T090000 bob-2026-05-02T090000" \
+    "$(printf '%s' "$OUT" | jq -r '[.sessions[].session_id] | join(" ")')"
+  assert_eq "three requested, all four counted" "3 4" "$(printf '%s' "$OUT" | jq -r '"\(.requested) \(.available)"')"
+  assert_eq "each report keeps its pending state" "incomplete none items" "$(printf '%s' "$OUT" | jq -r '[.sessions[].pending_state] | join(" ")')"
+  assert_eq "pending items are carried in full" "Escape \`|\` in cells|Add tests" \
+    "$(printf '%s' "$OUT" | jq -r '.sessions[2].subsections | [.in_progress[0].label, .promised[0].label] | join("|")')"
+  for id in carol-2026-05-04T090000 alice-2026-05-03T090000 bob-2026-05-02T090000; do
+    view="$(printf '%s' "$direct" | jq -S --arg id "$id" '.sessions[] | select(.session_id == $id) | del(.malformed)')"
+    recall_in "$r" resume "$id"
+    assert_eq "$id: same view as resume" "$(printf '%s' "$OUT" | jq -S .)" "$view"
+  done
+
+  recall_in "$r" ""
+  assert_eq "an empty argument string is the same form" "$direct" "$OUT"
+  skill_block_in "$r" ""
+  assert_eq "the skill's !-block gives the same output" "$direct" "$OUT"
+  skill_block_in "$r" "bogus"
+  assert_contains "an unknown subcommand is named as an error before the usage line" "$OUT" $'error: unknown subcommand: bogus\nUsage: /recall'
+  assert_eq "the skill's !-block exits 0" 0 "$RC"
+
+  for cmd in "bogus" "last 0" "list --limit x" "resume nobody" "resume alice" "filter color:red" "''"; do
+    skill_block_in "$r" "$cmd"
+    assert_eq "'$cmd' in the skill's !-block exits 0, so Claude Code passes the message on" 0 "$RC"
+    check "'$cmd' in the skill's !-block still prints its message" \
+      '[[ "$OUT" == Usage:* || "$OUT" == error:* || "$OUT" == "No session matches:"* || "$OUT" == "Ambiguous reference"* ]]' "$OUT"
+  done
+
+  : > "$s/dave-2026-05-05T090000.md"
+  recall_in "$r"
+  assert_eq "an empty newest file is named" "dave-2026-05-05T090000" "$(printf '%s' "$OUT" | jq -r .skipped_empty)"
+  assert_eq "an empty newest file takes one of the three places" "carol-2026-05-04T090000 alice-2026-05-03T090000" \
+    "$(printf '%s' "$OUT" | jq -r '[.sessions[].session_id] | join(" ")')"
+  rm -f "$s/dave-2026-05-05T090000.md"
+
+  rm -f "$s/alice-2026-05-01T090000.md" "$s/bob-2026-05-02T090000.md" "$s/alice-2026-05-03T090000.md"
+  recall_in "$r"
+  assert_eq "a single report is all there is" "1 carol-2026-05-04T090000" "$(printf '%s' "$OUT" | jq -r '"\(.available) \(.sessions[0].session_id)"')"
+
+  check "the recall skill describes the form without a subcommand" 'grep -q "^### No subcommand: resume the work" "$PLUGIN/skills/recall/SKILL.md"'
+}
+
+test_D17() {
+  local r s cmd mine="Test-User-2026-05-05T090000 test-user-2026-05-03T090000-2 test-user-2026-05-03T090000"
+  r="$(new_repo d17)"
+  s="$r/.harness/sessions"
+  mkdir -p "$s"
+  write_report "$s/test-user-2026-05-01T090000.md" 2026-05-01T090000Z "Mine, oldest"
+  write_report "$s/ana-2026-05-02T090000.md" 2026-05-02T090000Z "Ana"
+  write_report "$s/test-user-2026-05-03T090000.md" 2026-05-03T090000Z "Mine"
+  write_report "$s/test-user-2026-05-03T090000-2.md" 2026-05-03T090000Z "Mine, same second"
+  write_report "$s/ana-silva-2026-05-04T090000.md" 2026-05-04T090000Z "Ana Silva"
+  write_report "$s/Test-User-2026-05-05T090000.md" 2026-05-05T090000Z "Mine, named by another tool"
+  ids() { printf '%s' "$OUT" | jq -r '[.sessions[].session_id] | join(" ")'; }
+
+  recall_in "$r"
+  assert_eq "without a user, the three newest of anyone" "Test-User-2026-05-05T090000 ana-silva-2026-05-04T090000 test-user-2026-05-03T090000-2" "$(ids)"
+  assert_eq "without a user, user is null" "null" "$(printf '%s' "$OUT" | jq -r .user)"
+
+  recall_in "$r" --me
+  assert_eq "--me exits 0" 0 "$RC"
+  assert_eq "--me keeps the git user's reports, whatever their case" "$mine" "$(ids)"
+  assert_eq "--me names the user and counts only their reports" "test-user 4" "$(printf '%s' "$OUT" | jq -r '"\(.user) \(.available)"')"
+  skill_block_in "$r" "--me"
+  assert_eq "--me through the skill's !-block" "$mine" "$(ids)"
+
+  recall_in "$r" "--user ana"
+  assert_eq "--user matches the whole user part, not a prefix" "ana-2026-05-02T090000" "$(ids)"
+  recall_in "$r" "--user ANA"
+  assert_eq "--user ignores case" "ana-2026-05-02T090000" "$(ids)"
+  recall_in "$r" "-u 'Ana Silva'"
+  assert_eq "-u takes a git user name as /report turns it into a filename" "ana-silva-2026-05-04T090000" "$(ids)"
+
+  recall_in "$r" "--user nobody"
+  assert_eq "a user without reports exits 0" 0 "$RC"
+  assert_eq "a user without reports is a notice" "No sessions match: user:nobody" "$OUT"
+
+  RC=0
+  OUT="$(cd "$r" && GIT_CONFIG_GLOBAL=/dev/null bash "$RECALL" --me 2>&1)" || RC=$?
+  assert_eq "--me without a git user name is an error" 1 "$RC"
+  assert_contains "--me without a git user name points to --user" "$OUT" "--user <name>"
+
+  for cmd in "--user" "-u" "--me --me" "--me --user ana" "--me extra" "--bogus" "--user '!!'"; do
+    recall_in "$r" "$cmd"
+    check "'$cmd' is rejected with a non-zero exit" '[[ $RC -ne 0 ]]' "exit $RC, output: $OUT"
+    assert_lacks "'$cmd' prints no JSON" "$OUT" '"session_id"'
+    skill_block_in "$r" "$cmd"
+    assert_eq "'$cmd' in the skill's !-block exits 0" 0 "$RC"
+    assert_contains "'$cmd' in the skill's !-block prints the error" "$OUT" "error:"
+  done
+
+  check "prepare-report.sh names files with the helper --me uses" 'grep -q "report_file_user" "$PREPARE"'
+}
+
 test_C_CHECK() {
   local r path out wt
   r="$(new_repo check)"
@@ -1285,7 +1403,7 @@ test_HOOK() {
   check "the Codex hook keeps its detection marker" 'grep -q "^# codex-git-plugin: pre-commit" "$codex_hook"'
 }
 
-ALL_TESTS="D01 D02 D03 D04 D05 D06 D07 D08 D09 D10 D11 D12 D13 D14 D15 C_CHECK EXAMPLES INJECTION A01 A02 A03_A04 A05 A06_A08 A07_A12 A11 SENSITIVE REPO_STATE HOOK"
+ALL_TESTS="D01 D02 D03 D04 D05 D06 D07 D08 D09 D10 D11 D12 D13 D14 D15 D16 D17 C_CHECK EXAMPLES INJECTION A01 A02 A03_A04 A05 A06_A08 A07_A12 A11 SENSITIVE REPO_STATE HOOK"
 SELECTED="${*:-$ALL_TESTS}"
 
 for id in $SELECTED; do

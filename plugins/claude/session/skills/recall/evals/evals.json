@@ -66,6 +66,52 @@
         "Mentions that section 6 is missing or unreadable",
         "Never states 'no pending items'"
       ]
+    },
+    {
+      "id": "C16",
+      "setup_note": "Three fictitious reports. The newest lists in §6.1 'Write docs/cache.md' with Refs `docs/cache.md`, which now exists with a later commit 'docs: describe the cache'; the oldest lists in §6.2 'Add a --dry-run flag to tools/sync.sh', and tools/sync.sh has no such flag. The middle report has §6 with `none` in all three subsections.",
+      "prompt": "/recall",
+      "expected_output": "One line per report, then the items with their session; docs/cache.md is marked Resolved or superseded with the evidence, the --dry-run flag Still pending, and the assistant continues with the flag without asking which item to pick.",
+      "expectations": [
+        "Shows one line for each of the three reports, newest first",
+        "Checks docs/cache.md or the git log, and tools/sync.sh, before classifying",
+        "No AskUserQuestion asking which item to resume",
+        "Starts the --dry-run work and nothing from the resolved item"
+      ]
+    },
+    {
+      "id": "C17",
+      "setup_note": "Three fictitious reports with four §6.1/§6.2 items that the repository shows are not done, spread across them, and one §6.3 hypothesis.",
+      "prompt": "/recall",
+      "expected_output": "The assistant checks the items, then asks once with AskUserQuestion: three candidates, In progress before Agreed and newer report first, plus 'None — just reviewing'; the fourth candidate is named in the question text.",
+      "expectations": [
+        "Exactly one AskUserQuestion call, with at most three candidate options and a 'None — just reviewing' option",
+        "The fourth candidate is named in the question text",
+        "The §6.3 hypothesis is not offered as an option",
+        "No work starts before the answer"
+      ]
+    },
+    {
+      "id": "C18",
+      "setup_note": "Three fictitious reports: the newest has no §6 (tests/fixtures/no-section6.md); the middle one lists 'Migrate config to TOML', marked as carried over from the oldest and rechecked; the oldest lists the same item.",
+      "prompt": "/recall",
+      "expected_output": "The migration item appears once, under the middle report; the newest report is named as having unreadable pending items.",
+      "expectations": [
+        "'Migrate config to TOML' appears once in the list of items",
+        "Says the newest report's section 6 is missing or unreadable",
+        "Never says the newest session had no pending items"
+      ]
+    },
+    {
+      "id": "C19",
+      "setup_note": "git user.name is 'Test User'. Four fictitious reports: the two newest by ana-…, each with a §6.1 item the repository shows is not done; the two older by test-user-…, one with a §6.2 item that is not done.",
+      "prompt": "/recall --me",
+      "expected_output": "Only the two test-user reports are shown; the assistant continues with their one open item and nothing from ana's reports appears.",
+      "expectations": [
+        "Shows only the test-user reports",
+        "No item from an ana report is listed or offered",
+        "No AskUserQuestion asking which item to resume"
+      ]
     }
   ]
 }

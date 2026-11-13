@@ -6,7 +6,9 @@
 # stay compatible with reports written by earlier versions (Branch, Base
 # commit, "If partial, abandoned, or redirected").
 #
-# Modes: list, filter, last, resume.
+# Modes: list, filter, last, resume, and recent (no subcommand: the resume
+# view of each report given, newest first; $f_user names the user they were
+# kept for, or is "").
 
 def ws_trim: sub("^\\s+"; "") | sub("\\s+$"; "");
 
@@ -231,6 +233,31 @@ def notices($bad):
   (if $empty_ids != "" then "\nSkipped empty file(s): \($empty_ids)" else empty end),
   (if $unreadable_ids != "" then "\nCould not read: \($unreadable_ids)" else empty end);
 
+# What resume shows of one report: metadata, goal, decisions and pending items
+# with an explicit pending_state. $requested is the --item text, or "".
+def resume_view($requested):
+  . as $r
+  | {
+      session_id: $r.session_id,
+      title: $r.title,
+      file_path: $r.file_path,
+      timestamp: $r.timestamp,
+      goal: $r.goal,
+      goal_status: $r.goal_status,
+      status_note: $r.status_note,
+      direction_changes: $r.direction_changes,
+      origin: $r.origin,
+      pending_state: $r.pending.state
+    }
+  + (if $requested != "" then {requested_item: $requested} else {} end)
+  + (if $r.pending.state == "none" then {empty: true} else {} end)
+  + (if $r.pending.reasons then {incomplete_reasons: $r.pending.reasons} else {} end)
+  + (if ($r.pending.subsections | length) > 0 then {
+      subsections: ($r.pending.subsections | with_entries(.value = (.value.items // []))),
+      subsection_states: ($r.pending.subsections | with_entries(.value |= del(.items)))
+    } else {} end)
+  + {decisions: $r.decisions};
+
 group_inputs
 | map(parse_report(.file; .lines)) as $all
 | ($limit | tonumber? // 0) as $lim
@@ -265,27 +292,16 @@ group_inputs
       unreadable: $unreadable_ids
     }
   elif $mode == "resume" then
-    $all[0] as $r
-    | {
-        session_id: $r.session_id,
-        title: $r.title,
-        file_path: $r.file_path,
-        timestamp: $r.timestamp,
-        goal: $r.goal,
-        goal_status: $r.goal_status,
-        status_note: $r.status_note,
-        direction_changes: $r.direction_changes,
-        origin: $r.origin,
-        pending_state: $r.pending.state
-      }
-    + (if $item != "" then {requested_item: $item} else {} end)
-    + (if $r.pending.state == "none" then {empty: true} else {} end)
-    + (if $r.pending.reasons then {incomplete_reasons: $r.pending.reasons} else {} end)
-    + (if ($r.pending.subsections | length) > 0 then {
-        subsections: ($r.pending.subsections | with_entries(.value = (.value.items // []))),
-        subsection_states: ($r.pending.subsections | with_entries(.value |= del(.items)))
-      } else {} end)
-    + {decisions: $r.decisions}
+    $all[0] | resume_view($item)
+  elif $mode == "recent" then
+    {
+      requested: $lim,
+      user: (if $f_user == "" then null else $f_user end),
+      available: ($available | tonumber? // ($all | length)),
+      sessions: [$all[] | resume_view("") + {malformed}],
+      skipped_empty: $empty_ids,
+      unreadable: $unreadable_ids
+    }
   else
     error("unknown mode: \($mode)")
   end

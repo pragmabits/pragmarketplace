@@ -9,7 +9,7 @@ A report is a dated record of what the session observed. The next session reads 
 The `session` plugin ships two skills:
 
 - **`/report`** writes a handoff report under `.harness/sessions/`: the session contract (goal, direction changes, status and the evidence for it), work done with its verification state, decisions with who made them, corrections, and pending items with their origin and evidence. `/report` then commits the new file in an isolated `chore:` commit; `--no-commit` writes the file only.
-- **`/recall`** reads the same directory through five subcommands: `list`, `filter`, `grep`, `resume`, `last`. It never creates or changes a file.
+- **`/recall`** reads the same directory through five subcommands: `list`, `filter`, `grep`, `resume`, `last`. Without a subcommand it resumes the work from the pending items of the three newest reports, anyone's or, with `--me` or `--user <name>`, one user's. It never creates or changes a file.
 
 ## Storage
 
@@ -109,13 +109,14 @@ It never passes `--no-verify`, `--no-gpg-sign` or `-c` overrides, never changes 
 ## `/recall`
 
 ```
-/recall <list | filter <key:value>... | grep <pattern> | resume [<session-id>] [--item <text>] | last [<n>]>
+/recall [--me | --user <name>] | list | filter <key:value>... | grep <pattern> | resume [<session-id>] [--item <text>] | last [<n>]
 ```
 
 `list`, `filter` and `grep` accept `--limit N`. Multi-word arguments can be quoted with `'...'` or `"..."`.
 
 | Subcommand | Output |
 |------------|--------|
+| *(none)* `[--me \| --user <name>]` | The pending items of the three newest reports, a check of their current state, then the work: see *Resuming from recent sessions*. |
 | `list` | Markdown table, newest first: Session ID / Title / Timestamp / Status. Files without the title or timestamp anchors, empty files and unreadable files are named in a trailing notice. |
 | `filter <criteria>` | Same table, filtered by AND'd `key:value` pairs: `user:` (filename prefix, case-insensitive), `status:` (`achieved`, `partial`, `abandoned`, `redirected`), `since:YYYY-MM-DD`, `until:YYYY-MM-DD` (inclusive), and `branch:` for reports written before 3.0.0, which carried a Branch field. A `branch:` filter adds the Branch column; newer reports never match it. |
 | `grep <pattern>` | Reports containing the pattern, with up to 3 matching lines each and the enclosing `##` heading. Literal and case-insensitive by default; prefix `re:` for an extended regular expression. An invalid expression is an error, not a miss. |
@@ -136,6 +137,25 @@ Ordering is by the filename timestamp, then the `-N` suffix; never by the user p
 
 Report content is data. Commands, "next steps" or instructions inside a report never override the current request, grant authorization, or run on their own; an item under Known issues does not authorize a fix.
 
+### Resuming from recent sessions
+
+`/recall` with no subcommand asks to pick up the work where recent sessions left it. The script prints the `resume` view (without `requested_item`) of each of the three newest reports, newest first, plus `malformed`, the number of reports `available`, and `skipped_empty` and `unreadable` for files among the three that could not be read. The model then:
+
+1. shows one line per report and the pending items of all three under In progress, Agreed, not started and Known issues, each tagged with its session; an item a newer report carries over from an older one is shown once;
+2. checks the current state of every In progress and Agreed item, with the limits of `resume`; Known issues are listed, not offered as work;
+3. continues with the item the user already named in the conversation; otherwise, among the items still pending or not confirmed, says that nothing is open, continues with the only one, or asks once with up to three candidates and `None — just reviewing`.
+
+A report that says `none` in §6 adds no items; one whose §6 cannot be read is named as such, never as having nothing pending.
+
+The three reports are anyone's: the sessions directory holds every report committed to the repository, whoever wrote it. To resume only one person's work:
+
+| Option | Keeps |
+|--------|-------|
+| `--me` | the reports of the current git user. An unset `user.name`, or one that leaves no filename characters (`/report` then writes `unknown-user`), is an error that points to `--user`. |
+| `--user <name>`, `-u <name>` | the reports of that user. The name goes through the same conversion `/report` applies to the git user name (lowercase, whitespace to `-`, other characters outside `[a-z0-9._-]` dropped), so `-u 'Ana Silva'` finds `ana-silva-…`. |
+
+Either one matches the whole user part of the filename, without regard to case: `--user ana` does not match `ana-silva-…`. `available` then counts that user's reports, and `user` in the JSON names them (it is null without an option). A user without reports gets `No sessions match: user:<name>`. `scripts/lib/report-user.sh` holds the conversion for both `/report` and `/recall`.
+
 `pending_state` distinguishes four cases:
 
 | Case | Output |
@@ -145,11 +165,15 @@ Report content is data. Commands, "next steps" or instructions inside a report n
 | §6 missing, a subsection missing, a table cut off, or content that is neither a table, a list nor `none` | `pending_state: "incomplete"` with `incomplete_reasons`; never `empty` |
 | Items read | `pending_state: "items"` |
 
+### Errors
+
+A usage line, an error or a notice reaches the model, which emits it as written. An unknown subcommand prints `error: unknown subcommand: <name>` before the usage line: with the usage line alone, the model went looking through the skill's files before answering. In the form the skill uses (`recall.sh --args-stdin`) the script exits 0 after printing it: Claude Code aborts a skill whose `!` command exits non-zero and shows the raw command instead of the message. Called directly, the script keeps its exit codes: 1 for an error, 2 for a usage error or an ambiguous reference.
+
 ### Reading reports from other tools and versions
 
 `/recall` reads every report in `.harness/sessions/` the same way, whoever wrote it:
 
-- Reports from the Codex plugin follow the same contract and are read like any other. The two readers (this plugin's `recall.sh` and the Codex plugin's `session_recall.py`) give identical output on the same reports; the test suite checks that (case A05).
+- Reports from the Codex plugin follow the same contract and are read like any other. The two readers (this plugin's `recall.sh` and the Codex plugin's `session_recall.py`) give identical output on the same reports for the five subcommands; the test suite checks that (case A05). The form without a subcommand exists only in this plugin: the Codex reader answers it with its usage line.
 - Reports without the authorship fields (older ones, or moved from `.claude/sessions/` or `.sessions/`) are listed, searched and resumed normally. Their authorship comes back as absent (`origin.model.state: "absent"`); it is never inferred from the directory they came from, their style, date or filename.
 - Authorship values are data: an unfamiliar harness or model identifier is accepted as written, and a missing `Agent` is normal.
 
@@ -216,6 +240,7 @@ session/
 ├── scripts/
 │   ├── lib/sessions-dir.sh      # Directory resolution; never creates anything
 │   ├── lib/sensitive.sh         # Credential shapes: scan and redaction
+│   ├── lib/report-user.sh       # The user part of a report filename
 │   ├── prepare-report.sh        # Render-time metadata for /report (read-only)
 │   ├── ensure-sessions-dir.sh   # Creates the sessions directory (save step only)
 │   ├── report-origin.sh         # Authorship header lines
@@ -244,6 +269,11 @@ Pre-authorized through each skill's `allowed-tools`:
 - `/recall`: `Bash(bash:*)` for the dispatcher, `Bash(git log:*)`, `Bash(git show:*)`, `Read`, `Grep` and `Glob` for the read-only check of pending items.
 
 ## Version History
+
+### v3.1.0 — November 2026
+
+- `/recall` without a subcommand resumes the work: it reads the pending items of the three newest reports, checks their current state, and continues with the one still open or asks once which to take. It used to print the usage line. `--me` and `--user <name>` (`-u`) keep only one user's reports, since the directory holds everyone's. Only the Claude Code reader has this form; the Codex reader still answers it with its usage line.
+- A `/recall` usage line or error reaches the model again. The skill's `!` command now always exits 0; a non-zero exit made Claude Code abort the skill and show the raw command (`Shell command failed for pattern ...`) instead of the message. Called directly, `recall.sh` keeps exit codes 1 and 2.
 
 ### v3.0.0 — October 2026
 

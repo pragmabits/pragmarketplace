@@ -13,12 +13,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib/sessions-dir.sh
 source "${SCRIPT_DIR}/lib/sessions-dir.sh"
+# shellcheck source=lib/report-user.sh
+source "${SCRIPT_DIR}/lib/report-user.sh"
 
 root="$(resolve_sessions_root)"
 sessions_dir="$root/.harness/sessions"
 
 git_user="$(git config user.name 2>/dev/null || true)"
-file_user="$(printf '%s' "$git_user" | tr '[:upper:]' '[:lower:]' | sed -E 's/[[:space:]]+/-/g; s/[^a-z0-9._-]//g')"
+file_user="$(report_file_user "$git_user")"
 if [[ -z "$file_user" || "$file_user" == "unknown" ]]; then
   file_user="unknown-user"
 fi

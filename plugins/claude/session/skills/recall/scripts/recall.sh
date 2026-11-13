@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 # recall.sh — dispatcher for the recall skill subcommands. Read-only.
 #
-# Usage: recall.sh <list|filter|grep|resume|last> [args]
+# Usage: recall.sh [--me | --user <name>]
+#        recall.sh <list|filter|grep|resume|last> [args]
 #        recall.sh --args-stdin    (the same, read as one line from stdin)
 #
 # Output:
+#   no subcommand    — JSON: the resume view (below) of each of the three
+#                      newest reports, for resuming the work where recent
+#                      sessions left it. --me (the git user) or -u/--user
+#                      <name> keeps only that user's reports, by the user part
+#                      of the filename.
 #   list/filter/grep — markdown the skill emits verbatim.
 #   last             — JSON: one excerpt per report (title, goal, status,
 #                      status note, work topics, pending state and counts),
@@ -28,7 +34,10 @@
 #   missing, truncated or unreadable §6 is "incomplete", never "empty".
 #
 # Exit codes: 0 success (including "no sessions" notices), 1 error, 2 usage
-# error or ambiguous reference.
+# error or ambiguous reference. With --args-stdin, the form the skill uses, the
+# exit code is always 0: Claude Code aborts a skill whose !-command exits
+# non-zero and shows the raw command instead of its output, so the usage line
+# or error would never reach the model that is told to emit it.
 
 set -euo pipefail
 
@@ -38,9 +47,11 @@ source "${SCRIPT_DIR}/lib/sessions.sh"
 REPORT_JQ="${SCRIPT_DIR}/lib/report.jq"
 
 NO_SESSIONS='No sessions found in .harness/sessions/'
+# Reports read when no subcommand is given.
+RECENT_COUNT=3
 
 print_usage() {
-  printf 'Usage: /recall <list [--limit N] | filter <key:value>... [--limit N] | grep <pattern> [--limit N] | resume [<session-id>] [--item <text>] | last [<n>]>\n' >&2
+  printf 'Usage: /recall [--me | --user <name>] | list [--limit N] | filter <key:value>... [--limit N] | grep <pattern> [--limit N] | resume [<session-id>] [--item <text>] | last [<n>]\n' >&2
 }
 
 require_jq() {
@@ -441,6 +452,99 @@ cmd_last() {
 }
 
 # ---------------------------------------------------------------------------
+# no subcommand: the pending items of the newest reports
+# ---------------------------------------------------------------------------
+
+# Keep in SESSION_FILES only the reports whose filename user is $1, compared
+# without regard to case.
+keep_user() {
+  local want="$1" f id kept=() had_nocasematch=0
+  shopt -q nocasematch && had_nocasematch=1
+  shopt -s nocasematch
+  for f in ${SESSION_FILES[@]+"${SESSION_FILES[@]}"}; do
+    id="$(session_id "$f")"
+    if [[ "$id" =~ $SESSION_NAME_RE ]] && [[ "${BASH_REMATCH[2]}" == "$want" ]]; then
+      kept+=("$f")
+    fi
+  done
+  [[ $had_nocasematch -eq 1 ]] || shopt -u nocasematch
+  SESSION_FILES=(${kept[@]+"${kept[@]}"})
+}
+
+cmd_recent() {
+  local by="" name="" user=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --me|-u|--user)
+        if [[ -n "$by" ]]; then
+          printf 'error: give --me or --user <name> once\n' >&2
+          return 2
+        fi
+        by="$1"
+        if [[ "$1" == "--me" ]]; then
+          shift
+        else
+          if [[ -z "${2:-}" ]]; then
+            printf 'error: %s requires a user name\n' "$1" >&2
+            return 2
+          fi
+          name="$2"
+          shift 2
+        fi ;;
+      *)
+        printf 'error: without a subcommand /recall accepts only --me or --user <name> (got: %s)\n' "$1" >&2
+        return 2 ;;
+    esac
+  done
+
+  if [[ -n "$by" ]]; then
+    local helper="${RECALL_PLUGIN_ROOT}/scripts/lib/report-user.sh"
+    # shellcheck source=../../../scripts/lib/report-user.sh
+    if [[ ! -r "$helper" ]] || ! source "$helper"; then
+      printf 'error: the report user helper is missing from the plugin (scripts/lib/report-user.sh)\n' >&2
+      return 1
+    fi
+    if [[ "$by" == "--me" ]]; then
+      name="$(git config user.name 2>/dev/null || true)"
+      user="$(report_file_user "$name")"
+      # /report names these reports unknown-user, which says nothing about whose they are.
+      if [[ -z "$user" || "$user" == "unknown" ]]; then
+        printf 'error: --me needs a git user.name that /report can put in a filename; name the user with --user <name>\n' >&2
+        return 1
+      fi
+    else
+      user="$(report_file_user "$name")"
+      if [[ -z "$user" ]]; then
+        printf 'error: %s "%s" leaves no characters a report filename can hold\n' "$by" "$name" >&2
+        return 2
+      fi
+    fi
+  fi
+  require_jq || return 1
+
+  local rc=0
+  load_or_notice || rc=$?
+  [[ $rc -eq 10 ]] && return 0
+  [[ $rc -ne 0 ]] && return 1
+
+  if [[ -n "$user" ]]; then
+    keep_user "$user"
+    if [[ ${#SESSION_FILES[@]} -eq 0 ]]; then
+      printf 'No sessions match: user:%s\n' "$user"
+      return 0
+    fi
+  fi
+  # All reports count as available, not just the ones passed to jq.
+  AVAILABLE=${#SESSION_FILES[@]}
+  if [[ $RECENT_COUNT -lt $AVAILABLE ]]; then
+    SESSION_FILES=("${SESSION_FILES[@]:0:$RECENT_COUNT}")
+  fi
+  prepare_inputs
+  run_report_jq recent --arg limit "$RECENT_COUNT" --arg item "" \
+    --arg f_user "$user" --arg f_branch "" --arg f_status "" --arg f_since "" --arg f_until "" --arg criteria ""
+}
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -453,7 +557,9 @@ main() {
   # into the command text as is, so inside quotes a user's quote would end the
   # string and a $(...) would run. A heredoc with a quoted delimiter keeps the
   # text inert; split_words then splits it without evaluating anything.
+  local from_skill=0
   if [[ $# -eq 1 && "$1" == "--args-stdin" ]]; then
+    from_skill=1
     local arg_text
     arg_text="$(cat)"
     split_words "$arg_text"
@@ -463,21 +569,26 @@ main() {
     set -- ${WORDS[@]+"${WORDS[@]}"}
   fi
 
-  if [[ $# -eq 0 ]] || [[ -z "${1:-}" ]]; then
-    print_usage
-    exit 2
-  fi
-  local cmd="$1"
-  shift
   local rc=0
-  case "$cmd" in
-    list)   cmd_list "$@" || rc=$? ;;
-    filter) cmd_filter "$@" || rc=$? ;;
-    grep)   cmd_grep "$@" || rc=$? ;;
-    resume) cmd_resume "$@" || rc=$? ;;
-    last)   cmd_last "$@" || rc=$? ;;
-    *)      print_usage; exit 2 ;;
-  esac
+  if [[ $# -eq 0 || "$1" == -* ]]; then
+    cmd_recent "$@" || rc=$?
+  else
+    local cmd="$1"
+    shift
+    case "$cmd" in
+      list)   cmd_list "$@" || rc=$? ;;
+      filter) cmd_filter "$@" || rc=$? ;;
+      grep)   cmd_grep "$@" || rc=$? ;;
+      resume) cmd_resume "$@" || rc=$? ;;
+      last)   cmd_last "$@" || rc=$? ;;
+      *)
+        printf 'error: unknown subcommand: %s\n' "$cmd" >&2
+        print_usage
+        rc=2 ;;
+    esac
+  fi
+  # The message is already on the output; see "Exit codes" above.
+  [[ $from_skill -eq 1 ]] && exit 0
   exit "$rc"
 }
 
