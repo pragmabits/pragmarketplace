@@ -106,7 +106,12 @@ def build(event: str, items: list, loader, prompt_id: str | None, extras: dict, 
             if visible[pos]["kind"] == "U":
                 start = pos
                 break
-        if start is not None:
+        starter = next((i for i in visible if prompt_id and i["kind"] == "S" and i.get("prompt_id") == prompt_id),
+                       None)
+        if start is not None and starter is not None:
+            notes.append(f"this turn was started by a harness message ({starter['ref']}), not by the user: "
+                         "the request is the user's last message")
+        elif start is not None:
             notes.append("request located as the last user message: its prompt id was not found in the transcript")
     package = {"event": event}
     if start is None:

@@ -17,8 +17,11 @@ DEFAULTS = {
     # when the transcript names none, the CLI's own selection.
     "model": None,
     "effort": "low",
-    "timeout_s": 30,
-    "lock_wait_s": 40,
+    # The lock wait, an evaluation, the reviewer's kill (up to 4 s) and the
+    # stop wait must fit in the 90 s Claude Code gives the hook (hooks.json).
+    # In October and November 2026 the slowest completed evaluation took 29 s.
+    "timeout_s": 45,
+    "lock_wait_s": 30,
     "budgets": {
         "question": {"evaluations": 3, "returns": 2},
         "stop": {"evaluations": 3, "returns": 2},

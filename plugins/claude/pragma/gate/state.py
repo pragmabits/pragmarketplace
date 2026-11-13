@@ -88,6 +88,23 @@ def request(data: dict, key: str, cfg: dict, origin: str) -> dict:
     return req
 
 
+def renew_question_round(req: dict, answers: int) -> bool:
+    """Renew the question budget once the user has answered a question since the last question review.
+
+    `answers` counts the questions answered so far in the request; the first
+    question review only records it. Each answer is a decision the user made,
+    so the next question is a new round, not another attempt at the last one.
+    Returns whether a new round began.
+    """
+    seen = req.get("answers_seen")
+    req["answers_seen"] = answers
+    if seen is None or answers <= seen:
+        return False
+    req["budgets"]["question"] = {"evaluations": 0, "returns": 0}
+    req["question_round"] = req.get("question_round", 1) + 1
+    return True
+
+
 def log(path: Path, record: dict) -> None:
     target = path / "log.jsonl"
     try:

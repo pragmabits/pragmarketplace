@@ -140,7 +140,7 @@ def run(event: str, package: dict, refs: set, cfg: dict, model: str | None, work
             result.update(status="timeout", reason=f"no reply within {cfg['timeout_s']} s")
             return result
         if proc.returncode != 0:
-            result.update(status="error", reason=f"exit {proc.returncode}: {_tail(err)}")
+            result.update(status="error", reason=f"exit {proc.returncode}: {_failure(out, err)}")
             return result
         try:
             payload = json.loads(out.decode("utf-8", "replace"))
@@ -172,6 +172,12 @@ def run(event: str, package: dict, refs: set, cfg: dict, model: str | None, work
     except OSError as exc:
         result.update(status="error", reason=f"cannot start reviewer: {exc}")
         return result
+    except BaseException:
+        # The hook itself is being stopped, and Claude Code kills it about
+        # 1.5 s later: no time to let the reviewer end on SIGTERM.
+        if proc is not None and proc.poll() is None:
+            _kill(proc, (signal.SIGKILL,))
+        raise
     finally:
         if proc is not None and proc.poll() is None:
             _kill(proc)
@@ -179,8 +185,8 @@ def run(event: str, package: dict, refs: set, cfg: dict, model: str | None, work
         result["duration_ms"] = int((time.monotonic() - started) * 1000)
 
 
-def _kill(proc):
-    for sig in (signal.SIGTERM, signal.SIGKILL):
+def _kill(proc, signals=(signal.SIGTERM, signal.SIGKILL)):
+    for sig in signals:
         try:
             os.killpg(proc.pid, sig)
         except (ProcessLookupError, PermissionError):
@@ -190,6 +196,27 @@ def _kill(proc):
             return
         except subprocess.TimeoutExpired:
             continue
+
+
+def _failure(out: bytes, err: bytes) -> str:
+    """Why a reviewer that exited non-zero failed.
+
+    With --output-format json, `claude -p` reports an API failure on stdout
+    (`result`, `terminal_reason`) and may write nothing on stderr; reading
+    stderr alone logged such failures as a bare "exit 1".
+    """
+    parts = []
+    try:
+        payload = json.loads(out.decode("utf-8", "replace"))
+    except ValueError:
+        payload = None
+    if isinstance(payload, dict):
+        parts += [str(payload[k]) for k in ("terminal_reason", "result") if payload.get(k)]
+    elif out.strip():
+        parts.append(_tail(out))
+    if err.strip():
+        parts.append(_tail(err))
+    return _tail(" | ".join(parts).encode("utf-8")) if parts else "no output"
 
 
 def _tail(data: bytes, n: int = 300) -> str:

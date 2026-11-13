@@ -4,7 +4,8 @@
 FAKE_PLAN: JSON file with a list of steps, consumed one per call, the last one
 repeating. A step is {"verdict": "pass"|"revise"|"unknown", "category": ...,
 "refs": [...] (default: the request ref and F or Q)}, or {"raw": "text"} to
-print text instead of JSON, or {"exit": n}, plus an optional {"sleep": s}.
+print text instead of JSON, or {"exit": n} with optional "stdout" and "stderr"
+(default stderr: "fake failure"), plus an optional {"sleep": s}.
 FAKE_LOG: directory where each call records argv, cwd, selected env, the
 prompt received and its start and end times.
 """
@@ -44,7 +45,8 @@ def main():
     with open(path, "w") as fh:
         json.dump(record, fh)
     if "exit" in step:
-        sys.stderr.write("fake failure\n")
+        sys.stdout.write(step.get("stdout", ""))
+        sys.stderr.write(step.get("stderr", "fake failure\n"))
         sys.exit(step["exit"])
     if "raw" in step:
         sys.stdout.write(step["raw"])

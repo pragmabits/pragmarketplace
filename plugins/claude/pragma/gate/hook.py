@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import sys
 import time
 from pathlib import Path
@@ -21,6 +22,26 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from gate import config, display, state  # noqa: E402
 
 EVENTS = {"session-start", "user-prompt-submit", "message-display", "pre-tool-use", "stop"}
+STOP_SIGNALS = (signal.SIGTERM, signal.SIGHUP)
+
+
+class Interrupted(Exception):
+    """Claude Code stopped the hook while a review ran, as when the user interrupts or the session ends."""
+
+
+_on_stop = None  # logs the interruption; set for the reviewed moments
+
+
+def _interrupt(signum, _frame):
+    # The first signal is enough: a second one must not cut the cleanup short.
+    for sig in STOP_SIGNALS:
+        signal.signal(sig, signal.SIG_IGN)
+    name = signal.Signals(signum).name
+    # Claude Code kills the hook about 1.5 s after this signal (measured with
+    # 2.1.323): the log line goes first, then the reviewer is killed on the way out.
+    if _on_stop is not None:
+        _on_stop(name)
+    raise Interrupted(name)
 
 
 def emit(obj: dict) -> None:
@@ -89,45 +110,65 @@ def main(argv: list) -> int:
     started = time.monotonic()
     record = {"ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "prompt_id": prompt_id}
     decision = None
-    with state.locked(sdir, float(cfg["lock_wait_s"])) as got:
-        if not got:
-            record.update(event=kind, outcome="lock_timeout", released=True)
-            decision = {"action": "allow", "agent_message": None, "record": record,
-                        "user_message": f"pragma {core.LABEL[kind]} skipped: another review of this session was still running"}
-        else:
-            st = state.load(sdir)
-            key = prompt_id or st.get("current") or "unidentified"
-            req = state.request(st, key, cfg, "hook" if key not in st["requests"] else "user-prompt-submit")
-            index = transcript.update_index(sdir / "index.json", data.get("transcript_path") or "")
-            model = cfg.get("model") or index.get("model")
-            if index.get("missing"):
-                # Without the transcript there is no evidence to judge; a call
-                # could only come back inconclusive.
-                decision = core.release(kind, req, "skipped: the session transcript is not available",
-                                        "no_transcript", str(sdir / "log.jsonl"))
+
+    def log_stop(signame: str) -> None:
+        record.update(event=kind, outcome="interrupted", signal=signame, released=True,
+                      hook_ms=int((time.monotonic() - started) * 1000))
+        state.log(sdir, record)
+
+    # Without this, a review cut short leaves no trace in the gate's log: Claude
+    # Code records the hook as cancelled or, when a signal it did not send ends
+    # the hook, as failed with status 1 and no stderr.
+    global _on_stop
+    _on_stop = log_stop
+    for sig in STOP_SIGNALS:
+        signal.signal(sig, _interrupt)
+    try:
+        with state.locked(sdir, float(cfg["lock_wait_s"])) as got:
+            if not got:
+                record.update(event=kind, outcome="lock_timeout", released=True)
+                decision = {"action": "allow", "agent_message": None, "record": record,
+                            "user_message": f"pragma {core.LABEL[kind]} skipped: another review of this session was still running"}
             else:
-                if kind == "question":
-                    index, extras["shown"], extras["notes"], record["display"] = display.for_question(
-                        root, sdir, cfg, index, data.get("tool_use_id"), prompt_id)
+                st = state.load(sdir)
+                key = prompt_id or st.get("current") or "unidentified"
+                req = state.request(st, key, cfg, "hook" if key not in st["requests"] else "user-prompt-submit")
+                index = transcript.update_index(sdir / "index.json", data.get("transcript_path") or "")
+                model = cfg.get("model") or index.get("model")
+                if index.get("missing"):
+                    # Without the transcript there is no evidence to judge; a call
+                    # could only come back inconclusive.
+                    decision = core.release(kind, req, "skipped: the session transcript is not available",
+                                            "no_transcript", str(sdir / "log.jsonl"))
                 else:
-                    index, record["final_wait"] = transcript.settle_final(
-                        sdir / "index.json", index, extras["final_response"], float(cfg["stop_wait_s"]))
-                    if record["final_wait"]["held"] is False:
-                        extras["notes"] = [transcript.FINAL_MISSING]
-                    display.tidy(sdir, index, prompt_id)
-                if not transcript.holds_prompt(index, prompt_id):
-                    # Judging now would mean judging against an earlier request.
-                    decision = core.release(kind, req, "skipped: the current request is not in the transcript yet",
-                                            "no_request", str(sdir / "log.jsonl"))
-                else:
-                    with transcript.Loader(index["path"]) as loader:
-                        package, refs, stats = evidence.build(kind, index["items"], loader, prompt_id, extras,
-                                                              int(cfg["package_limit_bytes"]))
-                    record.update(package=stats)
-                    decision = core.review(kind, req, package, refs, cfg, model, root / "evalbox",
-                                           lambda: state.save(sdir, st), str(sdir / "log.jsonl"))
-            record.update(decision["record"])
-            state.save(sdir, st)
+                    if kind == "question":
+                        index, extras["shown"], extras["notes"], record["display"] = display.for_question(
+                            root, sdir, cfg, index, data.get("tool_use_id"), prompt_id)
+                        if state.renew_question_round(req, transcript.answers(index, prompt_id)):
+                            record["question_round"] = req["question_round"]
+                    else:
+                        index, record["final_wait"] = transcript.settle_final(
+                            sdir / "index.json", index, extras["final_response"], float(cfg["stop_wait_s"]))
+                        if record["final_wait"]["held"] is False:
+                            extras["notes"] = [transcript.FINAL_MISSING]
+                        display.tidy(sdir, index, prompt_id)
+                    if not transcript.holds_prompt(index, prompt_id):
+                        # Judging now would mean judging against an earlier request.
+                        decision = core.release(kind, req, "skipped: the current request is not in the transcript yet",
+                                                "no_request", str(sdir / "log.jsonl"))
+                    else:
+                        with transcript.Loader(index["path"]) as loader:
+                            package, refs, stats = evidence.build(kind, index["items"], loader, prompt_id, extras,
+                                                                  int(cfg["package_limit_bytes"]))
+                        record.update(package=stats)
+                        decision = core.review(kind, req, package, refs, cfg, model, root / "evalbox",
+                                               lambda: state.save(sdir, st), str(sdir / "log.jsonl"))
+                record.update(decision["record"])
+                state.save(sdir, st)
+    except Interrupted:
+        # Already logged by the signal handler; the reviewer was killed on the
+        # way out (evaluator.run), and an evaluation it started stays counted.
+        return 0
     record["hook_ms"] = int((time.monotonic() - started) * 1000)
     state.log(sdir, record)
 

@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -34,7 +35,7 @@ sys.path.insert(0, str(PLUGIN))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fixture import Transcript  # noqa: E402
-from gate import display, evaluator, evidence, state, transcript  # noqa: E402
+from gate import config, display, evaluator, evidence, state, transcript  # noqa: E402
 
 
 class GateCase(unittest.TestCase):
@@ -149,8 +150,41 @@ class Budgets(GateCase):
         self.assertEqual(len(self.calls()), 4)
         st = json.loads((self.state_dir / "sessions" / "sess-1" / "state.json").read_text())
         budgets = st["requests"]["p1"]["budgets"]
-        self.assertEqual(budgets["question"], {"evaluations": 2, "returns": 0})
+        # The answer to the first question opened a second round for the second one.
+        self.assertEqual(budgets["question"], {"evaluations": 1, "returns": 0})
         self.assertEqual(budgets["stop"], {"evaluations": 2, "returns": 1})
+
+    def test_an_answer_opens_a_new_question_round(self):
+        """One request with seven questions left the fourth on unreviewed (orvelis, 2026-11-12)."""
+        self.submit("Vamos desenhar o questionário juntos.", "p1")
+        for n in range(3):
+            self.assertIsNone(self.ask("p1", f"pergunta {n}?"))
+        out = self.ask("p1", "pergunta 3?")
+        self.assertIn("evaluation budget", out["systemMessage"])
+        self.answer("p1", 1, "pergunta 3?", "A")
+        self.assertIsNone(self.ask("p1", "pergunta 4?"))
+        self.assertEqual(len(self.calls()), 4)
+        self.assertEqual(self.log()[-1]["question_round"], 2)
+        st = json.loads((self.state_dir / "sessions" / "sess-1" / "state.json").read_text())
+        self.assertEqual(st["requests"]["p1"]["budgets"]["question"], {"evaluations": 1, "returns": 0})
+
+    def test_returns_renew_with_the_round(self):
+        self.submit("Decida comigo.", "p1")
+        self.plan([{"verdict": "revise", "category": "missing_explanation"}])
+        for question in ("a?", "b?"):
+            self.assertEqual(self.ask("p1", question)["hookSpecificOutput"]["permissionDecision"], "deny")
+        self.assertIn("correction budget", self.ask("p1", "c?")["systemMessage"])
+        self.answer("p1", 1, "c?", "A")
+        self.assertEqual(self.ask("p1", "d?")["hookSpecificOutput"]["permissionDecision"], "deny")
+
+    def test_an_answer_does_not_renew_the_stop_budget(self):
+        self.submit("Faça.", "p1")
+        self.plan([{"exit": 1}])
+        for final in ("a", "b", "c"):
+            self.stop("p1", final)
+        self.answer("p1", 1, "x?", "y")
+        self.stop("p1", "d")
+        self.assertEqual(self.log()[-1]["outcome"], "evaluations_exhausted")
 
     def test_two_stop_returns_leave_a_third_evaluation(self):
         self.submit("Faça a tarefa.", "p1")
@@ -307,6 +341,72 @@ class Failures(GateCase):
         self.assertEqual(len(self.calls()), 1)
         self.assertEqual(self.package()["request"]["text"], "Rode os testes.")
 
+    def _turn_started_by_the_harness(self, kind):
+        self.submit("Leia a pasta web/ com um subagente.", "p1")
+        self.tr.assistant("Pedi a leitura a um subagente.")
+        self.tr.harness_turn("web/ usa Vue 3 com Vite.", "p2", kind)
+        self.assertIsNone(self.stop("p2", "Leitura de web/ recebida: Vue 3 com Vite."))
+        self.assertEqual(self.log()[-1]["outcome"], "pass")
+        package = self.package()
+        self.assertEqual(package["request"]["text"], "Leia a pasta web/ com um subagente.")
+        self.assertIn("harness_message", [i["kind"] for i in package["turn"]])
+        self.assertTrue(any("started by a harness message" in n for n in package["notes"]), package["notes"])
+
+    def test_turn_started_by_a_subagent_hand_back_is_reviewed(self):
+        """A hand-back is meta with a prompt id of its own; it used to skip the review
+        as a request not in the transcript yet (orvelis, 2026-10-20)."""
+        self._turn_started_by_the_harness("peer")
+
+    def test_turn_started_by_an_automatic_continuation_is_reviewed(self):
+        self._turn_started_by_the_harness("auto-continuation")
+
+    def test_meta_text_without_a_harness_origin_stays_out(self):
+        self.submit("/git:commit", "p1")
+        self.tr._write({"type": "user", "isMeta": True, "promptId": "p1",
+                        "message": {"role": "user", "content": "Base directory for this skill: /x"}})
+        self.assertIsNone(self.stop("p1", "feito"))
+        self.assertNotIn("Base directory", json.dumps(self.package()))
+
+    def test_reviewer_failure_keeps_the_cause_it_printed(self):
+        """claude -p reports an API failure on stdout and may leave stderr empty."""
+        failure = {"type": "result", "subtype": "success", "is_error": True, "terminal_reason": "api_error",
+                   "result": "API Error: 529 overloaded"}
+        self.plan([{"exit": 1, "stderr": "", "stdout": json.dumps(failure)}])
+        self.submit("Faça.", "p1")
+        out = self.stop("p1", "feito")
+        self.assertIn("api_error | API Error: 529 overloaded", out["systemMessage"])
+        self.assertEqual(self.log()[-1]["reason"], "exit 1: api_error | API Error: 529 overloaded")
+
+    def test_stopped_hook_kills_its_reviewer_and_logs_why(self):
+        """Claude Code stops the hook when the session ends mid-review (orvelis, 2026-10-29)."""
+        self.plan([{"sleep": 30}])
+        self.submit("Faça.", "p1")
+        self.tr.assistant("feito")
+        payload = dict(self.base("p1"), hook_event_name="Stop", last_assistant_message="feito", background_tasks=[])
+        proc = subprocess.Popen([sys.executable, "-B", "-I", str(HOOK), "stop"], stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=self.env())
+        proc.stdin.write(json.dumps(payload))
+        proc.stdin.close()
+        call = None
+        deadline = time.monotonic() + 20
+        while call is None and time.monotonic() < deadline:
+            try:
+                call = self.calls()[0]
+            except (IndexError, ValueError):
+                time.sleep(0.1)
+        self.assertIsNotNone(call, "the reviewer never started")
+        stopped = time.monotonic()
+        proc.send_signal(signal.SIGTERM)
+        out, err = proc.communicate(timeout=15)
+        # Claude Code 2.1.323 kills a hook about 1.4 s after its SIGTERM.
+        self.assertLess(time.monotonic() - stopped, 1.4)
+        self.assertEqual(proc.returncode, 0, err)
+        self.assertEqual(out.strip(), "")
+        with self.assertRaises(ProcessLookupError):
+            os.kill(call["pid"], 0)
+        record = self.log()[-1]
+        self.assertEqual((record["outcome"], record["signal"], record["released"]), ("interrupted", "SIGTERM", True))
+
     def test_transcript_without_prompt_ids_falls_back_to_the_last_user_message(self):
         self.tr._write({"type": "user", "origin": {"kind": "human"}, "message": {"role": "user", "content": "Faça."}})
         self.assertIsNone(self.stop("p1", "feito"))
@@ -321,6 +421,17 @@ class Failures(GateCase):
         self.assertIsNone(self.hook("stop", payload))  # once per request
         self.assertEqual(self.calls(), [])
         self.assertEqual(self.log()[-1]["outcome"], "no_transcript")
+
+
+class Limits(unittest.TestCase):
+    def test_a_review_fits_in_the_hook_timeout(self):
+        """Lock wait, evaluation, the reviewer's kill (SIGTERM, then SIGKILL, 2 s each) and the
+        wait for the transcript must end before Claude Code kills the hook."""
+        hooks = json.loads((PLUGIN / "hooks" / "hooks.json").read_text())["hooks"]
+        d = config.DEFAULTS
+        for event, wait in (("PreToolUse", d["display_wait_s"]), ("Stop", d["stop_wait_s"])):
+            with self.subTest(event=event):
+                self.assertLess(d["lock_wait_s"] + d["timeout_s"] + 4 + wait, hooks[event][0]["hooks"][0]["timeout"])
 
 
 class Isolation(GateCase):

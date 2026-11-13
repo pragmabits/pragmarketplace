@@ -77,6 +77,17 @@ class Transcript:
         self._write({"type": "attachment", "attachment": {"type": "session_context", "context": {
             "userEmail": f"The user's email address is {email}.", "gitStatus": git_status}}})
 
+    def harness_turn(self, text, prompt_id, kind="peer"):
+        """A meta entry the harness injects with a prompt id of its own: a subagent's
+        hand-back (origin "peer"), as Claude Code records it, or an automatic continuation."""
+        origin = {"kind": kind}
+        if kind == "peer":
+            origin.update({"from": "a52ec075c4c0ed4fc", "name": "Explore"})
+            text = ('Another Claude session sent a message:\n<agent-message from="a52ec075c4c0ed4fc">\n'
+                    f"[Subagent hand-back] {text}\n</agent-message>")
+        self._write({"type": "user", "isMeta": True, "promptId": prompt_id, "origin": origin,
+                     "message": {"role": "user", "content": text}})
+
     def stop_feedback(self, text, prompt_id):
         self._write({"type": "user", "isMeta": True, "promptId": prompt_id,
                      "message": {"role": "user", "content": "Stop hook feedback:\n" + text}})

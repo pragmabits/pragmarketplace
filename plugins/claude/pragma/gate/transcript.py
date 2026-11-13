@@ -10,14 +10,17 @@ Item kinds (the letter is the reference prefix; the number is the line):
   U  a message the user typed           N  the user's answer to AskUserQuestion
   A  text the assistant showed          T  a tool call
   R  a tool result                      H  feedback returned by a Stop hook
-  I  an interruption by the user        S  a message the harness injected
-  M  a file the user attached with @    C  context the harness showed the agent
-                                           (git status, environment, date)
+  I  an interruption by the user        S  a message the harness injected: a
+  M  a file the user attached with @       background task's notification, a
+                                           subagent's hand-back, an automatic
+                                           continuation
+  C  context the harness showed the agent (git status, environment, date)
   G  the assistant's narration, which the screen shows as a summary
 Claude Code records the agent's reasoning as a thinking block with no text; a
 thinking block that carries text is narration (so on every local transcript
-measured in October 2026). Reasoning and meta entries other than Stop hook
-feedback are skipped.
+measured in October 2026). Reasoning is skipped, and so are meta entries other
+than Stop hook feedback and harness messages (a skill's expanded text, for
+example, which shares the prompt id of the command that loaded it).
 """
 
 from __future__ import annotations
@@ -27,7 +30,7 @@ import os
 import time
 from pathlib import Path
 
-INDEX_VERSION = 3
+INDEX_VERSION = 4
 STOP_FEEDBACK = "Stop hook feedback:"
 CONTEXT_TYPES = ("session_context", "environment", "date")
 FINAL_MISSING = ("the transcript did not hold the final response yet when this review ran: the tool calls and "
@@ -95,14 +98,20 @@ def _classify(entry: dict, tool_names: dict) -> list[dict]:
     text = _text_blocks(content)
     if not text.strip():
         return []
+    origin = entry.get("origin")
+    injected = isinstance(origin, dict) and origin.get("kind") not in (None, "human")
     if entry.get("isMeta"):
         if text.startswith(STOP_FEEDBACK):
             return [{"kind": "H", "prompt_id": prompt_id}]
+        # A subagent's hand-back (origin "peer") or an automatic continuation is
+        # meta, and can start a turn with a prompt id of its own: without it,
+        # that turn's request would never be found.
+        if injected:
+            return [{"kind": "S", "prompt_id": prompt_id}]
         return []
     if text.startswith("[Request interrupted"):
         return [{"kind": "I", "prompt_id": prompt_id}]
-    origin = entry.get("origin")
-    if isinstance(origin, dict) and origin.get("kind") not in (None, "human"):
+    if injected:
         return [{"kind": "S", "prompt_id": prompt_id}]
     return [{"kind": "U", "prompt_id": prompt_id}]
 
@@ -182,6 +191,12 @@ def holds_prompt(index: dict, prompt_id) -> bool:
             return True
         recorded = recorded or bool(item.get("prompt_id"))
     return not recorded
+
+
+def answers(index: dict, prompt_id) -> int:
+    """How many questions the user has answered in the request `prompt_id` (in the session, without an id)."""
+    return sum(1 for item in index["items"]
+               if item["kind"] == "N" and (not prompt_id or item.get("prompt_id") == prompt_id))
 
 
 class Loader:

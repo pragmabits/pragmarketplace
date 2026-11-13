@@ -100,12 +100,22 @@ How it works:
 - `gate/core.py` applies the budgets and the cache. The criteria are in
   `gate/rubric/`.
 
+A turn that the harness starts — a subagent's hand-back, a background task's
+notification, an automatic continuation — is reviewed like any other: its
+request is the user's last message, and the package says the harness started
+the turn. A harness message never asks for work or authorizes it.
+
 Limits, per user request and adjustable:
 
 - two independent budgets, questions and turn ends, each with 3 evaluations
-  and 2 returns; answers to questions, tool calls and continuations after a
-  return do not reset them, only a new prompt does;
-- 30 s per evaluation, after which the reviewer's process group is killed;
+  and 2 returns. A new prompt resets both. Each answer the user gives to a
+  question also opens a new round of question reviews, with a fresh question
+  budget: the next question is a new decision, not another attempt at the
+  last one. Tool calls and continuations after a return reset nothing, and an
+  answer leaves the turn-end budget alone;
+- 45 s per evaluation, after which the reviewer's process group is killed; the
+  wait for another review of the session (30 s), the evaluation, the kill and
+  the wait for the transcript fit in the 90 s Claude Code gives the hook;
 - one evaluation at a time per session; an identical package reuses the
   previous verdict without a call;
 - a failed call (timeout, error, invalid reply) still counts as an evaluation.
@@ -115,7 +125,18 @@ approval: timeouts, reviewer errors, invalid replies, an `unknown` verdict, a
 missing transcript, a request the transcript does not hold yet (judging then
 would mean judging against an earlier request) and exhausted budgets each
 produce, at most once per request, a one-line `systemMessage` to the user with
-the reason and the log path.
+the reason and the log path. A reviewer that fails is logged with the cause it
+printed, on stderr or, for an API failure, in its JSON output.
+
+When Claude Code stops the hook in the middle of a review (the user presses
+Esc or Ctrl+C, or the session ends), it sends `SIGTERM` and kills the hook
+about 1.5 s later (measured with Claude Code 2.1.323). The hook logs the
+moment as `interrupted`, with the signal, before anything else, then kills its
+reviewer at once; the moment goes on without a message, and an evaluation
+already started stays counted. Claude Code records such a hook as cancelled.
+A hook ended by a signal Claude Code did not send is recorded as failed with
+status 1 and no stderr, the status Claude Code gives any process ended by a
+signal; a `SIGKILL` cannot be caught, and then nothing is logged.
 
 What it does not cover:
 
@@ -145,7 +166,8 @@ or the path in `PRAGMA_GATE_CONFIG`) overrides any of:
   "enabled": true,
   "model": null,
   "effort": "low",
-  "timeout_s": 30,
+  "timeout_s": 45,
+  "lock_wait_s": 30,
   "budgets": {"question": {"evaluations": 3, "returns": 2},
               "stop": {"evaluations": 3, "returns": 2}},
   "package_limit_bytes": 65536,
