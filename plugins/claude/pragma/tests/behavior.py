@@ -672,7 +672,7 @@ def run_one(sid, variant, build, expected, run_no, args):
                 "categories": cats, "ok": ok, "status": record.get("status"), "reason": record.get("reason"),
                 "duration_ms": record.get("duration_ms"), "hook_wall_ms": wall, "usage": record.get("usage"),
                 "model_used": record.get("model_used"), "package_bytes": (record.get("package") or {}).get("bytes"),
-                "message": json.loads(out) if out else None}
+                "quotes": record.get("quotes"), "message": json.loads(out) if out else None}
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -730,6 +730,11 @@ def main():
     if ins:
         print(f"tokens per call: input median {sorted(ins)[len(ins) // 2]} (max {max(ins)}), "
               f"output median {sorted(outs)[len(outs) // 2]} (max {max(outs)})")
+    quoted = [r["quotes"] for r in results if r.get("quotes")]
+    if quoted:
+        # A quote found in no cited item leaves the item's start shown as the evidence.
+        print(f"quotes in returns: {sum(q['found'] for q in quoted)} of {sum(q['given'] for q in quoted)} "
+              f"found in the cited items, over {len(quoted)} returns")
     failed = [r for r in results if not r["ok"]]
     print(f"\n{len(results) - len(failed)}/{len(results)} runs as expected")
     if args.out:

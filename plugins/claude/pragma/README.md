@@ -52,9 +52,20 @@ ask for it again.
 
 A refused question or a blocked turn end reaches the agent as a message that
 starts with `pragma question review` or `pragma stop review`, with the finding,
-an excerpt of the evidence and the corrective action. The agent resolves it, or
-disputes it with evidence. In normal operation the user sees nothing from the
-gate.
+its evidence and the corrective action. The evidence of each cited item, at
+most three, is the passage the reviewer quoted from it, when the item holds
+that quote word for word (an escape such as `ç` in the item reads as the
+character it stands for), and the item's start otherwise. The agent resolves
+it, or disputes it with evidence.
+
+The user sees the same message under Claude Code's own labels (Claude Code
+2.1.325): a blocked turn end as `Stop hook error: pragma stop review …` in the
+`Ran N stop hooks` line below the response, and a refused question as the
+failed `AskUserQuestion` call, `PreToolUse:AskUserQuestion hook error: pragma
+question review …`. `error` is how Claude Code labels any hook that blocks,
+not a failure of the gate: a failure of the gate shows as `Stop says: pragma …`
+or `PreToolUse:AskUserQuestion says: pragma …`, the `systemMessage` described
+below. Apart from these, the user sees nothing from the gate.
 
 How it works:
 
@@ -96,7 +107,10 @@ How it works:
   `--no-session-persistence` and `--json-schema`, on the CLI's own
   authentication. The reviewer only judges: it cannot edit, run or delete
   anything. Its reply is validated — verdict, categories, and every cited
-  reference must exist in the package.
+  reference must exist in the package. Its quotes only choose what a return
+  shows as evidence: one that no cited item holds is not shown, and never
+  voids the verdict. The log counts the quotes given and found for each
+  return.
 - `gate/core.py` applies the budgets and the cache. The criteria are in
   `gate/rubric/`.
 
@@ -126,7 +140,10 @@ missing transcript, a request the transcript does not hold yet (judging then
 would mean judging against an earlier request) and exhausted budgets each
 produce, at most once per request, a one-line `systemMessage` to the user with
 the reason and the log path. A reviewer that fails is logged with the cause it
-printed, on stderr or, for an API failure, in its JSON output.
+printed, on stderr or, for an API failure, in its JSON output. An internal
+error of the gate itself, including a gate module that cannot be loaded, also
+exits 0 with a one-line `systemMessage`, at every moment it happens, and the
+traceback on stderr.
 
 When Claude Code stops the hook in the middle of a review (the user presses
 Esc or Ctrl+C, or the session ends), it sends `SIGTERM` and kills the hook
@@ -147,6 +164,13 @@ What it does not cover:
 - The gate controls questions and turn ends, not every action before them.
   Permissions stay necessary.
 - The verdict is a model's judgment and can be wrong in either direction.
+- The turn-end review judges pending obligations, not the truth of every
+  statement in the final response: a false statement that leaves nothing
+  pending, about what was done or what exists, fits no category and passes,
+  even when the package contradicts it.
+- The reviewer has no tools and judges only the transcript: a claim about a
+  file, a command or a state the transcript does not show cannot be checked,
+  and passes. Neither can one whose evidence the package left out for size.
 - The capture needs a Claude Code that delivers `MessageDisplay`. Without it,
   a question that presumes an explanation is let through with an inconclusive
   verdict instead of being returned. The same holds, in a session that shows

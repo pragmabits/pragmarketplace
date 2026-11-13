@@ -13,8 +13,13 @@ Decide whether the evidence proves an obligation that is still pending.
 - `revise`: at least one pending obligation is proven by items in the package.
   Each finding gives its `category`, the `refs` of the items that prove it,
   exactly as they appear in the package (for example `U12`, `A40`, `T41`,
-  `R42`, `Q`, `F`), a concrete `description` and a corrective `action` that
-  stays inside what the user asked for.
+  `R42`, `Q`, `F`), the `quotes` that prove it, a concrete `description` and
+  a corrective `action` that stays inside what the user asked for. `quotes`
+  holds, for each cited item, the passage of its text that proves the
+  finding, copied character for character, without ellipses, quotation marks
+  or paraphrase, at most 200 characters each. The agent and the user see these
+  quotes as the evidence of the finding; a quote not found in the cited items
+  is not shown.
 - `unknown`: the decision needs information the package does not contain (for
   example, the request itself was left out). List what is missing in
   `missing`. Do not guess a violation to fill the gap.

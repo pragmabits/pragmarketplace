@@ -4,8 +4,10 @@
 Events: session-start, user-prompt-submit, message-display, pre-tool-use
 (AskUserQuestion only), stop. Reads the hook input on stdin and answers on
 stdout in Claude Code's hook format. Any failure of the gate itself lets the
-session go on: this script exits 0 and, at most once per request, says why in
-a systemMessage.
+session go on: this script exits 0 and says why in a systemMessage, once per
+request for a moment let through unreviewed (core.release), at every moment
+for an internal error. Only a failure before main runs, in this file itself,
+exits non-zero, which Claude Code shows as a hook error with its stderr.
 """
 
 from __future__ import annotations
@@ -18,8 +20,6 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from gate import config, display, state  # noqa: E402
 
 EVENTS = {"session-start", "user-prompt-submit", "message-display", "pre-tool-use", "stop"}
 STOP_SIGNALS = (signal.SIGTERM, signal.SIGHUP)
@@ -52,6 +52,10 @@ def emit(obj: dict) -> None:
 def main(argv: list) -> int:
     if os.environ.get("PRAGMA_GATE_EVALUATOR"):
         return 0  # the reviewer's own process: never review the reviewer
+    # Imported here, not at the top, so a module that cannot be loaded is an
+    # internal error like any other: exit 0 and a systemMessage, not a
+    # traceback with status 1.
+    from gate import config, display, state
     event = argv[1] if len(argv) > 1 else ""
     if event not in EVENTS:
         print(f"pragma gate: unknown event {event!r}", file=sys.stderr)

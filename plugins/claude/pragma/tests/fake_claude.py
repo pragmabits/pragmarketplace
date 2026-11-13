@@ -3,7 +3,8 @@
 
 FAKE_PLAN: JSON file with a list of steps, consumed one per call, the last one
 repeating. A step is {"verdict": "pass"|"revise"|"unknown", "category": ...,
-"refs": [...] (default: the request ref and F or Q)}, or {"raw": "text"} to
+"refs": [...] (default: the request ref and F or Q), "quotes": [...] (default:
+none, as a reviewer whose quotes are missing)}, or {"raw": "text"} to
 print text instead of JSON, or {"exit": n} with optional "stdout" and "stderr"
 (default stderr: "fake failure"), plus an optional {"sleep": s}.
 FAKE_LOG: directory where each call records argv, cwd, selected env, the
@@ -59,7 +60,8 @@ def main():
             refs = [r for r in ((package.get("request") or {}).get("ref"),
                                 "Q" if package.get("event") == "question" else "F") if r]
         reply["findings"] = [{"category": step.get("category", "delegated_work"), "refs": refs,
-                              "description": "fake finding", "action": "fake action"}]
+                              "quotes": step.get("quotes", []), "description": "fake finding",
+                              "action": "fake action"}]
     elif verdict == "unknown":
         reply["missing"] = ["fake missing item"]
     out = {"type": "result", "subtype": "success", "is_error": False, "result": json.dumps(reply),

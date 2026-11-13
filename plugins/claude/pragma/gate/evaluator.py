@@ -51,10 +51,11 @@ def schema(event: str) -> dict:
                     "properties": {
                         "category": {"type": "string", "enum": CATEGORIES[event]},
                         "refs": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                        "quotes": {"type": "array", "items": {"type": "string"}, "minItems": 1},
                         "description": {"type": "string"},
                         "action": {"type": "string"},
                     },
-                    "required": ["category", "refs", "description", "action"],
+                    "required": ["category", "refs", "quotes", "description", "action"],
                 },
             },
             "missing": {"type": "array", "items": {"type": "string"}},
@@ -99,7 +100,11 @@ def validate(event: str, reply, refs: set) -> tuple[dict | None, str | None]:
         for key in ("description", "action"):
             if not isinstance(f.get(key), str) or not f[key].strip():
                 return None, f"finding {n} has an empty {key}"
+        # Quotes only choose what the return shows as evidence: a missing or
+        # unusable one leaves the item's start shown, never voids the verdict.
+        quotes = f.get("quotes") if isinstance(f.get("quotes"), list) else []
         clean.append({"category": f["category"], "refs": frefs,
+                      "quotes": [q.strip()[:MAX_TEXT] for q in quotes if isinstance(q, str) and q.strip()],
                       "description": f["description"].strip()[:MAX_TEXT],
                       "action": f["action"].strip()[:MAX_TEXT]})
     if verdict == "revise" and not clean:

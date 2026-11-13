@@ -35,7 +35,7 @@ sys.path.insert(0, str(PLUGIN))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fixture import Transcript  # noqa: E402
-from gate import config, display, evaluator, evidence, state, transcript  # noqa: E402
+from gate import config, core, display, evaluator, evidence, state, transcript  # noqa: E402
 
 
 class GateCase(unittest.TestCase):
@@ -194,6 +194,16 @@ class Budgets(GateCase):
         self.assertIsNone(self.stop("p1", "feito"))
         self.assertEqual([r["outcome"] for r in self.log()], ["returned", "returned", "pass"])
 
+    def test_a_return_shows_the_quoted_passage_and_logs_the_quotes(self):
+        self.submit("Meça a imagem.", "p1")
+        final = "Medi a imagem. " + "Detalhe da medição. " * 12 + "Ficou a imagem local scan:x na máquina."
+        self.plan([{"verdict": "revise", "category": "temporary_resources", "refs": ["F"],
+                    "quotes": ["Ficou a imagem local scan:x na máquina."]}])
+        out = self.stop("p1", final)
+        self.assertIn('Evidence: F: "...Ficou a imagem local scan:x na máquina."', out["reason"])
+        self.assertNotIn("Medi a imagem", out["reason"])
+        self.assertEqual(self.log()[-1]["quotes"], {"given": 1, "found": 1})
+
     def test_third_revise_is_released_with_one_diagnostic_and_no_approval(self):
         self.submit("Faça a tarefa.", "p1")
         self.plan([{"verdict": "revise"}])
@@ -319,6 +329,31 @@ class Failures(GateCase):
         self.assertIsNone(self.hook("stop", "{not json"))
         self.assertIsNone(self.hook("stop", json.dumps(["no", "session"])))
         self.assertIsNone(self.hook("bogus-event", self.base("p1")))
+        self.assertEqual(self.calls(), [])
+
+    def test_a_gate_module_that_cannot_be_loaded_lets_every_moment_through(self):
+        """Exit 0 and the one-line message, not a traceback with status 1, which Claude Code shows as a hook error."""
+        copy = self.tmp / "plugin"
+        shutil.copytree(PLUGIN / "gate", copy / "gate")
+        with open(copy / "gate" / "state.py", "a", encoding="utf-8") as fh:
+            fh.write("\ndef broken(:\n")
+        self.tr.user("Faça.", "p1")
+        self.tr.assistant("feito")
+        moments = [
+            ("session-start", {"session_id": self.session, "source": "startup"}),
+            ("user-prompt-submit", dict(self.base("p1"), prompt="Faça.")),
+            ("message-display", dict(self.base("p1"), message_id="m1", index=0, final=True, delta="feito")),
+            ("pre-tool-use", dict(self.base("p1"), tool_name="AskUserQuestion", tool_use_id="toolu_q",
+                                  tool_input={"questions": []})),
+            ("stop", dict(self.base("p1"), last_assistant_message="feito", background_tasks=[])),
+        ]
+        for event, payload in moments:
+            proc = subprocess.run([sys.executable, "-B", "-I", str(copy / "gate" / "hook.py"), event],
+                                  input=json.dumps(payload), capture_output=True, text=True, env=self.env(),
+                                  timeout=60)
+            self.assertEqual(proc.returncode, 0, f"{event}: {proc.stderr}")
+            self.assertIn("internal error", json.loads(proc.stdout)["systemMessage"], event)
+            self.assertIn("SyntaxError", proc.stderr, event)
         self.assertEqual(self.calls(), [])
 
     def test_request_not_in_the_transcript_yet_skips_the_call(self):
@@ -603,6 +638,23 @@ class Package(GateCase):
         self.assertIn(pkg["context"][0]["ref"], refs)
         self.assertNotIn("private@example.com", json.dumps(pkg))
 
+    def test_every_reference_the_reviewer_may_cite_has_a_text_to_show(self):
+        self.tr.context("Git user: someone\nCurrent branch: main")
+        self.tr.user("Leia @spec.md e implemente", "p1")
+        self.tr.attach_file("spec.md", "ESPECIFICACAO: faça X e Y")
+        self.answer("p1", 1, "Formato?", "JSON")
+        self.tr.tool("toolu_1", "Bash", {"command": "ls"}, "a b", "p1")
+        self.tr.stop_feedback("pragma stop review: algo", "p1")
+        self.tr.narration("Resumo: li os dois arquivos.")
+        self.tr.assistant("Pronto.")
+        pkg, refs, _ = self.build(final_response="Pronto.")
+        self.assertTrue(pkg["final_response"].get("same_as"))
+        self.assertEqual(refs - set(core._texts(pkg)), set())
+        shown = [{"kind": "D", "ref": "D1", "head": "Explico antes de perguntar.", "tail": "", "dropped": 0}]
+        pkg, refs, _ = self.build(event="question", questions=[{"question": "Qual?"}], shown=shown)
+        self.assertIn("D1", refs)
+        self.assertEqual(refs - set(core._texts(pkg)), set())
+
     def test_refused_question_is_not_an_answer(self):
         self.tr.user("Pedido", "p1")
         self.tr.refused_question("p1", 1, [{"question": "x?"}], "pragma question review: já respondido")
@@ -846,8 +898,15 @@ class TranscriptLag(GateCase):
         """The measured case: the last tool calls arrive together with the final response."""
         self.submit("Grave as duas notas.", "p1")
         final = "Gravei as duas notas."
+        index = self.state_dir / "sessions" / self.session / "index.json"
 
         def late():
+            # The hook writes its index right before it starts waiting. A fixed
+            # delay from the hook's launch measured the hook's start-up instead
+            # and failed about one run in ten on a loaded machine.
+            deadline = time.monotonic() + 10
+            while not index.exists() and time.monotonic() < deadline:
+                time.sleep(0.01)
             time.sleep(0.4)
             self.tr.tool("toolu_w1", "Write", {"file_path": "a.md"}, "File created successfully", "p1")
             self.tr.tool("toolu_w2", "Write", {"file_path": "b.md"}, "File created successfully", "p1")
@@ -884,6 +943,106 @@ class TranscriptLag(GateCase):
         self.assertLess(wait["waited_ms"], 50)
 
 
+class Evidence(unittest.TestCase):
+    """What a return shows as the evidence of each finding: the reviewer's quote, else the item's start."""
+
+    final = ("Sobre o Makefile do passo 5 não ficou nenhuma decisão para você. " + "Detalhes do gate. " * 20
+             + "Ficaram só a imagem local `wall-e-scan:wall-e` e o banco do trivy no cache.")
+
+    def package(self):
+        return {
+            "event": "stop",
+            "request": {"ref": "U1", "text": "Tem alguma questão em aberto?",
+                        "attached_files": [{"ref": "M2", "file": "spec.md", "text": "ESPECIFICACAO: faça X e Y"}]},
+            "context": [{"ref": "C3", "kind": "harness_context", "type": "git", "text": "Current branch: main"}],
+            "history": [],
+            "turn": [{"ref": "T4", "kind": "tool", "tool": "Bash",
+                      "input": json.dumps({"command": 'docker build --tag "wall-e-scan:wall-e" .\ntrivy image x'}),
+                      "result": {"ref": "R5", "is_error": False, "text": "sha256:dc56" + " linha" * 40 + " exit=0"}}],
+            "final_response": {"ref": "F", "text": self.final, "same_as": ["A6"]},
+        }
+
+    def message(self, *findings, package=None, event="stop"):
+        return core.agent_message(event, list(findings), package or self.package(), 1, 2)
+
+    def finding(self, refs, quotes):
+        return {"category": "temporary_resources", "refs": refs, "quotes": quotes, "description": "d",
+                "action": "a"}
+
+    def evidence(self, text):
+        return next(line for line in text.splitlines() if line.startswith("  Evidence: "))
+
+    def test_the_quoted_passage_is_shown_instead_of_the_start(self):
+        text, quotes = self.message(self.finding(["F"], ["Ficaram só a imagem local `wall-e-scan:wall-e`"]))
+        self.assertEqual(self.evidence(text), '  Evidence: F: "...Ficaram só a imagem local `wall-e-scan:wall-e`..."')
+        self.assertEqual(quotes, {"given": 1, "found": 1})
+
+    def test_a_quote_the_cited_items_do_not_hold_falls_back_to_their_start(self):
+        # "exit=0" is in R5, which this finding does not cite.
+        text, quotes = self.message(self.finding(["F"], ["a imagem foi apagada", "exit=0"]))
+        self.assertTrue(self.evidence(text).startswith('  Evidence: F: "Sobre o Makefile do passo 5'))
+        self.assertNotIn("exit=0", text)
+        self.assertEqual(quotes, {"given": 2, "found": 0})
+
+    def test_a_tool_input_is_quoted_as_the_reviewer_reads_it(self):
+        for quote in ('docker build --tag "wall-e-scan:wall-e"', 'docker build --tag \\"wall-e-scan:wall-e\\"'):
+            text, quotes = self.message(self.finding(["T4"], [quote]))
+            self.assertIn(quote, self.evidence(text))
+            self.assertEqual(quotes["found"], 1, quote)
+
+    def test_escapes_in_a_tool_output_are_quoted_decoded(self):
+        """Measured with the real reviewer: it quotes `'\\u00e7'` in a traceback as 'ç'."""
+        package = self.package()
+        package["turn"][0]["result"]["text"] = ("5 passed, 1 failed\nFAILED tests/test_export.py::test_pdf - "
+                                               "UnicodeEncodeError: 'latin-1' codec can't encode character '\\u00e7'"
+                                               " and '\\ud83d\\ude00'")
+        quote = "UnicodeEncodeError: 'latin-1' codec can't encode character 'ç' and '😀'"
+        text, quotes = self.message(self.finding(["R5"], [quote]), package=package)
+        self.assertEqual(self.evidence(text), f'  Evidence: R5: "...{quote}"')
+        self.assertEqual(quotes["found"], 1)
+
+    def test_quoted_items_come_first_and_at_most_three_are_shown(self):
+        text, _ = self.message(self.finding(["U1", "C3", "M2", "R5", "F"], ["exit=0", "o banco do trivy no cache."]))
+        self.assertEqual(self.evidence(text), '  Evidence: R5: "...exit=0"; F: "...o banco do trivy no cache."; '
+                                              'U1: "Tem alguma questão em aberto?"')
+
+    def test_attached_files_context_and_closing_blocks_are_cited(self):
+        text, _ = self.message(self.finding(["M2", "C3"], ["faça X e Y"]), self.finding(["A6"], ["banco do trivy"]))
+        self.assertIn('M2: "...faça X e Y"', text)
+        self.assertIn('C3: "Current branch: main"', text)
+        self.assertIn('A6: "...banco do trivy..."', text)
+        text, _ = self.message(self.finding(["F", "A6"], ["banco do trivy"]))
+        self.assertEqual(self.evidence(text), '  Evidence: F: "...banco do trivy..."')  # A6 is the same text
+
+    def test_quotation_marks_and_ellipses_around_a_quote_are_not_part_of_it(self):
+        text, quotes = self.message(self.finding(["F"], ['"...nenhuma decisão para você…"']))
+        self.assertEqual(self.evidence(text), '  Evidence: F: "...nenhuma decisão para você..."')
+        self.assertEqual(quotes["found"], 1)
+
+    def test_a_long_quote_is_shown_cut(self):
+        long = self.final[:core.QUOTE_CHARS + 50]
+        text, _ = self.message(self.finding(["F"], [long]))
+        self.assertEqual(self.evidence(text), '  Evidence: F: "' + long[:core.QUOTE_CHARS] + '..."')
+
+    def test_a_question_is_quoted_from_its_text(self):
+        package = {"event": "question", "request": {"ref": "U1", "text": "Escolha"}, "history": [], "turn": [],
+                   "proposed_question": {"ref": "Q", "questions": [
+                       {"question": 'Qual "formato" usar?', "header": "Formato",
+                        "options": [{"label": "JSON", "description": "j"}]}]}}
+        text, quotes = self.message(self.finding(["Q"], ['Qual "formato" usar?']), package=package, event="question")
+        self.assertEqual(self.evidence(text), '  Evidence: Q: "Qual "formato" usar?..."')
+        self.assertEqual(quotes["found"], 1)
+
+    def test_a_finding_without_quotes_shows_the_start_as_before(self):
+        finding = self.finding(["T4", "F"], [])
+        del finding["quotes"]  # a verdict cached before quotes existed
+        text, quotes = self.message(finding)
+        self.assertEqual(self.evidence(text), '  Evidence: T4: "Bash {"command": "docker build --tag '
+                                              '\\"wall-e-scan:wall-e\\" .\\ntrivy image x"}"; F: "'
+                                              + self.final[:core.HEAD_CHARS] + '..."')
+        self.assertEqual(quotes, {"given": 0, "found": 0})
+
+
 class Validation(unittest.TestCase):
     refs = {"U1", "F", "T2"}
 
@@ -891,7 +1050,7 @@ class Validation(unittest.TestCase):
         return evaluator.validate(event, reply, self.refs)
 
     def finding(self, **kw):
-        f = {"category": "delegated_work", "refs": ["U1"], "description": "d", "action": "a"}
+        f = {"category": "delegated_work", "refs": ["U1"], "quotes": ["q"], "description": "d", "action": "a"}
         f.update(kw)
         return f
 
@@ -916,6 +1075,18 @@ class Validation(unittest.TestCase):
             _, problem = self.check(reply)
             self.assertIsNotNone(problem, reply)
             self.assertIn(expected, problem)
+
+    def test_quotes_never_void_a_verdict(self):
+        for quotes, kept in ((["  passo  ", "", 3, " "], ["passo"]), ("passo", []), (None, [])):
+            verdict, problem = self.check({"verdict": "revise", "findings": [self.finding(quotes=quotes)],
+                                           "missing": []})
+            self.assertIsNone(problem, quotes)
+            self.assertEqual(verdict["findings"][0]["quotes"], kept)
+        finding = self.finding()
+        del finding["quotes"]
+        verdict, problem = self.check({"verdict": "revise", "findings": [finding], "missing": []})
+        self.assertIsNone(problem)
+        self.assertEqual(verdict["findings"][0]["quotes"], [])
 
     def test_question_categories(self):
         _, problem = evaluator.validate("question", {"verdict": "revise", "missing": [], "findings": [
