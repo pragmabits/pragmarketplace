@@ -273,7 +273,8 @@ Pre-authorized through each skill's `allowed-tools`:
 ### v3.1.0 — November 2026
 
 - `/recall` without a subcommand resumes the work: it reads the pending items of the three newest reports, checks their current state, and continues with the one still open or asks once which to take. It used to print the usage line. `--me` and `--user <name>` (`-u`) keep only one user's reports, since the directory holds everyone's. Only the Claude Code reader has this form; the Codex reader still answers it with its usage line.
-- A `/recall` usage line or error reaches the model again. The skill's `!` command now always exits 0; a non-zero exit made Claude Code abort the skill and show the raw command (`Shell command failed for pattern ...`) instead of the message. Called directly, `recall.sh` keeps exit codes 1 and 2.
+- A `/recall` usage line or error now reaches the model, which emits it as written. The skill's `!` command always exits 0; a non-zero exit made Claude Code abort the skill and show the raw command (`Shell command failed for pattern ...`) instead of the message. Called directly, `recall.sh` keeps exit codes 1 and 2.
+- An unknown subcommand prints `error: unknown subcommand: <name>` before the usage line. With the usage line alone, the model went looking through the skill's files before answering.
 
 ### v3.0.0 — October 2026
 
