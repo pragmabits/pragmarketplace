@@ -21,7 +21,7 @@ Resolved once, when this skill was loaded. Nothing has been created yet.
 $ARGUMENTS
 ```
 
-- `--lang xx` or `--lang xx-YY` (e.g. `--lang pt-BR`): the report language. Without it, use the language the user used most in the session. Technical terms stay in English. Template headings, field labels, `none` and the goal-status values stay in English in every language, because /recall reads them.
+- `--lang xx` or `--lang xx-YY` (e.g. `--lang pt-BR`): the report language. Without it, use the language the user used most in the session. Technical terms stay in English. Template headings, field labels, `none`, the goal-status values and the §6.3 Status values stay in English in every language, because /recall reads them.
 - `--no-commit`: write the file without committing it.
 - Any remaining text is a hint for the title.
 
@@ -56,7 +56,7 @@ Rules:
 4. A cause is confirmed only with evidence. Otherwise describe the symptom and mark the cause as a hypothesis.
 5. When part of the session is not visible (for example, turns replaced by a context summary), do not reconstruct its start, approvals, counts or conclusions. Say what is missing in **Context coverage**.
 6. Writing the report authorizes no new work. Do not run a pending test suite, fix the project, or finish a task so the report looks better. Record the state as it is.
-7. Any statement about the repository's current state — commits not pushed, a push or pull outstanding, staged or uncommitted changes, stashes, an operation in progress — comes only from the **Repository state at generation** block, read when this report is generated. A reading taken earlier in the session describes that earlier moment, and the repository can change outside the session; when such a reading matters, record it with its moment ("before the fix, `git status` showed ..."), never as the present. What the block does not see — the remote itself (nothing is fetched), pull requests, CI, other clones — is not determined: leave it out. Pending items follow the same rule, and the block precedes this report's own commit.
+7. Any statement about the repository's current state — commits not pushed, a push or pull outstanding, staged or uncommitted changes, stashes, an operation in progress — comes only from the **Repository state at generation** block, read when this report is generated. A reading taken earlier in the session describes that earlier moment, and the repository can change outside the session; when such a reading matters, record it with its moment ("before the fix, `git status` showed ..."), never as the present. What the block does not see — the remote itself (nothing is fetched), pull requests, CI, other clones — is not determined: leave it out. The repository's state is never a pending item by itself (see §6); a pending item that cites it follows the same rule, and the block precedes this report's own commit.
 
 ### Goal, direction, status
 
@@ -73,13 +73,27 @@ When something said earlier in the session turned out to be wrong and the next s
 
 ### Pending items (§6)
 
-The three subsections are historical. They say what was open when the report was written and grant no authorization to act later.
+The three subsections are historical. They say what was open when the report was written and grant no authorization to act later. The next session reads every item as work to do or a defect to fix, so nothing else goes here.
 
-- **6.1 In progress**: work started in this session and not finished.
+- **6.1 In progress**: work started in this session and not finished. That includes a check the session's own work still needs, within the scope the user set: a suite or a run not repeated after the last change, a case not tested, a view not looked at. The work is not finished until it is verified. Its §2 topic says `pending:` with the check, and the item names the check and, when known, what it costs (its duration, what it needs). A check nobody asked for, such as a standard the user set for one task extended to other work or to the history, is not an item.
 - **6.2 Agreed, not started**: work someone committed to, with an identifiable origin (who committed and where). An assistant suggestion the user did not accept is not a 6.2 item.
-- **6.3 Known issues and hypotheses**: noted, and outside the authorized work. A hypothesis stays a hypothesis; do not promote it to a confirmed defect.
+- **6.3 Known defects**: something in the project that fails or gives a wrong result, or is suspected to, outside the authorized work. Each row says what goes wrong and what makes it happen in this project: its trigger. The Status cell holds exactly one of two values, and any qualifier goes in Evidence:
+  - `confirmed`: the failure was observed, as a failing test, a reproduction, or an error in a log or an output. A reading of the code alone never confirms a defect.
+  - `suspected`: the failure was not observed. A suspected defect needs an observed symptom, or a trigger that occurs in this project (in its data, or fired by its own code), and its Evidence names the check that would settle it. It stays suspected; do not promote it.
 
-Each item says what is missing, the evidence available, and the condition for resuming it, plus a file or decision reference when there is one. Write `—` in a cell rather than inventing content. Do not list as pending anything finished or dropped during this session. An item carried over from an earlier report says so, and whether it was rechecked in this session.
+None of the following is a pending item, and none goes in §6.3:
+
+| What it is | Where it goes |
+|---|---|
+| A suggestion, a review finding or a question the user did not decide on or answer | §4, decided by `proposed, not accepted`, with where it was raised; when it blocks an item, that item's condition for resuming says so |
+| A deliberate choice, or a limit or behavior someone accepted | §4, with who decided |
+| The repository's state: commits not pushed, uncommitted changes, stashes | nowhere; the next session reads it live |
+| A note about reports, the history or other records | the §2 topic it belongs to, when the next session needs it |
+| A scenario nothing in this project triggers | nowhere |
+| A problem outside the project: another tool, the machine, a service the project does not use | nowhere |
+| A hypothesis refuted, or anything finished or dropped during this session | nowhere |
+
+Each item says what is missing, the evidence available, and the condition for resuming it, plus a file or decision reference when there is one. Write `—` in a cell rather than inventing content. An item of an earlier report is carried over only when it meets these rules today; it says it was carried over, and whether it was rechecked in this session. When this session closes an item of an earlier report, the §2 topic that closed it names the item and the evidence: the commit, the test.
 
 ### Metadata
 
@@ -139,7 +153,7 @@ Section numbers are fixed. Do not renumber, rename the `## N.` and `### 6.N` anc
 | Files deleted | <count> |
 | In-progress items | <count> |
 | Agreed items | <count> |
-| Known issues and hypotheses | <count> |
+| Known defects | <count> |
 
 ---
 
@@ -149,7 +163,7 @@ Section numbers are fixed. Do not renumber, rename the `## N.` and `### 6.N` anc
 
 **Problem:** <what needed doing>
 **Done:** <what was changed>
-**Verification:** <the check and its observed result, with its scope | pending: the relevant check not yet run>
+**Verification:** <the check and its observed result, with its scope | pending: the relevant check not yet run, carried in §6.1>
 **Files:** `<relative/path>`, ...
 
 ---
@@ -203,11 +217,11 @@ Section numbers are fixed. Do not renumber, rename the `## N.` and `### 6.N` anc
 |------|--------|-------------|------|
 | <task> | <who committed to it, and where> | <condition> | <path or decision> |
 
-### 6.3 Known issues and hypotheses
+### 6.3 Known defects
 
-| Issue | Status | Evidence | Location |
-|-------|--------|----------|----------|
-| <issue> | <confirmed \| hypothesis> | <what supports it, or what is missing> | <path or component> |
+| Defect | Status | Evidence | Location |
+|--------|--------|----------|----------|
+| <what goes wrong, and what makes it happen here> | <confirmed \| suspected> | <what was observed; for suspected, the check that would settle it> | <path or component> |
 ```
 
 `\|` inside a table cell is a literal pipe. In the angle-bracket placeholders, `|` separates alternatives; pick one.

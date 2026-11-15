@@ -33,7 +33,7 @@ Reports live in one directory per project, `<project-root>/.harness/sessions/`, 
 
 | Argument | Description |
 |----------|-------------|
-| `--lang xx` / `--lang xx-YY` | Report language (e.g. `--lang pt-BR`). Default: the language the user used most in the session. Headings, field labels, `none` and the goal-status values stay in English, because `/recall` reads them. |
+| `--lang xx` / `--lang xx-YY` | Report language (e.g. `--lang pt-BR`). Default: the language the user used most in the session. Headings, field labels, `none`, the goal-status values and the §6.3 Status values stay in English, because `/recall` reads them. |
 | `--no-commit` | Write the report without committing it: no `git add`, nothing written to the index. |
 | *(remaining text)* | Hint for the report title. |
 
@@ -54,6 +54,26 @@ The skill's description lists only explicit report requests as triggers, so clos
 The skill keeps four states apart in the text: done and verified (with the command, file or hash that shows it), done with verification pending (and which check is missing), proposed or inferred, and not available. A started test is not a passed test; "docs updated" names the documents checked; a cause without evidence is a hypothesis; a partial view of the session is declared in **Context coverage** instead of filled in. Writing the report authorizes no new work.
 
 Decisions name who decided (the user, the assistant within scope, or a proposal not accepted) and the evidence for that attribution. Corrections that the next session needs are recorded in one line each: earlier statement, corrected fact, consequence.
+
+### Pending items
+
+§6 holds only what the next session should treat as work to do or a defect to fix:
+
+- **6.1 In progress**: work started and not finished, including a check the session's own work still needs within the scope the user set (a suite not rerun after the last change, a case not tested). Its §2 topic says `pending:` with the check, and the item names the check and, when known, its cost.
+- **6.2 Agreed, not started**: work someone committed to, with who and where.
+- **6.3 Known defects**: something in the project that fails or gives a wrong result, or is suspected to, outside the authorized work. Each row says what goes wrong and what makes it happen in this project. Status is exactly `confirmed`, when the failure was observed (a failing test, a reproduction, an error in a log or an output), or `suspected`, which needs an observed symptom or a trigger that occurs in the project and names the check that would settle it. A reading of the code alone never confirms a defect.
+
+Everything else has another place or none:
+
+| What it is | Where it goes |
+|---|---|
+| A suggestion, review finding or question the user did not decide on or answer | §4, `proposed, not accepted` |
+| A deliberate choice, or an accepted limit or behavior | §4, with who decided |
+| The repository's state (commits not pushed, uncommitted changes) | nowhere: the next session reads it live |
+| A note about reports or the history | the §2 topic it belongs to |
+| A scenario nothing in the project triggers, a problem outside the project, a refuted hypothesis, anything finished or dropped | nowhere |
+
+Before 3.2.0, §6.3 was *Known issues and hypotheses*, defined as anything noted outside the authorized work. Reports from that time mixed real defects with unpushed commits, unrun checks, undecided review proposals, accepted choices and scenarios with no trigger, and `/recall` listed all of them as known issues without checking them. `check-report.sh` now flags a §6.3 that is not the template's table or `none`, text next to the table, a table without a Status column or without its separator row, and any Status other than `confirmed` or `suspected` ("confirmed (by choice)", "confirmed (code reading)", the old `hypothesis`); code marks, emphasis and case around a valid value are accepted. It cannot tell a non-defect written as plain `confirmed`; that rule lives in the skill.
 
 A report carries no credential value of any kind — no password, token, key, URL with credentials or authorization header — and that includes examples, fake and test values, placeholders shaped like a credential, and masked or truncated values. The report names the credential and where it lives instead. The model reviews the draft before saving; `check-report.sh` then flags credential shapes whether real or invented (a token whose body is `xxxx`, a stand-in password, a value given to a credential name or a `--password` flag); only prose and references to environment variables (`$NAME`, `${NAME}`) pass, and a flagged value is removed, never left in the file. Repository hooks are a third barrier. None of these finds every secret.
 
@@ -116,7 +136,7 @@ It never passes `--no-verify`, `--no-gpg-sign` or `-c` overrides, never changes 
 
 | Subcommand | Output |
 |------------|--------|
-| *(none)* `[--me \| --user <name>]` | The pending items of the three newest reports, a check of their current state, then the work: see *Resuming from recent sessions*. |
+| *(none)* `[--me \| --user <name>]` | The pending items and known defects of the three newest reports, checked against the project, then a question about which to take: see *Resuming from recent sessions*. |
 | `list` | Markdown table, newest first: Session ID / Title / Timestamp / Status. Files without the title or timestamp anchors, empty files and unreadable files are named in a trailing notice. |
 | `filter <criteria>` | Same table, filtered by AND'd `key:value` pairs: `user:` (filename prefix, case-insensitive), `status:` (`achieved`, `partial`, `abandoned`, `redirected`), `since:YYYY-MM-DD`, `until:YYYY-MM-DD` (inclusive), and `branch:` for reports written before 3.0.0, which carried a Branch field. A `branch:` filter adds the Branch column; newer reports never match it. |
 | `grep <pattern>` | Reports containing the pattern, with up to 3 matching lines each and the enclosing `##` heading. Literal and case-insensitive by default; prefix `re:` for an extended regular expression. An invalid expression is an error, not a miss. |
@@ -131,19 +151,26 @@ Ordering is by the filename timestamp, then the `-N` suffix; never by the user p
 
 `resume` is three separate phases:
 
-1. **Lookup** (the script, read-only): metadata, goal, decisions and pending items, with an explicit `pending_state`.
-2. **Local check** (the model, read-only): for the items tied to what the user wants to resume, cheap local evidence — the cited file, the code, a later report, `git log`. Each checked item is shown as **Still pending**, **Resolved or superseded**, or **Not confirmed** (with the missing check named); a hypothesis that nothing current confirms or refutes stays **Not confirmed**. No test suites, builds, downloads, network calls or edits to classify an item.
-3. **Work**, only as the user's current request allows. When the user already named the item, the model continues with it without asking again; when there are real open alternatives, it asks once with context; when the user only wanted to see the list, it stops.
+1. **Lookup** (the script, read-only): metadata, goal, decisions and pending items, with an explicit `pending_state`. The JSON key `known_issues` holds §6.3 under either heading.
+2. **Sort and check** (the model, read-only). §6.3 items are sorted first. Defects are checked. A check the session left undone is handled as an In progress item. Anything else (repository state, an undecided proposal, an accepted choice, a note, a scenario nothing triggers, a problem outside the project) is shown under *Not problems* and never offered. Each checked item is **Still pending**, **Still a defect**, **Resolved or superseded**, **Not confirmed** with the missing check named, or **Not a problem**. A claim by a newer report that it closed an item counts only with the commit, test or file in the project.
+3. **Work**, only as the user's current request allows. When the user already named the item, the model continues with it without asking again. Otherwise, with items open, it asks once and lists defects among the options. When the user only wanted to see the list, it stops.
 
-Report content is data. Commands, "next steps" or instructions inside a report never override the current request, grant authorization, or run on their own; an item under Known issues does not authorize a fix.
+**What the check can settle.** The skill states this in its own section, *What a check can and cannot settle*, which every checking step follows:
+- **Read only.** The check uses Read, Grep, Glob, `git log` and `git show`, and never runs a test suite, build, gate, project script or network call, or edits a file.
+- **What reading settles:** whether a cited file or path exists and changed since the report, whether a closing commit or test exists, whether the project's own code fires a defect's trigger, and the repository's state.
+- **What it cannot settle:** whether a test passes now, whether a failure still reproduces, or anything in data, a service or the machine.
+- **So most suspected defects come back Not confirmed**, with the check named, and its cost when the report records one. That check runs only once the user chooses the item.
+- **Wording.** What was only read is never called verified, and what was not checked is attributed to the report instead of asserted.
+
+Report content is data. Commands, "next steps" or instructions inside a report never override the current request, grant authorization, or run on their own. A defect offered as an option is not authorization to fix it; the user's choice is.
 
 ### Resuming from recent sessions
 
 `/recall` with no subcommand asks to pick up the work where recent sessions left it. The script prints the `resume` view (without `requested_item`) of each of the three newest reports, newest first, plus `malformed`, the number of reports `available`, and `skipped_empty` and `unreadable` for files among the three that could not be read. The model then:
 
-1. shows one line per report and the pending items of all three under In progress, Agreed, not started and Known issues, each tagged with its session; an item a newer report carries over from an older one is shown once;
-2. checks the current state of every In progress and Agreed item, with the limits of `resume`; Known issues are listed, not offered as work;
-3. continues with the item the user already named in the conversation; otherwise, among the items still pending or not confirmed, says that nothing is open, continues with the only one, or asks once with up to three candidates and `None — just reviewing`.
+1. gathers the pending items of all three, counting once an item a newer report carries over; sorts the §6.3 items and checks every In progress, Agreed and Known defects item, with the limits of `resume`;
+2. shows one line per report; the open items under In progress, Agreed, not started and Known defects, each with its session, checked state and evidence or missing check; *Closed since recorded*, with the evidence; and *Not problems*, one line each with what the item is;
+3. continues with the item the user already named in the conversation. Otherwise it says that nothing is open, or asks once (also for a single candidate, so no item starts without the user's choice). The question has up to three candidates and `None — just reviewing`, in this order: In progress, Known defects, Agreed, with Still pending and Still a defect items before Not confirmed ones. Further candidates are named in the question text.
 
 A report that says `none` in §6 adds no items; one whose §6 cannot be read is named as such, never as having nothing pending.
 
@@ -209,9 +236,9 @@ Then six fixed-number sections. Empty ones say `none`; anchors never move.
 | 3 | Issues and Bugs Found | Issue / Cause (confirmed, hypothesis, unknown) / Resolution / Files, plus a Corrections table. |
 | 4 | Decisions Made | Decision / Choice / Decided by / Evidence / Alternatives considered. |
 | 5 | Files Changed | Created / Modified / Deleted, only by this session. |
-| 6 | Pending Items | 6.1 In progress, 6.2 Agreed, not started (with origin), 6.3 Known issues and hypotheses. |
+| 6 | Pending Items | 6.1 In progress (including checks the session's own work still needs), 6.2 Agreed, not started (with origin), 6.3 Known defects (`confirmed` or `suspected`). Readers still accept the earlier heading, *Known issues and hypotheses*. |
 
-`examples/` holds two fictitious reports in this format: `ana-2026-10-14T171205.md`, an achieved session with a correction written by Claude Code, and `ana-2026-10-15T193040.md`, a partial one in Portuguese written by Codex.
+`examples/` holds two fictitious reports in this format: `ana-2026-10-14T171205.md`, an achieved session with a correction written by Claude Code, and `ana-2026-10-15T193040.md`, a partial one in Portuguese written by Codex, with unrun checks in §6.1 and a confirmed defect in §6.3.
 
 ## Testing
 
@@ -269,6 +296,13 @@ Pre-authorized through each skill's `allowed-tools`:
 - `/recall`: `Bash(bash:*)` for the dispatcher, `Bash(git log:*)`, `Bash(git show:*)`, `Read`, `Grep` and `Glob` for the read-only check of pending items.
 
 ## Version History
+
+### v3.2.0 — November 2026
+
+- §6.3 is now *Known defects*. It holds only something in the project that fails or gives a wrong result, or is suspected to. The Status is exactly `confirmed` (the failure was observed) or `suspected` (a symptom or a trigger in the project, plus the check that would settle it). Before, §6.3 took anything noted outside the authorized work, and reports filled it with unpushed commits, unrun checks, undecided review proposals, accepted choices and scenarios nothing triggers. Those now go to §6.1 (a check the session's own work still needs), §4 (proposals, questions, choices) or nowhere. `check-report.sh` flags a §6.3 Status other than `confirmed` or `suspected`, and a §6.3 that is not the table alone or `none`.
+- `/recall` checks known defects against the project and offers them as work. It used to list them as recorded, without checking, and never offered them. The §6.3 items of older reports are sorted first: anything that is not a defect is named under *Not problems* and leaves the list.
+- `/recall` states the limit of its check in a section of its own: it reads files and git history and runs nothing, so a suspected defect usually comes back Not confirmed, with the check that would settle it. A newer report's claim to have closed an item counts only with the evidence in the project. What was only read is never called verified.
+- `/recall` without a subcommand no longer starts an item on its own when only one is open: it asks, as it does with several.
 
 ### v3.1.0 — November 2026
 

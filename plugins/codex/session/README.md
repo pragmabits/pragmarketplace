@@ -50,6 +50,8 @@ python3 plugins/codex/session/scripts/session_recall.py last [<n>]
 
 The format is the Claude Code plugin's: fixed anchors (`Session contract`, `## 1.` to `## 6.`, `### 6.1` to `### 6.3`), `none` for empty sections, `\|` as a literal pipe in table cells, no Branch field. The full template and writing rules are in `skills/report/SKILL.md`; `plugins/claude/session/README.md` describes the fields.
 
+§6.3 is *Known defects*: only something in the project that fails or gives a wrong result, or is suspected to, with Status exactly `confirmed` (the failure was observed) or `suspected` (a symptom or a trigger in the project, plus the check that would settle it). A check the session's own work still needs is a §6.1 item; proposals, questions and accepted choices go to §4; the repository's state, notes, scenarios nothing triggers and problems outside the project are not pending items. Older reports carry the heading *Known issues and hypotheses* and mixed content; `resume` sorts their §6.3 items before checking them, and states in its skill what a read-only check can and cannot settle. This plugin has no report checker, so the Status rule lives only in the skill here; the Claude Code plugin's `check-report.sh` enforces it there.
+
 ### Authorship fields
 
 They describe who wrote this report, not everyone who took part in the session.

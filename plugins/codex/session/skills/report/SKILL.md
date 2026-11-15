@@ -26,7 +26,7 @@ It creates `.harness/sessions/` if needed and prints JSON. Use its values as fac
 - `origin.lines`: copy these lines into the header exactly. `origin.sources` says where each value came from; it does not go in the report.
 - `repository_state`: the repository as it is now. Any statement about its current state — commits not pushed, a push or pull outstanding, staged or uncommitted changes, stashes, an operation in progress — comes only from here. A reading taken earlier in the session describes that earlier moment, and the repository can change outside the session; record such a reading with its moment, never as the present. What this does not see (the remote itself, pull requests, CI, other clones) is not determined: leave it out.
 - `status_short`: context only. It can hold work that predates this session or belongs to someone else.
-- `language`: when set, the report language. Otherwise the language the user used most. Headings, field labels, `none` and the goal-status values stay in English in every language.
+- `language`: when set, the report language. Otherwise the language the user used most. Headings, field labels, `none`, the goal-status values and the §6.3 Status values stay in English in every language.
 
 ## What the report may claim
 
@@ -50,7 +50,15 @@ The report records what this session's visible conversation and tool results sho
 
 **Corrections.** Something said earlier that turned out wrong, and that the next session needs to know, goes in §3 Corrections: earlier statement, corrected fact, consequence. No discussion, no quoted insults.
 
-**Pending items.** Historical, and no authorization to act later. 6.1 work started and not finished; 6.2 work someone committed to, with its origin (an assistant suggestion the user did not accept is not 6.2); 6.3 known issues and hypotheses, outside the authorized work. Each item says what is missing, the evidence, and the condition to resume; `—` rather than invented content.
+**Pending items.** Historical, and no authorization to act later. The next session reads every item as work to do or a defect to fix, so nothing else goes in §6.
+
+- 6.1: work started and not finished, including a check the session's own work still needs within the scope the user set (a suite or run not repeated after the last change, a case not tested). The §2 topic says `pending:` with the check, and the item names the check and, when known, its cost. A check nobody asked for, such as a standard set for one task extended to the history, is not an item.
+- 6.2: work someone committed to, with its origin. An assistant suggestion the user did not accept is not 6.2.
+- 6.3 Known defects: something in the project that fails or gives a wrong result, or is suspected to, outside the authorized work. Each row says what goes wrong and what makes it happen in this project. Status is exactly `confirmed` (the failure was observed: a failing test, a reproduction, an error in a log or output; a reading of the code alone never confirms) or `suspected` (not observed; it needs an observed symptom or a trigger that occurs in this project, in its data or fired by its own code, and its Evidence names the check that would settle it). Any qualifier goes in Evidence.
+
+Not pending items, and never §6.3: a suggestion, review finding or question the user did not decide on or answer (§4, `proposed, not accepted`, with where it was raised; when it blocks an item, that item's condition to resume says so); a deliberate choice or an accepted limit or behavior (§4, with who decided); the repository's state, such as commits not pushed or uncommitted changes (nowhere: the next session reads it live); a note about reports or the history (the §2 topic it belongs to, if needed); a scenario nothing in this project triggers, a problem outside the project, a refuted hypothesis, anything finished or dropped (nowhere).
+
+Each item says what is missing, the evidence, and the condition to resume; `—` rather than invented content. An earlier report's item is carried over only when it meets these rules today, saying so and whether it was rechecked. When this session closes an earlier report's item, the §2 topic that closed it names the item and the evidence (the commit, the test).
 
 **Metadata.** No Branch field, and never the worktree's name or location. Paths relative to the project. Head observed is not the session's base. Commits made in this session lists only commits whose creation appears in this session's tool output; `none` only when the whole session is visible; otherwise `not determined` and why. The authorship lines describe who wrote this report, not everyone who took part. Copy `origin.lines` and add no other authorship line — no Model, Harness version or Agent, for lack of a documented source. Never state the model from your own knowledge, settings or a default, and do not ask the user which model is running.
 
@@ -96,7 +104,7 @@ Section numbers are fixed; do not renumber or drop a section.
 | Files deleted | <count> |
 | In-progress items | <count> |
 | Agreed items | <count> |
-| Known issues and hypotheses | <count> |
+| Known defects | <count> |
 
 ---
 
@@ -106,7 +114,7 @@ Section numbers are fixed; do not renumber or drop a section.
 
 **Problem:** <what needed doing>
 **Done:** <what was changed>
-**Verification:** <the check and its observed result, with its scope | pending: the relevant check not yet run>
+**Verification:** <the check and its observed result, with its scope | pending: the relevant check not yet run, carried in §6.1>
 **Files:** `<relative/path>`, ...
 
 ---
@@ -160,11 +168,11 @@ Section numbers are fixed; do not renumber or drop a section.
 |------|--------|-------------|------|
 | <task> | <who committed to it, and where> | <condition> | <path or decision> |
 
-### 6.3 Known issues and hypotheses
+### 6.3 Known defects
 
-| Issue | Status | Evidence | Location |
-|-------|--------|----------|----------|
-| <issue> | <confirmed \| hypothesis> | <what supports it, or what is missing> | <path or component> |
+| Defect | Status | Evidence | Location |
+|--------|--------|----------|----------|
+| <what goes wrong, and what makes it happen here> | <confirmed \| suspected> | <what was observed; for suspected, the check that would settle it> | <path or component> |
 ```
 
 `\|` inside a table cell is a literal pipe. In the placeholders, `|` separates alternatives; pick one.

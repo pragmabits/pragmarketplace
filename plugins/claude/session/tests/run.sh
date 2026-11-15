@@ -151,7 +151,7 @@ none
 
 none
 
-### 6.3 Known issues and hypotheses
+### 6.3 Known defects
 
 none
 EOF
@@ -159,6 +159,12 @@ EOF
 
 # Credential-shaped strings, assembled at run time.
 fake_github_token() { printf 'gh%s_%s' p "$(printf 'Fk3%.0s' 1 2 3 4 5 6 7 8 9 10 11 12)"; }
+
+# Add a paragraph to §2 of a report. Text appended at the end would land in
+# §6.3, after its `none`, which /recall reads as an unrecognized subsection.
+add_to_work() { # report path, text
+  NOTE="$2" awk '{ print } /^## 2\. Work Completed/ { print ""; print ENVIRON["NOTE"] }' "$1" > "$1.tmp" && mv "$1.tmp" "$1"
+}
 
 # Value of "- <label>: <value>" in prepare-report.sh output.
 meta() { printf '%s\n' "$1" | sed -n "s/^- $2: //p" | head -n1; }
@@ -600,7 +606,7 @@ test_D11() {
   path="$(new_report_in "$r")"
   rel=".harness/sessions/${path##*/}"
   token="$(fake_github_token)"
-  printf '\nThe CI used %s for the upload.\n' "$token" >> "$path"
+  add_to_work "$path" "The CI used $token for the upload."
   out="$(bash "$COMMIT" "$path" 2>&1)"
   assert_contains "credential found before staging" "$out" "result: check-failed"
   assert_contains "finding names the kind and line" "$out" "sensitive: line"
@@ -617,7 +623,7 @@ if git diff --cached | grep -q 'FICTITIOUS-SENSITIVE-MARKER'; then
 fi
 EOF
   chmod +x "$r/.git/hooks/pre-commit"
-  printf '\nNote: FICTITIOUS-SENSITIVE-MARKER\n' >> "$path"
+  add_to_work "$path" "Note: FICTITIOUS-SENSITIVE-MARKER"
   out="$(bash "$COMMIT" "$path" 2>&1)"
   assert_contains "hook rejection reported" "$out" "result: commit-failed"
   assert_contains "classified as a hook rejection" "$out" "category: rejected"
@@ -646,7 +652,7 @@ EOF
     # Assembled at run time, so this file never carries the marker itself.
     local nc_marker
     nc_marker="$(printf 'DO NOT %s' COMMIT)"
-    printf '\nThe user said: %s anything else.\n' "$nc_marker" >> "$path"
+    add_to_work "$path" "The user said: $nc_marker anything else."
     out="$(bash "$COMMIT" "$path" 2>&1)"
     assert_contains "git plugin pre-commit lets a session report quote a no-commit phrase" "$out" "result: committed"
   else
@@ -883,6 +889,31 @@ test_D16() {
   check "the recall skill describes the form without a subcommand" 'grep -q "^### No subcommand: resume the work" "$PLUGIN/skills/recall/SKILL.md"'
 }
 
+# §6.3 reads into the same known_issues key under its 3.2.0 heading (Known
+# defects) and under the earlier one (Known issues and hypotheses).
+test_D18() {
+  local r s
+  r="$(new_repo d18)"
+  s="$r/.harness/sessions"
+  mkdir -p "$s"
+  install_fixture new-items.md "$s" bob-2026-05-02T120000
+  install_fixture known-defects.md "$s" gil-2026-05-04T120000
+
+  recall_in "$r" resume gil
+  assert_eq "Known defects: pending_state items" "items" "$(printf '%s' "$OUT" | jq -r .pending_state)"
+  assert_eq "Known defects: read under known_issues" "items" "$(printf '%s' "$OUT" | jq -r '.subsection_states.known_issues.state')"
+  assert_eq "Known defects: columns kept" "Defect Status Evidence Location" "$(printf '%s' "$OUT" | jq -r '.subsection_states.known_issues.columns | join(" ")')"
+  assert_eq "Known defects: Status cells kept" "confirmed suspected" "$(printf '%s' "$OUT" | jq -r '[.subsections.known_issues[].cells[1]] | join(" ")')"
+
+  recall_in "$r" resume bob
+  assert_eq "earlier heading: still read under known_issues" "items" "$(printf '%s' "$OUT" | jq -r '.subsection_states.known_issues.state')"
+
+  recall_in "$r" last 2
+  assert_eq "last: both headings counted" "2 1" "$(printf '%s' "$OUT" | jq -r '[.sessions[].pending_counts.known_issues] | join(" ")')"
+
+  assert_eq "a report with the Known defects heading passes check-report.sh" "" "$(bash "$CHECK" "$s/gil-2026-05-04T120000.md" 2>&1)"
+}
+
 test_D17() {
   local r s cmd mine="Test-User-2026-05-05T090000 test-user-2026-05-03T090000-2 test-user-2026-05-03T090000"
   r="$(new_repo d17)"
@@ -972,6 +1003,74 @@ test_C_CHECK() {
   sed -i.bak 's/^\*\*Goal status:\*\* achieved/**Goal status:** done-ish/' "$path" && rm -f "$path.bak"
   out="$(bash "$CHECK" "$path" 2>&1)"
   assert_contains "invalid goal status flagged" "$out" "goal status must be one of"
+
+  # §6.3 holds the template's table of defects: Status is confirmed or suspected.
+  path="$r/.harness/sessions/test-user-2026-05-04T100000.md"
+  write_report "$path" 2026-05-04T100000Z
+  sed -i.bak '/^### 6\.3/,$d' "$path" && rm -f "$path.bak"
+  cat >> "$path" <<'EOF'
+### 6.3 Known defects
+
+| Defect | Status | Evidence | Location |
+|--------|--------|----------|----------|
+| Export stops at an empty page | confirmed | a failing test | `src/a.py` |
+| A self-link loops | suspected | no visited set | `src/a.py` |
+| Five commits not pushed | confirmed (by choice) | state block | `main` |
+| Tie in the same second | hypothesis | code reading | `deploy/x.sh` |
+| A pipe \| in a cell | suspected | the escaped pipe comes before Status | `src/b.py` |
+EOF
+  out="$(bash "$CHECK" "$path" 2>&1)"
+  assert_eq "§6.3: only Status values other than confirmed or suspected are flagged" "2" "$(printf '%s\n' "$out" | grep -c 'a §6.3 Status is confirmed or suspected')"
+  assert_contains "§6.3: a qualified Status is flagged at its line" "$out" "line $(grep -n 'Five commits' "$path" | cut -d: -f1): a §6.3 Status"
+  assert_contains "§6.3: the earlier hypothesis value is flagged at its line" "$out" "line $(grep -n 'same second' "$path" | cut -d: -f1): a §6.3 Status"
+  assert_lacks "§6.3: the flagged value is not echoed" "$out" "by choice"
+
+  sed -i.bak '/^### 6\.3/,$d' "$path" && rm -f "$path.bak"
+  cat >> "$path" <<'EOF'
+### 6.3 Known defects
+
+| Defect | **Status** | Evidence | Location |
+|--------|------------|----------|----------|
+| Export stops at an empty page | `confirmed` | a failing test | `src/a.py` |
+| A self-link loops | **suspected** | no visited set | `src/a.py` |
+| A page size of zero divides by zero | Confirmed | a failing test | `src/b.py` |
+EOF
+  out="$(bash "$CHECK" "$path" 2>&1)"
+  assert_eq "§6.3: code marks, emphasis and case around a valid Status pass" "" "$out"
+
+  sed -i.bak '/^### 6\.3/,$d' "$path" && rm -f "$path.bak"
+  cat >> "$path" <<'EOF'
+### 6.3 Known defects
+
+| Defect | Status | Evidence | Location |
+|--------|--------|----------|----------|
+| Export stops at an empty page | confirmed | a failing test | `src/a.py` |
+
+- Five commits not pushed
+EOF
+  out="$(bash "$CHECK" "$path" 2>&1)"
+  assert_contains "§6.3: text next to the table is flagged at its line" "$out" "line $(grep -n 'Five commits' "$path" | cut -d: -f1): §6.3 holds only the template's table"
+
+  sed -i.bak '/^### 6\.3/,$d' "$path" && rm -f "$path.bak"
+  cat >> "$path" <<'EOF'
+### 6.3 Known defects
+
+| Defect | Status | Evidence | Location |
+| Tie in the same second | hypothesis | code reading | `deploy/x.sh` |
+EOF
+  out="$(bash "$CHECK" "$path" 2>&1)"
+  assert_contains "§6.3: a table without a separator row is flagged" "$out" "has no separator row"
+  assert_contains "§6.3: the row in the separator's place is still checked" "$out" "line $(grep -n 'same second' "$path" | cut -d: -f1): a §6.3 Status"
+
+  sed -i.bak '/^### 6\.3/,$d' "$path" && rm -f "$path.bak"
+  printf '### 6.3 Known defects\n\n- something noted\n' >> "$path"
+  out="$(bash "$CHECK" "$path" 2>&1)"
+  assert_contains "§6.3 written as a list is flagged" "$out" "§6.3 is the template's table, or none"
+
+  sed -i.bak '/^### 6\.3/,$d' "$path" && rm -f "$path.bak"
+  printf '### 6.3 Known defects\n\n| Defect | Evidence |\n|---|---|\n| x | y |\n' >> "$path"
+  out="$(bash "$CHECK" "$path" 2>&1)"
+  assert_contains "a §6.3 table without a Status column is flagged" "$out" "the §6.3 table has no Status column"
 
   local e
   for e in "$PLUGIN"/examples/*.md; do
@@ -1098,7 +1197,7 @@ test_A05() {
   for f in "$FIX"/*.md "$PLUGIN"/examples/*.md; do
     case "$(basename "$f" .md)" in
       *T[0-9][0-9][0-9][0-9][0-9][0-9]) cp "$f" "$s/" ;;
-      *) cp "$f" "$s/u$i-2026-06-0${i}T10000$i.md" ;;
+      *) cp "$f" "$s/$(printf 'u%d-2026-06-%02dT1000%02d.md' "$i" "$i" "$i")" ;;
     esac
     i=$((i + 1))
   done
@@ -1403,7 +1502,7 @@ test_HOOK() {
   check "the Codex hook keeps its detection marker" 'grep -q "^# codex-git-plugin: pre-commit" "$codex_hook"'
 }
 
-ALL_TESTS="D01 D02 D03 D04 D05 D06 D07 D08 D09 D10 D11 D12 D13 D14 D15 D16 D17 C_CHECK EXAMPLES INJECTION A01 A02 A03_A04 A05 A06_A08 A07_A12 A11 SENSITIVE REPO_STATE HOOK"
+ALL_TESTS="D01 D02 D03 D04 D05 D06 D07 D08 D09 D10 D11 D12 D13 D14 D15 D16 D17 D18 C_CHECK EXAMPLES INJECTION A01 A02 A03_A04 A05 A06_A08 A07_A12 A11 SENSITIVE REPO_STATE HOOK"
 SELECTED="${*:-$ALL_TESTS}"
 
 for id in $SELECTED; do

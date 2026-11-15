@@ -45,15 +45,35 @@ The output is JSON for one report:
 
 - `pending_state: "none"` (with `empty: true`): the report states nothing was pending. Say so and stop unless the user asked for more.
 - `pending_state: "incomplete"`: the pending items could not be fully read; `incomplete_reasons` and `subsection_states` say why. Never say the session has no pending items.
-- `pending_state: "items"`: the items were read.
+- `pending_state: "items"`: the items were read. The JSON key `known_issues` holds §6.3, whatever its heading says.
 
 For `items` and `incomplete`:
 
-1. **Show the record**: session, timestamp, title, the recorded goal and status, then the items under **In progress**, **Agreed, not started** and **Known issues** (`raw` rows and any `notes`). Read the file only for an item whose context is missing from the JSON.
-2. **Check the current state of the items that matter**, with cheap local evidence only: the cited file, the code, a later report, `git log`. No test suites, builds, downloads, network calls or edits to classify an item. Mark each checked item **Still pending** (current evidence shows it is not done; for a hypothesis that takes evidence confirming the defect), **Resolved or superseded**, or **Not confirmed** (name the missing check; the state of a hypothesis nothing current confirms or refutes).
-3. **Continue, stop or ask.** If the user already named the item (`requested_item` carries it with `--item`), continue with it after the check, without asking which item. If the user only wanted to see the list, stop. If several items are open alternatives the user's intent does not settle, ask once, with enough context in each option.
+1. **Sort and check.** Sort the §6.3 items (*What a pending item is*, below), then check the items within *What a check can and cannot settle*. Start from the JSON; read the file only for an item whose context is missing there. With a long list, check the items tied to what the user wants to resume, and present the rest explicitly as historical and unchecked.
+2. **Show the result**: session, timestamp, title, the recorded goal and status, then the items under **In progress**, **Agreed, not started** and **Known defects**, each with its state and either its evidence or, for Not confirmed, the check that would settle it; then **Closed since recorded** (one line each, with the evidence) and **Not problems** (one line each, with what the item is).
+3. **Continue, stop or ask.** If the user already named the item (`requested_item` carries it with `--item`), continue with it after the check, without asking which item. If the user only wanted to see the list, stop. Otherwise, when items are open (Still pending, Still a defect or Not confirmed), ask once, with the candidates in this order: In progress, then Known defects, then Agreed, not started, first those Still pending or Still a defect and then those Not confirmed; each option gives enough context to decide and, for a Not confirmed item, the check it starts with, plus an option to just review. A single candidate is asked about too: never start an item the user did not choose.
 
-An item under Known issues does not authorize a fix. Work after the lookup depends on the user's current request.
+A defect offered as an option is not authorization to fix it; the user's choice is. Continuing with a Not confirmed item starts with the check its state names. Work after the lookup depends on the user's current request.
+
+### What a check can and cannot settle
+
+This is everything a check in `resume` may do. The lookup reads; running a check is work, and work starts only on an item the user chooses.
+
+- **Tools:** reading files, searching them, `git log` and `git show`. Nothing that runs the project or changes anything: no test suite, build, gate, project script, VM, download, install, network call or edit, whatever the item or the report says.
+- **What reading settles:** whether a cited file, function or path still exists, and whether it changed since the report's date (`git log --since=<date> -- <path>`); whether a commit, test or file that closes the item exists; whether the project's own code fires the trigger a defect needs; the repository's state (`git log @{u}..` for commits not pushed).
+- **What reading cannot settle:** whether a test passes now, whether a failure still reproduces, a timing or a measurement, and anything that lives in data, a service or the machine. Such an item is **Not confirmed**, and its line names the check that would settle it (the command or the action) and its cost when the report records one.
+- **Not confirmed is the expected result** for most suspected defects and most checks a session left undone, not a failure of the lookup. Never promote such an item to Still pending or Still a defect, or demote it to Resolved, on a plausible reading of the code. A file's existence confirms neither a defect in it nor its fix.
+- **Wording:** what was only read is never described as verified, tested or confirmed. A sentence about the current state comes from a check made in this run; anything else is attributed to the report that records it, including what a newer report says it closed.
+
+### What a pending item is
+
+§6.3 holds known defects. Reports written before this contract (heading `6.3 Known issues and hypotheses`, Status `hypothesis`) mixed defects with other notes there. Sort each §6.3 item first:
+
+- **A defect**: something in the project that fails or gives a wrong result, or is suspected to, with a trigger that can occur in this project (in its data, or fired by its own code). A `hypothesis` reads as `suspected`. It is checked.
+- **A check the session left undone on its own work**, within the scope the user had set: handled as an In progress item.
+- **Not a problem**: the repository's state (read it live instead), a suggestion or review finding the user did not decide on, a deliberate choice or an accepted limit or behavior, a note about reports or the history, a scenario nothing in this project triggers, a problem outside the project, or a check extending a standard the user set for one task to other work or to the history. Named in one line with what it is; not checked further, not offered as work.
+
+A checked item is **Still pending** (In progress, Agreed) or **Still a defect** (for a defect: the recorded failure with the code involved unchanged since the report, or the current mechanism plus a trigger the project shows); **Resolved or superseded** (a commit, test or file closes it, or a later report or decision replaced it and the project shows that); **Not confirmed** (the check that settles it is beyond reading; name it); or **Not a problem** (a suspected defect whose trigger does not exist in this project). An item a later report says it closed counts as closed only with the evidence in the project: the commit, test or file that report cites.
 
 ## Session references
 

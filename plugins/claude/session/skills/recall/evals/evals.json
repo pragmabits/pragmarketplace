@@ -71,23 +71,23 @@
       "id": "C16",
       "setup_note": "Three fictitious reports. The newest lists in §6.1 'Write docs/cache.md' with Refs `docs/cache.md`, which now exists with a later commit 'docs: describe the cache'; the oldest lists in §6.2 'Add a --dry-run flag to tools/sync.sh', and tools/sync.sh has no such flag. The middle report has §6 with `none` in all three subsections.",
       "prompt": "/recall",
-      "expected_output": "One line per report, then the items with their session; docs/cache.md is marked Resolved or superseded with the evidence, the --dry-run flag Still pending, and the assistant continues with the flag without asking which item to pick.",
+      "expected_output": "One line per report, then the open items with their session and checked state; docs/cache.md appears under Closed since recorded with the evidence, the --dry-run flag Still pending; the assistant asks once, offering the flag and 'None — just reviewing', and starts nothing before the answer.",
       "expectations": [
         "Shows one line for each of the three reports, newest first",
         "Checks docs/cache.md or the git log, and tools/sync.sh, before classifying",
-        "No AskUserQuestion asking which item to resume",
-        "Starts the --dry-run work and nothing from the resolved item"
+        "Exactly one AskUserQuestion call, offering the --dry-run item and a 'None — just reviewing' option",
+        "No work starts before the answer, and nothing from the resolved item is offered"
       ]
     },
     {
       "id": "C17",
-      "setup_note": "Three fictitious reports with four §6.1/§6.2 items that the repository shows are not done, spread across them, and one §6.3 hypothesis.",
+      "setup_note": "Three fictitious reports with four §6.1/§6.2 items that the repository shows are not done, spread across them, and one §6.3 suspected defect whose trigger the code shows but whose failure nothing current confirms.",
       "prompt": "/recall",
-      "expected_output": "The assistant checks the items, then asks once with AskUserQuestion: three candidates, In progress before Agreed and newer report first, plus 'None — just reviewing'; the fourth candidate is named in the question text.",
+      "expected_output": "The assistant checks the items, then asks once with AskUserQuestion: three candidates, In progress before Agreed and newer report first, plus 'None — just reviewing'; the fourth §6.1/§6.2 item and the Not confirmed defect, with the check it starts with, are named in the question text.",
       "expectations": [
         "Exactly one AskUserQuestion call, with at most three candidate options and a 'None — just reviewing' option",
-        "The fourth candidate is named in the question text",
-        "The §6.3 hypothesis is not offered as an option",
+        "The fourth §6.1/§6.2 candidate is named in the question text",
+        "The §6.3 defect is shown as Not confirmed with the check that would settle it, and is named as a candidate in the question text, after the Still pending items",
         "No work starts before the answer"
       ]
     },
@@ -106,11 +106,46 @@
       "id": "C19",
       "setup_note": "git user.name is 'Test User'. Four fictitious reports: the two newest by ana-…, each with a §6.1 item the repository shows is not done; the two older by test-user-…, one with a §6.2 item that is not done.",
       "prompt": "/recall --me",
-      "expected_output": "Only the two test-user reports are shown; the assistant continues with their one open item and nothing from ana's reports appears.",
+      "expected_output": "Only the two test-user reports are shown; the assistant asks once about their one open item, and nothing from ana's reports appears.",
       "expectations": [
         "Shows only the test-user reports",
         "No item from an ana report is listed or offered",
-        "No AskUserQuestion asking which item to resume"
+        "Exactly one AskUserQuestion call, offering the test-user item and 'None — just reviewing'; no work starts before the answer"
+      ]
+    },
+    {
+      "id": "C20",
+      "setup_note": "Three fictitious reports written before 3.2.0. The newest §6.3 (heading 'Known issues and hypotheses') lists: 'Five local commits not pushed' (confirmed; the branch has no upstream difference now), 'Read the snapshot in Node instead of the reader page' (hypothesis, a /code-review proposal the user never decided), 'Two delay points left as they are' (confirmed, by choice), 'Two releases published in the same second tie in PUBLISHED' (confirmed, code reading; every release passes a gate of minutes before taking its timestamp and nothing publishes two at once), and 'An empty last page ends the export with an error' (confirmed, a failing test recorded; src/pager.py unchanged since the report).",
+      "prompt": "/recall",
+      "expected_output": "The empty-page defect is shown under Known defects as Still a defect, from the recorded failure and the unchanged code, and is offered as an option. The other four appear under Not problems, one line each with what they are (repository state read live, an undecided proposal, an accepted choice, a scenario nothing in the project triggers), and none is offered.",
+      "expectations": [
+        "Reads the repository state live (git log against the upstream) instead of repeating the report's count",
+        "The empty-page defect is Still a defect and is one of the AskUserQuestion options",
+        "The proposal, the choice, the commits and the same-second tie are under Not problems and are not options",
+        "Runs no test, build or project script to classify an item"
+      ]
+    },
+    {
+      "id": "C21",
+      "setup_note": "Two fictitious reports. The oldest §6.3 lists 'Handshake unanswered for minutes' (suspected, cause unknown) in internal/tunnel. The newest §2 says it 'resolved the earlier hypotheses' without naming a commit or a test, and its §6.3 is none; internal/tunnel has no commit after the oldest report.",
+      "prompt": "/recall",
+      "expected_output": "The handshake item is not listed as closed: the newest report's claim is attributed to it ('the newest report records ...'), and the item is checked like any other and shown as Not confirmed with the check that would settle it.",
+      "expectations": [
+        "Never states that the handshake item was resolved",
+        "Attributes the closing claim to the newest report rather than asserting it",
+        "The item is Not confirmed, with the missing check named"
+      ]
+    },
+    {
+      "id": "C22",
+      "setup_note": "tests/fixtures/known-defects.md installed as the newest report, with src/pager.py and tests/test_pager.py present and unchanged since the report; its §6.3 has a confirmed defect (a recorded failing test) and a suspected one (a self-link loop).",
+      "prompt": "/recall resume",
+      "expected_output": "The confirmed defect is Still a defect, from the recorded failure and the unchanged code; the suspected loop is Not confirmed with the check named (a page that links to itself); no test is run to decide either.",
+      "expectations": [
+        "No Bash call runs pytest, make or any project script",
+        "The empty-page defect is Still a defect, citing the recorded failing test and the unchanged src/pager.py",
+        "The loop is Not confirmed and names the check that would settle it",
+        "Neither item is described as verified or tested in this run"
       ]
     }
   ]

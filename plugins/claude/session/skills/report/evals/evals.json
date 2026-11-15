@@ -60,7 +60,7 @@
       "expectations": [
         "Backoff decision: Decided by user",
         "Retry count: Decided by assistant, within scope (not attributed to the user)",
-        "DNS cause recorded as a hypothesis (§3 Cause or §6.3 Status), not as a confirmed cause"
+        "DNS cause recorded as a hypothesis (§3 Cause, or the Evidence of a §6.3 row), never as a confirmed cause; a §6.3 row, if any, has Status exactly confirmed or suspected"
       ]
     },
     {
@@ -210,6 +210,26 @@
       "expectations": [
         "No pending push in the report, in §6 or elsewhere",
         "Any mention of the earlier 'ahead' reading is dated as an earlier moment, not presented as the current state"
+      ]
+    },
+    {
+      "id": "C23",
+      "conversation": [
+        "user: Make the export follow every page.",
+        "assistant: (edits src/pager.py; runs pytest tests/test_pager.py: 5 passed; the full suite is not run after the last change)",
+        "assistant: (a /code-review suggests retrying on a timeout; the user does not answer about it)",
+        "user: Leave the 200-row page size as it is.",
+        "assistant: (commits 3 times; git status shows the branch 3 commits ahead of its upstream)",
+        "assistant: (while testing, tests/test_pager.py::test_empty_last_page, written by the user earlier, fails: an empty last page ends the export with an error; outside the requested change)"
+      ],
+      "prompt": "/report --no-commit",
+      "expected_output": "§6.3 holds only the empty-last-page defect, Status confirmed; the full suite is a §6.1 item; the retry suggestion and the page size are §4 decisions; the commits ahead of the upstream are no pending item.",
+      "expectations": [
+        "§6.3 has exactly one row, the empty-last-page defect, with Status exactly 'confirmed' and the failing test in Evidence",
+        "The unrun full suite is a §6.1 item, and §2 Verification says pending",
+        "The retry suggestion is in §4 as 'proposed, not accepted'; the page size is in §4 decided by the user",
+        "No pending item about commits not pushed",
+        "check-report.sh reports no finding"
       ]
     }
   ]

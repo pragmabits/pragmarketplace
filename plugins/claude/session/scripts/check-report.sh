@@ -7,8 +7,9 @@
 # offending value itself:
 #   sensitive  — a credential-shaped value (lib/sensitive.sh)
 #   privacy    — the project's absolute path, or a linked worktree's name
-#   structure  — a missing, duplicated or out-of-order anchor, or a field that
-#                new reports no longer carry
+#   structure  — a missing, duplicated or out-of-order anchor, a field that
+#                new reports no longer carry, or a §6.3 that is not the
+#                template's table of defects
 #   coherence  — the header timestamp disagrees with the filename
 #
 # Exit: 0 no findings, 1 findings, 2 usage error or unreadable file.
@@ -163,6 +164,62 @@ while IFS= read -r ln; do
   [[ -z "$ln" ]] && continue
   add "structure: line $ln: new reports carry no Model field — no documented source identifies the model"
 done < <(anchor_line '^\*\*Model:\*\*')
+
+# §6.3 holds only defects: the template's table and nothing else, or `none`,
+# and a Status cell that says confirmed or suspected (code marks, emphasis and
+# case aside). A qualifier such as "(by choice)" or "(code reading)" marks
+# something that is not a defect, or belongs in Evidence.
+while IFS="$(printf '\t')" read -r ln kind; do
+  [[ -z "$ln" ]] && continue
+  case "$kind" in
+    status) add "structure: line $ln: a §6.3 Status is confirmed or suspected and nothing else — a qualifier goes in Evidence; what is not a defect leaves §6.3" ;;
+    no-status) add "structure: line $ln: the §6.3 table has no Status column" ;;
+    no-separator) add "structure: line $ln: the §6.3 table has no separator row under its header, so /recall cannot read it" ;;
+    no-table) add "structure: line $ln: §6.3 is the template's table, or none" ;;
+    extra) add "structure: line $ln: §6.3 holds only the template's table — text next to it goes in its section or out of the report" ;;
+  esac
+done < <(printf '%s\n' "$body" | awk -F '\t' '
+  function trim(s) { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); return s }
+  # A cell value without code marks or emphasis, in lower case.
+  function plain(s) { gsub(/[`*_]/, "", s); return tolower(trim(s)) }
+  # Table cells, honoring \| as a literal pipe inside a cell.
+  function cells(s, out,    n, i) {
+    gsub(/\\\|/, "\001", s)
+    s = trim(s); sub(/^\|/, "", s); sub(/\|$/, "", s)
+    n = split(s, out, "|")
+    for (i = 1; i <= n; i++) { gsub(/\001/, "|", out[i]); out[i] = trim(out[i]) }
+    return n
+  }
+  { n = $1; line = $0; sub(/^[0-9]+\t/, "", line) }
+  line ~ /^### 6\.3/ { inside = 1; start = n; next }
+  inside && line ~ /^(#|##|###) / { inside = 0 }
+  !inside { next }
+  line ~ /^[[:space:]]*$/ || line ~ /^[[:space:]]*(---+|\*\*\*+|___+)[[:space:]]*$/ { next }
+  line ~ /^[[:space:]]*\|/ {
+    rows++
+    if (rows == 1) {
+      k = cells(line, head)
+      for (i = 1; i <= k; i++) if (plain(head[i]) == "status") col = i
+      if (!col) print n "\tno-status"
+      next
+    }
+    # The separator row, as /recall reads it: three dashes or more per cell.
+    if (rows == 2 && line ~ /^[[:space:]]*\|?[[:space:]]*:?---+:?[[:space:]]*(\|[[:space:]]*:?---+:?[[:space:]]*)*\|?[[:space:]]*$/) next
+    if (rows == 2) print n "\tno-separator"
+    if (col) {
+      cells(line, c)
+      v = plain(c[col])
+      if (v != "confirmed" && v != "suspected") print n "\tstatus"
+    }
+    next
+  }
+  { other++; if (!first_other) first_other = n; if (tolower(line) ~ /^[[:space:]]*[*_`]*[[:space:]]*(none|nenhum|nenhuma|n\/a)[[:space:]]*[*_`]*[[:space:]]*\.?[[:space:]]*$/) none = 1 }
+  END {
+    if (!start) exit
+    if (rows == 0 && !(none && other == 1)) print start "\tno-table"
+    else if (rows > 0 && other > 0) print first_other "\textra"
+  }
+')
 
 # --- coherence ---------------------------------------------------------------
 base="$(basename "$file" .md)"

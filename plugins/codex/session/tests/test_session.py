@@ -53,7 +53,7 @@ none
 
 none
 
-### 6.3 Known issues and hypotheses
+### 6.3 Known defects
 
 none
 """
@@ -70,9 +70,29 @@ PENDING_ITEMS = """## 6. Pending Items
 
 none
 
-### 6.3 Known issues and hypotheses
+### 6.3 Known defects
+
+| Defect | Status | Evidence | Location |
+|--------|--------|----------|----------|
+| An empty page ends the export | confirmed | a failing test | `src/a.py` |
+"""
+
+# §6.3 under the heading reports carried before the Known defects contract.
+PENDING_LEGACY = """## 6. Pending Items
+
+### 6.1 In progress
 
 none
+
+### 6.2 Agreed, not started
+
+none
+
+### 6.3 Known issues and hypotheses
+
+| Issue | Status | Evidence | Location |
+|-------|--------|----------|----------|
+| Slow on large input | hypothesis | not measured | `src/a.py` |
 """
 
 
@@ -161,6 +181,12 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(items["pending_state"], "items")
         self.assertEqual(items["subsections"]["in_progress"][0]["label"], "Escape `a | b`")
         self.assertEqual(items["requested_item"], "the escape")
+        self.assertEqual(items["subsection_states"]["known_issues"]["columns"][0], "Defect")
+        self.assertEqual(items["subsections"]["known_issues"][0]["cells"][1], "confirmed")
+        self.write("d-2026-05-04T100000.md", report("2026-05-04T100000", pending=PENDING_LEGACY))
+        legacy = json.loads(self.recall("resume", "d-").stdout)
+        self.assertEqual(legacy["pending_state"], "items")
+        self.assertEqual(legacy["subsections"]["known_issues"][0]["cells"][1], "hypothesis")
 
     def test_order_ids_and_errors(self) -> None:
         self.write("zed-2026-05-01T100000.md", report("2026-05-01T100000"))
