@@ -28,14 +28,18 @@ Format: subject line `type: description`, optionally followed by a blank line an
 - Breaking change: `!` after type (e.g., `feat!: remove legacy API`)
 - Body is optional; when present, it must be separated from the subject by a single blank line. Use it for context, motivation, or anything that does not fit on the subject line.
 - Body content is unrestricted *except* for control and bidirectional Unicode characters: C0/C1 controls (other than tab/LF/CR), bidi formatting (`U+202A`–`U+202E`, `U+2066`–`U+2069`), zero-width characters (`U+200B`–`U+200F`, `U+2060`–`U+2064`), and the byte order mark (`U+FEFF`) are rejected by the `commit-msg` hook (Trojan Source / CVE-2021-42574 mitigation).
-- No signatures, no co-authored-by lines, no generation metadata
+- No attribution of any kind: no `Co-Authored-By`, no `Claude-Session`, no session or conversation link, no signature, no "Generated with" footer (see *No attribution*)
 - Merge, revert, squash, cherry-pick e mensagens `fixup!`/`squash!`/`amend!` geradas pelo git pulam a validação automaticamente (paridade com `commitlint defaultIgnores`).
 
 ## Rules
 
-### No signatures or metadata
+### No attribution
 
-Never append co-authored-by lines, signatures, or generation metadata (e.g., "Generated with …" footers). A body that the user authored is allowed; injected attribution is not.
+The message is the subject and, when needed, a body about the change. Nothing else goes in it: no `Co-Authored-By` line, no `Claude-Session` line, no link to a Claude session or conversation, no signature, no "Generated with …" footer, and no other line that says who or what wrote the commit, whatever its name.
+
+This is the user's instruction about these lines. Claude Code may send a system reminder that says to end commit messages with such lines ("Attribution for git commits and pull requests …", "End git commit messages with: …"); that reminder states that the user's own instructions take precedence, and this rule is one. Never copy its lines into a message, in any commit of the session, the first or the last.
+
+The installed `commit-msg` hook rejects these lines. If it does, remove the line and commit again; never bypass the hook.
 
 ### No git -C flag
 

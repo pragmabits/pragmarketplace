@@ -58,7 +58,7 @@ Installed artifacts in the consumer repository:
 - `.codex/hooks/git_command_policy.py`
 - `.codex/hooks.json`
 - `.codex/config.toml` with `[features].codex_hooks = true`
-- `.git/hooks/commit-msg`
+- `.git/hooks/commit-msg` (the message format, and no attribution lines: `Co-Authored-By`, `Claude-Session`, a Claude session link, a "Generated with Claude Code" footer)
 - Optional: `.git/hooks/pre-commit` (session reports in `.harness/sessions/<user>-<YYYY-MM-DDTHHMMSS>[-N].md` skip its no-commit marker check; the other checks still apply; secret and marker checks read only added lines)
 - Optional: `.git/hooks/prepare-commit-msg`
 

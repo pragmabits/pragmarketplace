@@ -13,7 +13,7 @@
       "name": "git",
       "source": "./plugins/claude/git",
       "description": "Strategic git commit plugin — semantic analysis, whole-file staging, hook-validated commits, native git hooks, and safety hooks",
-      "version": "3.1.0",
+      "version": "3.1.1",
       "author": {
         "name": "pragmabits",
         "email": "leonardoleoncio96@gmail.com"
@@ -58,7 +58,7 @@
       "name": "session",
       "source": "./plugins/claude/session",
       "description": "Session lifecycle helpers for Claude Code. The /report skill writes a handoff report under .harness/sessions/, the directory shared with the Codex session plugin, that keeps verified work, pending verification, hypotheses and missing information apart, records who made each decision and which tool wrote the report, and lists pending items with their origin and evidence; /report commits the new file in an isolated, verified chore: commit unless --no-commit is given. The /recall skill lists, filters, searches and resumes reports from any tool that follows the same contract through five read-only subcommands (list, filter, grep, resume, last); without a subcommand it resumes the work from the pending items of the three newest reports, optionally only the current or a named user's. It checks the current state of pending items before offering them as work.",
-      "version": "3.1.0",
+      "version": "3.2.0",
       "author": {
         "name": "pragmabits",
         "email": "leonardoleoncio96@gmail.com"

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# tests/run.sh — deterministic tests for the git plugin's PreToolUse guard.
+# tests/run.sh — deterministic tests for the git plugin's PreToolUse guard,
+# and for the attribution check of its commit-msg hook and the Codex plugin's.
 #
 # Usage: bash plugins/claude/git/tests/run.sh
 #
-# Each case feeds validate-git-command.sh a fake PreToolUse input on stdin:
+# Each guard case feeds validate-git-command.sh a fake PreToolUse input on stdin:
 # tool_input.command and cwd, the directory Claude Code will run the command
 # in, with CLAUDE_PROJECT_DIR set as Claude Code sets it for hooks.
 # Repositories are temporary, and git is isolated from the user's
@@ -112,6 +113,72 @@ CLAUDE_PROJECT_DIR="$REPO/web" expect_deny "cd before git is denied whatever the
 expect_deny "git add -p is denied" "$REPO" "git add -p ." "git add -p is blocked"
 expect_deny "git -C is denied" "$REPO" "git -C web status" "git -C flag is blocked"
 expect_deny "git config user.name is denied" "$REPO" "git config user.name x" "Modifying git user.name"
+
+# The commit-msg hooks (this plugin's and the Codex plugin's) reject the
+# attribution lines Claude Code asks for in its system reminder.
+CODEX_COMMIT_MSG="$PLUGIN/../../codex/git/assets/git-hooks/commit-msg"
+MSG_FILE="$ROOT_TMP/COMMIT_EDITMSG"
+HOOK_KINDS="claude"
+if command -v python3 >/dev/null 2>&1; then HOOK_KINDS="claude codex"; fi
+
+# Args: hook kind (claude | codex), message file content. Sets RC and ERR.
+run_commit_msg() {
+  printf '%s\n' "$2" > "$MSG_FILE"
+  if [[ $1 == claude ]]; then
+    ERR="$(cd "$REPO" && bash "$PLUGIN/hooks/commit-msg" "$MSG_FILE" 2>&1)"; RC=$?
+  else
+    ERR="$(cd "$REPO" && python3 -I "$CODEX_COMMIT_MSG" "$MSG_FILE" 2>&1)"; RC=$?
+  fi
+}
+
+# Args: pass | reject, description, message file content[, text the error must contain].
+expect_message() {
+  local kind want="${4:-attribution line}"
+  for kind in $HOOK_KINDS; do
+    run_commit_msg "$kind" "$3"
+    if [[ $1 == pass ]]; then
+      if [[ $RC -eq 0 ]]; then ok "$kind commit-msg: $2"; else not_ok "$kind commit-msg: $2" "rc=$RC: $ERR"; fi
+    elif [[ $RC -eq 0 ]]; then
+      not_ok "$kind commit-msg: $2" "accepted"
+    elif [[ "$ERR" != *"$want"* ]]; then
+      not_ok "$kind commit-msg: $2" "missing: $want"$'\n'"in: $ERR"
+    else
+      ok "$kind commit-msg: $2"
+    fi
+  done
+}
+
+expect_message pass "a subject alone passes" "fix: bring make up up with the secrets of .dev"
+expect_message pass "a subject and a body pass" $'fix: keep the key in one place\n\nThe deploy sets WALLE_SECRETS on the VPS.'
+expect_message pass "prose about co-author trailers passes" \
+  $'docs: explain the commit rules\n\nThe hook rejects co-author trailers and session links written by a harness.'
+expect_message pass "a session link inside a sentence passes" \
+  $'docs: explain the hook\n\nIt rejects links like claude.ai/code/session_abc in a body.'
+expect_message pass "a subject that says generated with Claude Code passes" "docs: note the README was generated with Claude Code"
+expect_message pass "the diff below the scissors line of git commit -v is not the message" \
+  $'fix: clean\n\n# ------------------------ >8 ------------------------\n# Do not modify or remove the line above.\ndiff --git a/x b/x\n+  https://claude.ai/code/session_x\n Co-Authored-By: someone\nCo-Authored-By: someone'
+expect_message pass "the indented messages a squash merge quotes pass" \
+  $'feat: squash the pager branch\n\ncommit 1a2b3c4\n\n    feat: add the pager\n\n    Co-Authored-By: A Person <a@example.invalid>'
+expect_message reject "a Claude-Session line is rejected" \
+  $'fix: bring make up up with the secrets of .dev\n\nThe deploy sets WALLE_SECRETS.\n\nClaude-Session: https://claude.ai/code/session_0148cxfbGLif49K1LPPrmRfs'
+expect_message reject "a Co-Authored-By line is rejected, whatever its case" \
+  $'feat: add the pager\n\nco-authored-by: Claude Opus 5.5 <noreply@anthropic.com>'
+expect_message reject "a Claude session link alone on its line is rejected" \
+  $'feat: add the pager\n\nhttps://claude.ai/code/session_0148cxfbGLif49K1LPPrmRfs'
+expect_message reject "a Generated with Claude Code footer is rejected" \
+  $'feat: add the pager\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)'
+expect_message reject "a hand-written Revert message is checked too" \
+  $'Revert "feat: add the pager"\n\nCo-Authored-By: Claude <noreply@anthropic.com>'
+expect_message reject "a hand-written Merge message is checked too" \
+  $'Merge branch pager\n\nClaude-Session: https://claude.ai/code/session_x'
+expect_message reject "the line number is the file's, comment lines included" \
+  $'fix: x\n# a comment\n\nbody\n\nClaude-Session: y' "(line 6)"
+touch "$REPO/.git/CHERRY_PICK_HEAD"
+expect_message pass "a cherry-pick keeps the copied commit's message" \
+  $'feat: add the pager\n\nCo-Authored-By: A Person <a@example.invalid>'
+rm -f "$REPO/.git/CHERRY_PICK_HEAD"
+run_commit_msg claude $'fix: x\n\nClaude-Session: https://claude.ai/code/session_x'
+if [[ "$ERR" == *"(line 3)"* && "$ERR" == *"received: Claude-Session"* ]]; then ok "claude commit-msg: the rejection shows the line"; else not_ok "claude commit-msg: the rejection shows the line" "$ERR"; fi
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [[ $fail -eq 0 ]]

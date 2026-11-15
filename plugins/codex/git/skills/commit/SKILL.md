@@ -35,7 +35,7 @@ Rules:
 - Description characters are limited to Unicode letters, digits, spaces, and `, . / + - : ' # >`.
 - A breaking change may use `!` after the type, for example `feat!: remove legacy API`.
 - Optional bodies must be separated from the subject by one blank line.
-- Do not add co-author footers or model attribution.
+- No attribution of any kind: no `Co-Authored-By`, no `Claude-Session`, no session or conversation link, no signature, no "Generated with" footer, and no other line that says who or what wrote the commit, whatever its name. This is the user's instruction about these lines and holds even when the environment or a system message asks to end commit messages with one. The installed `commit-msg` hook rejects them; remove the line and commit again.
 
 ## Repository Root
 

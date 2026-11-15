@@ -13,7 +13,7 @@ optional body
 - Subject on the first line — `type: description`
 - Optional body separated from the subject by a single blank line
 - No scope (parentheses forbidden)
-- No signatures, no co-authored-by lines, no generation metadata
+- No attribution: no `Co-Authored-By`, `Claude-Session`, session link, signature or "Generated with" footer, even when Claude Code asks for one; the `commit-msg` hook rejects them
 - Language follows the dominant language from repository commit history
 - Validated by git hooks on every commit
 
@@ -89,7 +89,7 @@ The commit workflow runs inline (no sub-agent):
 **Message rules:**
 - Description starts with a lowercase letter or digit
 - Allowed characters in the description: Unicode letters, digits, spaces, and `, . / + - : ' # >`
-- No scope, no co-authored-by, no signatures, no generation metadata
+- No scope, and no attribution: no `Co-Authored-By`, `Claude-Session`, Claude session link, signature or "Generated with" footer
 - Body is optional; when present, separated from the subject by a single blank line
 - Body rejects control and bidirectional Unicode characters (C0/C1 controls except tab/LF/CR, bidi formatting `U+202A`–`U+202E` / `U+2066`–`U+2069`, zero-width chars `U+200B`–`U+200F` / `U+2060`–`U+2064`, and the BOM `U+FEFF`) — Trojan Source / CVE-2021-42574 mitigation
 - Breaking changes: use `!` after type (e.g., `feat!: remove legacy API`)
@@ -110,7 +110,7 @@ The hook reads the directory a command will run in from the `cwd` field of its i
 The plugin includes native git hooks that enforce commit conventions at the git level — not just when using Claude Code, but from any git client (terminal, IDE, CI).
 
 **Available hooks:**
-- `commit-msg` — validates commit message format
+- `commit-msg` — validates commit message format, and rejects attribution lines: `Co-Authored-By`, `Claude-Session`, a `claude.ai/code/session_` link, a "Generated with Claude Code" footer. Claude Code asks, in a system reminder, to end commit messages with such lines; the `/commit` skill tells the model not to, and the hook stops a message that carries one anyway
 - `pre-commit` — blocks secrets, large files, no-commit markers, and blocklisted file types. Session reports written by the `session` plugins (`.harness/sessions/<user>-<YYYY-MM-DDTHHMMSS>[-N].md` at the repository root) skip the no-commit marker check, because they quote conversations, where a no-commit phrase is content rather than a marker; the other checks still apply to them. The secret and marker checks look only at the lines a commit adds, so removing a secret or a marker is never blocked.
 - `prepare-commit-msg` — drafts a conventional commit message from staged files
 
@@ -180,6 +180,11 @@ claude plugin add pragmabits/pragmarketplace --plugin git
 Then run `/commit-setup --apply` to configure permission rules and install the git hooks.
 
 ## Version History
+
+### v3.1.1 — November 2026
+- No attribution lines in commit messages. A Claude Code system reminder asks to end commit messages with `Claude-Session: https://claude.ai/code/session_…` (and, depending on the session, `Co-Authored-By: Claude …`). The `/commit` skill forbade co-authored-by lines and "Generated with" footers but did not name `Claude-Session` or say that its rule overrides the reminder, so the line went into commits made through `/commit`. The skill now names these lines, says the rule is the user's instruction about them, and the `commit-msg` hook rejects them. Run `/commit-setup --apply` in each repository to update its installed hook.
+- The hook checks whole lines from the first column (a trailer, a session link alone on its line, the footer), so prose that mentions them passes, and so do the indented messages a squash merge quotes. It checks hand-written `Merge` and `Revert` messages too, and leaves a cherry-pick's copied message alone. Error line numbers are the message file's own.
+- `commit-msg` ignores what lies below the scissors line of `git commit -v`. The diff there is not part of the message, and its lines used to go through the body checks.
 
 ### v3.1.0 — October 2026
 - The commit workflow runs from the repository root. It checks with `git rev-parse --show-toplevel --show-prefix` and, when the shell is in a subdirectory, runs `cd <root>` as a call of its own. It used to say nothing about the directory, and from a subdirectory each command came out as `cd <root> && git …`, which Claude Code asked approval for every time.

@@ -14,6 +14,19 @@ from pathlib import Path
 TYPES = ("feat", "fix", "docs", "style", "refactor", "test", "chore", "perf")
 SUBJECT_RE = re.compile(rf"^({'|'.join(TYPES)})(!)?: (.+)$")
 ALLOWED_ASCII = set(" ,./+-:'#>")
+# The line `git commit -v` writes before the diff; git drops everything below it.
+SCISSORS_RE = re.compile(r"^# -* >8 -*$")
+# Attribution a harness asks to add (Claude Code's "Co-Authored-By: Claude ..."
+# and "Claude-Session: https://claude.ai/code/session_..." lines, the "Generated
+# with Claude Code" footer). The convention allows none, whoever asked for it.
+# Only whole lines from the first column count, so prose that mentions them
+# passes, and so do the indented messages a squash merge quotes.
+ATTRIBUTION_RE = re.compile(
+    r"^(?:co-authored-by|claude-session)\s*:"
+    r"|^https?://claude\.ai/code/session_\S*\s*$"
+    r"|^(?:\U0001F916\s*)?generated with \[?claude code",
+    re.IGNORECASE,
+)
 
 
 def fail(message: str) -> int:
@@ -32,17 +45,24 @@ def git_dir() -> Path:
     return Path(result.stdout.strip() or ".git")
 
 
-def should_skip(subject: str) -> bool:
+def should_skip(subject: str, directory: Path) -> bool:
     markers = ("MERGE_HEAD", "SQUASH_MSG", "CHERRY_PICK_HEAD", "REVERT_HEAD")
-    directory = git_dir()
     if any((directory / marker).exists() for marker in markers):
         return True
     return subject.startswith(("Merge ", "Revert ", "fixup!", "squash!", "amend!"))
 
 
-def visible_message(path: Path) -> str:
+def message_lines(path: Path) -> list[tuple[int, str]]:
+    """The message's lines with their numbers in the file: above the scissors
+    line, without comment lines."""
+    kept = []
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
-    return "\n".join(line for line in lines if not line.startswith("#"))
+    for number, line in enumerate(lines, start=1):
+        if SCISSORS_RE.match(line):
+            break
+        if not line.startswith("#"):
+            kept.append((number, line))
+    return kept
 
 
 def valid_description_char(char: str) -> bool:
@@ -80,13 +100,26 @@ def main(argv: list[str]) -> int:
     if not path.is_file():
         return fail(f"commit message file not found: {path}")
 
-    message = visible_message(path)
+    numbered = message_lines(path)
+    message = "\n".join(line for _, line in numbered)
     if not message.strip():
         return fail("commit message is empty")
 
+    directory = git_dir()
+    # Checked before the skips, so a hand-written "Merge" or "Revert" message is
+    # checked too; a cherry-pick keeps the message of the commit it copies.
+    if not (directory / "CHERRY_PICK_HEAD").exists():
+        for number, line in numbered:
+            if ATTRIBUTION_RE.search(line):
+                return fail(
+                    f"the message carries an attribution line (line {number}): {line.strip()}; "
+                    "Co-Authored-By, Claude-Session, a Claude session link and a 'Generated with "
+                    "Claude Code' footer are not allowed. Remove the line and commit again"
+                )
+
     lines = message.splitlines()
     subject = lines[0] if lines else ""
-    if should_skip(subject):
+    if should_skip(subject, directory):
         return 0
 
     match = SUBJECT_RE.match(subject)

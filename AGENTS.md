@@ -29,7 +29,7 @@ Do not use shell redirection, `tee`, `sed -i`, ad hoc scripts, formatters, code 
 
 - `.claude-plugin/marketplace.json`: central Claude plugin registry and published version source of truth.
 - `plugins/claude/<plugin>/.claude-plugin/plugin.json`: per-plugin Claude manifest.
-- `plugins/codex/<plugin>/.codex-plugin/plugin.json`: per-plugin Codex manifest. Current Codex plugins: `git` `0.2.0` and `session` `0.2.0`.
+- `plugins/codex/<plugin>/.codex-plugin/plugin.json`: per-plugin Codex manifest. Current Codex plugins: `git` `0.2.1` and `session` `0.3.0`.
 - `.agents/plugins/marketplace.json`: Codex marketplace metadata for repo-local Codex plugins.
 - `.harness/sessions/`: session handoff reports, shared by the Claude Code and Codex `session` plugins. This belongs to the user project, not to Claude, Codex, `.agents`, or any plugin runtime.
 - `.codex/config.toml`: project-local Codex configuration and filesystem permission profile.
@@ -40,9 +40,9 @@ Do not use shell redirection, `tee`, `sed -i`, ad hoc scripts, formatters, code 
 
 Current marketplace entries:
 
-- `git` `3.1.0`: semantic commit workflow, Conventional Commits validation, native git hooks, safety hooks.
+- `git` `3.1.1`: semantic commit workflow, Conventional Commits validation, native git hooks, safety hooks.
 - `review` `1.0.1`: `/codex-review`, backed by `codex-review.sh` and the external Codex CLI.
-- `session` `3.1.0`: `/report` and `/recall` handoff reports for Claude Code.
+- `session` `3.2.0`: `/report` and `/recall` handoff reports for Claude Code.
 - `pragma` `0.3.4`: standing working directives injected by a `SessionStart` hook, plus a review gate on `AskUserQuestion` and turn ends. No slash entry.
 - `axio` `0.4.0`: `axio` and `migration` skills for the axio Go logging library. No slash entry; sourced by `git-subdir` from `pragmabits/axio` (`plugin/`), not from `plugins/claude/`.
 

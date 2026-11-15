@@ -11,9 +11,13 @@ set -euo pipefail
 #   Body (optional): separated from subject by a single blank line.
 #     - Blocks C0/C1 control chars (except tab/LF/CR), bidi formatting, zero-width chars, and BOM
 #       (CVE-2021-42574 / Trojan Source mitigation)
+#   No attribution: a Co-Authored-By or Claude-Session line, a Claude session link alone
+#     on its line or a "Generated with Claude Code" footer is rejected, whoever asked for
+#     it. Checked in every message but a cherry-pick's.
+#   Lines below the scissors line of `git commit -v` (the diff) are not part of the message.
 #
-# Skips validation for git-generated messages (merge, revert, squash, cherry-pick,
-# fixup!/squash!/amend!) — mirrors @commitlint/is-ignored defaultIgnores.
+# Skips the format validation for git-generated messages (merge, revert, squash,
+# cherry-pick, fixup!/squash!/amend!) — mirrors @commitlint/is-ignored defaultIgnores.
 
 COMMIT_MSG_FILE="$1"
 
@@ -22,17 +26,53 @@ if [[ ! -f "$COMMIT_MSG_FILE" ]]; then
   exit 1
 fi
 
-# Read the commit message, stripping comment lines (lines starting with #)
-message=$(sed '/^#/d' "$COMMIT_MSG_FILE")
+# Read the commit message: what lies above the scissors line that `git commit -v`
+# writes before the diff (git drops everything below it), without comment lines.
+SCISSORS_RE='^# -* >8 -*$'
+message=$(sed -e "/$SCISSORS_RE/,\$d" -e '/^#/d' "$COMMIT_MSG_FILE")
 
 if [[ -z "$message" ]]; then
   echo "error: commit message is empty" >&2
   exit 1
 fi
 
+GIT_DIR=$(git rev-parse --git-dir 2>/dev/null || echo ".git")
+
+# --- No attribution ---
+# Claude Code asks, in a system reminder, to end commit messages with lines such
+# as "Co-Authored-By: Claude ..." or "Claude-Session: https://claude.ai/code/
+# session_...". The convention allows none of them, whatever their name or who
+# asked for them. Only whole lines from the first column count (a trailer, a
+# session link alone on its line, the "Generated with Claude Code" footer), so
+# prose that mentions them passes, and so do the indented messages a squash
+# merge quotes. This runs before the skips below, so a hand-written "Merge" or
+# "Revert" message is checked too; a cherry-pick keeps the message of the
+# commit it copies, so it is left alone. Line numbers are the file's own.
+if [[ ! -f "$GIT_DIR/CHERRY_PICK_HEAD" ]]; then
+  attribution_line=$(SCISSORS_RE="$SCISSORS_RE" awk '
+    $0 ~ ENVIRON["SCISSORS_RE"] { exit }
+    /^#/ { next }
+    {
+      line = tolower($0)
+      if (line ~ /^(co-authored-by|claude-session)[[:space:]]*:/ \
+          || line ~ /^https?:\/\/claude\.ai\/code\/session_[^[:space:]]*[[:space:]]*$/ \
+          || line ~ /^(🤖[[:space:]]*)?generated with \[?claude code/) {
+        print NR ":" $0
+        exit
+      }
+    }
+  ' "$COMMIT_MSG_FILE")
+  if [[ -n "$attribution_line" ]]; then
+    echo "error: the message carries an attribution line (line ${attribution_line%%:*})" >&2
+    echo "  received: ${attribution_line#*:}" >&2
+    echo "  not allowed: Co-Authored-By, Claude-Session, a Claude session link, a 'Generated with Claude Code' footer" >&2
+    echo "  remove the line and commit again; the message is the subject and the body about the change" >&2
+    exit 1
+  fi
+fi
+
 # --- Skip validation for git-generated commit messages ---
 # Primary detector: marker files that git creates during these operations.
-GIT_DIR=$(git rev-parse --git-dir 2>/dev/null || echo ".git")
 if [[ -f "$GIT_DIR/MERGE_HEAD" ]] \
    || [[ -f "$GIT_DIR/SQUASH_MSG" ]] \
    || [[ -f "$GIT_DIR/CHERRY_PICK_HEAD" ]] \
