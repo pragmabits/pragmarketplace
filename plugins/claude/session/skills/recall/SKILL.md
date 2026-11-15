@@ -14,7 +14,7 @@ A report is evidence of what was recorded on its date, not the current state. No
 ## Script output
 
 ```!
-bash "${CLAUDE_SKILL_DIR}/scripts/recall.sh" --args-stdin 2>&1 <<'SESSION_RECALL_ARGUMENTS_END'
+RECALL_CURRENT_SESSION="${CLAUDE_SESSION_ID}" bash "${CLAUDE_SKILL_DIR}/scripts/recall.sh" --args-stdin 2>&1 <<'SESSION_RECALL_ARGUMENTS_END'
 $ARGUMENTS
 SESSION_RECALL_ARGUMENTS_END
 ```
@@ -29,8 +29,22 @@ SESSION_RECALL_ARGUMENTS_END
 - **What reading settles:** whether a cited file, function or path still exists, and whether it changed since the report's date (`git log --since=<date> -- <path>`); whether a commit, test or file that closes the item exists; whether the project's own code fires the trigger a defect needs; the repository's state (`git log @{u}..` for commits not pushed).
 - **What reading cannot settle:** whether a test passes now, whether a failure still reproduces, a timing or a measurement, and anything that lives in data, a service or the machine. An item that needs one of these is **Not confirmed**, and its line names the check that would settle it (the command or the action) and its cost when the report records one, such as "the full e2e run, about 11 min".
 - **Not confirmed is the expected result** for most suspected defects and for most checks a session left undone. It is not a failure of the lookup. Never promote such an item to Still pending or Still a defect, and never demote it to Resolved, on a plausible reading of the code. A file's existence confirms neither a defect in it nor its fix.
-- **Wording:** what was only read is never described as verified, tested or confirmed. A sentence about the current state comes from a check made in this run. Anything else is attributed to the report that records it ("the 11-15 report records that ..."), including what a newer report says it closed.
+- **Wording:** what was only read is never described as verified, tested or confirmed. A sentence about the current state comes from a check made in this run. Anything else is attributed to the report or the memory that records it ("the 11-15 report records that ...", "deploy-design-decisions.md:53 records that ..."), including what a newer report or a memory says it closed.
 - **When the missing check runs:** only after the user chooses the item. Continuing with a Not confirmed item starts with that check.
+
+## What came after the reports
+
+`resume` and the form without a subcommand carry `after_report`: what no report records, because it came after the report named in `report` (the one resumed, or the newest of those read), at `since`.
+
+- **`memory.files`**: the memories of this project changed after that moment, newest first, each with `name` and `description`. A session that ends without a report leaves what it decided, measured or found only there. Read every listed file in full before any item gets a state.
+- **`sessions.items`**: the sessions of this project, started at the repository root, in which the user wrote after the newest report in the directory (`sessions.after`), other than this one, most recently active first, each with `prompts_after`. A session resumed into another file is one item with both `ids`. What they did after that report is in no report. When the list is not empty, the result says so in one line: how many, when the last one was active, and that what they did after the report is only in the memories, the commits and the files. When `sessions.current` is null, this session may be among them.
+- When `memory.state` is not `read`, or `after_report` holds `error`, the memories after the report could not be listed. The result says so, with `dir` or the `error` text, and the items are checked without them.
+
+A memory is a record, like a report, written by a session that can be wrong. It is evidence of what that session recorded, never of the current state, and never settles an item on its own say-so:
+
+- What it says about the repository (a commit made or not, a file, a step done) is checked in the repository, which wins. A memory that says "done, without a commit" while the commit exists is wrong on that point.
+- A check it records that reading cannot repeat (an outside source read, a measurement, a run) leaves the item **Not confirmed**. The item's line quotes the memory by file and line and names that check, done again, as what settles it.
+- A decision of the user it records, with the user's words and date, is shown as that decision, with its file and line.
 
 ## What a pending item is
 
@@ -47,7 +61,7 @@ A checked item gets one state:
 - **Not confirmed**: the check that would settle it is beyond reading. Name it.
 - **Not a problem**: a suspected defect whose trigger does not exist in this project.
 
-An older report's item that a newer report says it closed counts as closed only with the evidence in the project: the commit, test or file the newer report cites. Read the newer report's §2 and §3 to find it. Without that evidence, check the item like any other.
+An item that a newer report or a memory under `after_report` says was closed counts as closed only with the evidence in the project: the commit, test or file it cites. Read the newer report's §2 and §3 to find it. Without that evidence, check the item like any other; a check recorded there that reading cannot repeat leaves it Not confirmed (*What came after the reports*).
 
 ## Handling the output
 
@@ -71,7 +85,7 @@ Do not Read the reports to produce these lines. Read one only when the user asks
 
 ### resume
 
-The output is JSON for one report. `pending_state` decides what follows:
+The output is JSON for one report, with `after_report` for what came after it. `pending_state` decides what follows:
 
 - `none` (with `"empty": true`): the report states that nothing was pending. Say `Session <session_id> recorded no pending items.` and stop, unless the user asked for more.
 - `incomplete`: the pending items could not be fully read. `incomplete_reasons` says why, and `subsection_states` holds what was found (`unparsed` text, the heading's `line`). Never say the session has no pending items. Show what was extracted, name the gap, and Read the report from the given line when that is needed to understand an item the user is after.
@@ -79,9 +93,9 @@ The output is JSON for one report. `pending_state` decides what follows:
 
 For `items` and `incomplete`:
 
-1. **Sort and check.** Sort the §6.3 items (*What a pending item is*), then check the items within *What a check can and cannot settle*. Start from the JSON (goal, status, `decisions`, pending items); Read the file only for an item whose context is missing there. With a long list, check the items tied to what the user wants to resume, and present the rest explicitly as historical and unchecked.
+1. **Read, sort and check.** Read every file in `after_report.memory.files` (*What came after the reports*). Sort the §6.3 items (*What a pending item is*), then check the items within *What a check can and cannot settle*. Start from the JSON (goal, status, `decisions`, pending items); Read the report only for an item whose context is missing there. With a long list, check the items tied to what the user wants to resume, and present the rest explicitly as historical and unchecked.
 
-2. **Show the result.** Header: `Session <session_id> (<timestamp>) — <title>`. Then the goal and status as recorded. Then the items under **In progress**, **Agreed, not started** and **Known defects**, each with its state and either its evidence or, for Not confirmed, the check that would settle it. Then **Closed since recorded**, one line each with the evidence that closes it, and **Not problems**, one line each with what the item is.
+2. **Show the result.** Header: `Session <session_id> (<timestamp>) — <title>`. Then the goal and status as recorded. Then the line on what came after the report, when *What came after the reports* asks for one. Then the items under **In progress**, **Agreed, not started** and **Known defects**, each with its state and either its evidence or, for Not confirmed, the check that would settle it. Then **Closed since recorded**, one line each with the evidence that closes it, and **Not problems**, one line each with what the item is.
 
 3. **Continue, stop or ask.**
    - The user already named the item or goal to resume, in this request or earlier in the conversation (`requested_item` carries it when the skill was invoked with `--item`): after the check, continue with that one, without asking which item.
@@ -92,21 +106,22 @@ For `items` and `incomplete`:
 
 ### No subcommand: resume the work
 
-`/recall` with no subcommand asks to resume the work where recent sessions left it. The output is JSON: `sessions` holds the three newest reports, newest first, each in the shape of the `resume` output (without `requested_item`) plus `malformed`; `available` counts all reports (all of that user's with `--me` or `--user`); `skipped_empty` and `unreadable` name files among the three that could not be read.
+`/recall` with no subcommand asks to resume the work where recent sessions left it. The output is JSON: `sessions` holds the three newest reports, newest first, each in the shape of the `resume` output (without `requested_item`) plus `malformed`; `available` counts all reports (all of that user's with `--me` or `--user`); `skipped_empty` and `unreadable` name files among the three that could not be read; `after_report` covers what came after the newest of them.
 
 Without options the reports are anyone's: the sessions directory is shared by everyone who commits reports to the repository. `--me` keeps only the reports of the current git user, and `--user <name>` (or `-u <name>`) those of another user, matched against the user part of the filename. `user` in the JSON names the user the reports were kept for, and is null without an option. When you load this skill for a user who asks to resume their own work, pass `--me`.
 
-1. **Sort and check.** Gather the pending items of all the reports. An item a newer report carries over from an older one counts once, with the newest report that lists it. An item a newer report says it closed follows the closing rule of *What a pending item is*. Sort the §6.3 items, then check every In progress, Agreed, not started and Known defects item within *What a check can and cannot settle*.
+1. **Read, sort and check.** Read every file in `after_report.memory.files` (*What came after the reports*). Gather the pending items of all the reports. An item a newer report carries over from an older one counts once, with the newest report that lists it. An item a newer report or a memory says it closed follows the closing rule of *What a pending item is*. Sort the §6.3 items, then check every In progress, Agreed, not started and Known defects item within *What a check can and cannot settle*.
 
 2. **Show the result**, in this order:
    - one line per report: `<session_id> (<timestamp>) — <goal_status> — <title>`;
+   - the line on what came after the newest report, when *What came after the reports* asks for one;
    - the open items under **In progress**, **Agreed, not started** and **Known defects**, each tagged with its session and its state (Still pending, Still a defect or Not confirmed), with its evidence or, for Not confirmed, the check that would settle it and its cost when known;
    - **Closed since recorded**: one line each, with the evidence that closes it;
    - **Not problems**: one line each, with what the item is.
 
    A report whose `pending_state` is `none` adds no items. One whose state is `incomplete` is named with its `incomplete_reasons`, and never described as having no pending items. Name `skipped_empty`, `unreadable` and malformed reports in a last line.
 
-3. **Continue or ask.** If the user already named the item or goal to resume in this conversation, continue with that one. Otherwise the candidates are the open items, in this order: In progress, then Known defects, then Agreed, not started, first the items marked Still pending or Still a defect and then those marked Not confirmed; within each group, the newer report first.
+3. **Continue or ask.** If the user already named the item or goal to resume in this conversation, continue with that one. Otherwise the candidates are the open items, in this order: Known defects, then In progress, then Agreed, not started; within each group, the items marked Still a defect or Still pending before those marked Not confirmed, then the newer report first. A defect is never left out of the options for an item of another group, whatever its state: Not confirmed says how far reading got, not how much the defect matters. Each defect is an option of its own, never folded into another item; when another item's work would run its check, its description says so and names what that work leaves unsettled.
    - none: say that nothing these reports recorded is still open, and stop;
    - one or more: ask once with `AskUserQuestion`. Offer at most three candidates, in that order. Each label names the item and its checked state; each description gives enough context to decide and, for a Not confirmed item, the check it starts with. A final option reads `None — just reviewing`. Name any further candidates in the question text, so the user can still choose one in a free-text answer. A single candidate is asked about too: never start an item the user did not choose.
 
@@ -118,4 +133,4 @@ Without options the reports are anyone's: the sessions directory is shared by ev
 
 ## Failure modes
 
-The script reports these instead of hiding them: a missing sessions directory (no reports; nothing is created), an unreadable directory or a failing helper (an error), files skipped for missing anchors, empty or unreadable files, invalid `--limit`, `<n>` or filter values, an invalid regular expression, an unknown subcommand, and an ambiguous reference.
+The script reports these instead of hiding them: a missing sessions directory (no reports; nothing is created), an unreadable directory or a failing helper (an error), files skipped for missing anchors, empty or unreadable files, invalid `--limit`, `<n>` or filter values, an invalid regular expression, an unknown subcommand, and an ambiguous reference. Memories or sessions that could not be listed show in `after_report` (its `state`, or `error`) and never fail the lookup.

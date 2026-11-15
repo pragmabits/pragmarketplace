@@ -41,7 +41,9 @@ export GIT_CONFIG_NOSYSTEM=1
 export GIT_CONFIG_GLOBAL="$ROOT_TMP/gitconfig"
 export GIT_CEILING_DIRECTORIES="$ROOT_TMP"
 unset CLAUDE_PROJECT_DIR CLAUDE_PLUGIN_ROOT GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE \
-  GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
+  GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL \
+  CLAUDE_CONFIG_DIR CLAUDE_CODE_PROJECT_DIR_NAME CLAUDE_COWORK_MEMORY_PATH_OVERRIDE \
+  CLAUDE_CODE_REMOTE_MEMORY_DIR RECALL_CURRENT_SESSION
 git config --file "$GIT_CONFIG_GLOBAL" user.name "Test User"
 git config --file "$GIT_CONFIG_GLOBAL" user.email "test@example.invalid"
 git config --file "$GIT_CONFIG_GLOBAL" init.defaultBranch main
@@ -183,6 +185,7 @@ skill_block_in() {
   local dir="$1" args="$2" block
   block="$(awk '/^```!$/ { on = 1; next } on && /^```$/ { exit } on' "$PLUGIN/skills/recall/SKILL.md")"
   block="${block//'${CLAUDE_SKILL_DIR}'/"$PLUGIN/skills/recall"}"
+  block="${block//'${CLAUDE_SESSION_ID}'/test-session}"
   block="${block//'$ARGUMENTS'/"$args"}"
   RC=0
   OUT="$(cd "$dir" && bash -c "$block" 2>&1)" || RC=$?
@@ -857,13 +860,15 @@ test_D16() {
   for id in carol-2026-05-04T090000 alice-2026-05-03T090000 bob-2026-05-02T090000; do
     view="$(printf '%s' "$direct" | jq -S --arg id "$id" '.sessions[] | select(.session_id == $id) | del(.malformed)')"
     recall_in "$r" resume "$id"
-    assert_eq "$id: same view as resume" "$(printf '%s' "$OUT" | jq -S .)" "$view"
+    assert_eq "$id: same view as resume" "$(printf '%s' "$OUT" | jq -S 'del(.after_report)')" "$view"
   done
 
   recall_in "$r" ""
   assert_eq "an empty argument string is the same form" "$direct" "$OUT"
   skill_block_in "$r" ""
-  assert_eq "the skill's !-block gives the same output" "$direct" "$OUT"
+  assert_eq "the skill's !-block gives the same output" "$(printf '%s' "$direct" | jq 'del(.after_report.sessions.current)')" \
+    "$(printf '%s' "$OUT" | jq 'del(.after_report.sessions.current)')"
+  assert_eq "the skill's !-block passes the session's id" "test-session" "$(printf '%s' "$OUT" | jq -r '.after_report.sessions.current')"
   skill_block_in "$r" "bogus"
   assert_contains "an unknown subcommand is named as an error before the usage line" "$OUT" $'error: unknown subcommand: bogus\nUsage: /recall'
   assert_eq "the skill's !-block exits 0" 0 "$RC"
@@ -964,6 +969,144 @@ test_D17() {
   done
 
   check "prepare-report.sh names files with the helper --me uses" 'grep -q "report_file_user" "$PREPARE"'
+}
+
+# The folder name Claude Code gives an ASCII path under <config>/projects.
+claude_key() { printf '%s' "$1" | sed 's/[^a-zA-Z0-9]/-/g'; }
+
+# A memory file with front matter. Args: path, name, description, UTC stamp for touch -t.
+write_memory() {
+  printf -- '---\nname: %s\ndescription: %s\n---\n\nbody\n' "$2" "$3" > "$1"
+  TZ=UTC touch -t "$4" "$1"
+}
+
+# A transcript. Args: path, ISO start, UTC stamp for touch -t, entrypoint, then
+# the ISO times of the user's prompts.
+write_transcript() {
+  local path="$1" start="$2" stamp="$3" entry="$4" t
+  shift 4
+  printf '{"type":"mode"}\n{"type":"attachment","timestamp":"%s","entrypoint":"%s"}\n' "$start" "$entry" > "$path"
+  for t in "$@"; do
+    printf '{"type":"user","timestamp":"%s","entrypoint":"%s","message":{"role":"user","content":"a prompt"}}\n' "$t" "$entry" >> "$path"
+  done
+  TZ=UTC touch -t "$stamp" "$path"
+}
+
+test_D19() {
+  local r s mem tr key a
+  r="$(new_repo d19)"
+  s="$r/.harness/sessions"
+  mkdir -p "$s"
+  write_report "$s/alice-2026-05-01T090000.md" 2026-05-01T090000Z "Older"
+  write_report "$s/alice-2026-05-03T090000.md" 2026-05-03T090000Z "Newest"
+  export CLAUDE_CONFIG_DIR="$ROOT_TMP/d19-config"
+  key="$(claude_key "$r")"
+  tr="$CLAUDE_CONFIG_DIR/projects/$key"
+  mem="$tr/memory"
+  mkdir -p "$mem"
+  write_memory "$mem/decisions.md" decisions '"Compose stop order checked in the source"' 202605031000
+  write_memory "$mem/older.md" older "changed before the newest report" 202605030800
+  write_memory "$mem/escaped.md" escaped '"say \"aplique\" here"' 202605031000
+  write_memory "$mem/single.md" single "'it''s fine'" 202605031000
+  printf -- '---\nname: folded\ndescription: >-\n  first line\n  second line\n---\n' > "$mem/folded.md"
+  printf -- '---\nname: unclosed\n\nname: from the body\n' > "$mem/unclosed.md"
+  printf -- '- [Decisions](decisions.md)\n' > "$mem/MEMORY.md"
+  printf 'no front matter\n' > "$mem/plain.md"
+  TZ=UTC touch -t 202605031000 "$mem/MEMORY.md" "$mem/plain.md" "$mem/folded.md" "$mem/unclosed.md"
+  # The report is at 09:00. Each line: who, start, last write, entrypoint, prompts.
+  write_transcript "$tr/s-after.jsonl" 2026-05-03T11:00:00.000Z 202605031100 cli 2026-05-03T11:00:00.000Z
+  write_transcript "$tr/s-resumed.jsonl" 2026-05-03T11:00:00.000Z 202605031130 cli 2026-05-03T11:00:00.000Z 2026-05-03T11:20:00.000Z
+  write_transcript "$tr/s-spanning.jsonl" 2026-05-03T08:00:00.000Z 202605031000 cli 2026-05-03T08:30:00.000Z 2026-05-03T10:00:00.000Z
+  write_transcript "$tr/s-reporting.jsonl" 2026-05-03T07:00:00.000Z 202605030905 cli 2026-05-03T08:00:00.000Z
+  write_transcript "$tr/s-headless.jsonl" 2026-05-03T10:40:00.000Z 202605031040 sdk-cli 2026-05-03T10:40:00.000Z
+  write_transcript "$tr/s-current.jsonl" 2026-05-03T12:00:00.000Z 202605031210 cli 2026-05-03T12:00:00.000Z 2026-05-03T12:10:00.000Z
+  write_transcript "$tr/s-current-origin.jsonl" 2026-05-03T12:00:00.000Z 202605031200 cli 2026-05-03T12:00:00.000Z
+  write_transcript "$tr/s-tools.jsonl" 2026-05-03T10:30:00.000Z 202605031030 cli
+  {
+    printf '{"type":"user","timestamp":"2026-05-03T10:31:00.000Z","message":{"content":[{"type":"tool_result","content":"x"}]}}\n'
+    printf '{"type":"user","isMeta":true,"timestamp":"2026-05-03T10:32:00.000Z","message":{"content":"skill text"}}\n'
+    printf '{"type":"user","isCompactSummary":true,"timestamp":"2026-05-03T10:33:00.000Z","message":{"content":"summary"}}\n'
+  } >> "$tr/s-tools.jsonl"
+  TZ=UTC touch -t 202605031033 "$tr/s-tools.jsonl"
+
+  export RECALL_CURRENT_SESSION=s-current
+  recall_in "$r"
+  a="$(printf '%s' "$OUT" | jq -c .after_report)"
+  assert_eq "no subcommand exits 0" 0 "$RC"
+  assert_eq "the moment is the newest report's" "alice-2026-05-03T090000 2026-05-03T09:00:00Z" \
+    "$(printf '%s' "$a" | jq -r '"\(.report) \(.since)"')"
+  assert_eq "memory is found where Claude Code keeps it" "read default $mem" \
+    "$(printf '%s' "$a" | jq -r '"\(.memory.state) \(.memory.source) \(.memory.dir)"')"
+  assert_eq "only memories changed after the report, the index left out" "decisions.md escaped.md folded.md plain.md single.md unclosed.md" \
+    "$(printf '%s' "$a" | jq -r '[.memory.files[].path | split("/") | last] | sort | join(" ")')"
+  assert_eq "name and description come from the front matter, quotes removed" "decisions|Compose stop order checked in the source|2026-05-03T10:00:00Z" \
+    "$(printf '%s' "$a" | jq -r '.memory.files[] | select(.path | endswith("/decisions.md")) | "\(.name)|\(.description)|\(.modified)"')"
+  assert_eq "escapes, single quotes and block values are read as YAML gives them" 'say "aplique" here|it'"'"'s fine|first line second line' \
+    "$(printf '%s' "$a" | jq -r '[.memory.files[] | select(.name == "escaped" or .name == "single" or .name == "folded")] | sort_by(.name) | [.[0], .[2], .[1]] | map(.description) | join("|")')"
+  assert_eq "a memory without front matter, or with one that never closes, has no name" "null null" \
+    "$(printf '%s' "$a" | jq -r '[.memory.files[] | select(.path | endswith("/plain.md") or endswith("/unclosed.md")) | .name] | map(tostring) | join(" ")')"
+  assert_eq "sessions where the user wrote after the newest report, newest activity first" \
+    "s-resumed,s-after=2@2026-05-03T11:30:00Z s-spanning=1@2026-05-03T10:00:00Z" \
+    "$(printf '%s' "$a" | jq -r '[.sessions.items[] | "\(.ids | join(","))=\(.prompts_after)@\(.last_active)"] | join(" ")')"
+  assert_eq "the newest report sets the sessions' moment, and the current session is named" "alice-2026-05-03T090000 2026-05-03T09:00:00Z s-current" \
+    "$(printf '%s' "$a" | jq -r '.sessions | "\(.after) \(.since) \(.current)"')"
+  unset RECALL_CURRENT_SESSION
+  recall_in "$r"
+  assert_eq "without the session's id, this session and the file it was resumed from are listed" "s-current,s-current-origin null" \
+    "$(printf '%s' "$OUT" | jq -r '.after_report.sessions | "\(.items[0].ids | join(",")) \(.current)"')"
+
+  recall_in "$r" resume alice-2026-05-01T090000
+  assert_eq "resume takes the memories' moment from the report resumed, the sessions' from the newest" \
+    "alice-2026-05-01T090000 older.md alice-2026-05-03T090000" \
+    "$(printf '%s' "$OUT" | jq -r '.after_report | "\(.report) \([.memory.files[].path | split("/") | last] | map(select(. == "older.md")) | join(" ")) \(.sessions.after)"')"
+
+  mkdir -p "$r/.claude" "$HOME/custom-memory"
+  printf '{"autoMemoryDirectory": "~/custom-memory/"}\n' > "$r/.claude/settings.local.json"
+  write_memory "$HOME/custom-memory/moved.md" moved "a memory in the folder the settings name" 202605031000
+  recall_in "$r"
+  assert_eq "autoMemoryDirectory in the local settings moves the memory folder" \
+    "$HOME/custom-memory|autoMemoryDirectory in $r/.claude/settings.local.json|moved" \
+    "$(printf '%s' "$OUT" | jq -r '.after_report.memory | "\(.dir)|\(.source)|\([.files[].name] | join(" "))"')"
+  ln -s "$HOME/custom-memory" "$HOME/linked-memory"
+  printf '{"autoMemoryDirectory": "~/linked-memory"}\n' > "$r/.claude/settings.local.json"
+  recall_in "$r"
+  assert_eq "a memory folder that is a symbolic link is listed through it" "read moved" \
+    "$(printf '%s' "$OUT" | jq -r '.after_report.memory | "\(.state) \([.files[].name] | join(" "))"')"
+  rm -rf "$r/.claude"
+
+  chmod 000 "$mem"
+  recall_in "$r"
+  assert_eq "an unreadable memory folder is named, and the lookup still answers" "0 unreadable 2" \
+    "$(printf '%s' "$OUT" | jq -r '"\(.after_report.memory.state) \(.sessions | length)"' | sed "s/^/$RC /")"
+  chmod 755 "$mem"
+
+  (cd "$r" && git worktree add -q "$ROOT_TMP/d19-worktree" 2>/dev/null)
+  mkdir -p "$ROOT_TMP/d19-worktree/.harness/sessions"
+  write_report "$ROOT_TMP/d19-worktree/.harness/sessions/alice-2026-05-03T090000.md" 2026-05-03T090000Z "Worktree"
+  recall_in "$ROOT_TMP/d19-worktree"
+  assert_eq "a worktree shares the main working tree's memory and keeps its own sessions" \
+    "$mem $CLAUDE_CONFIG_DIR/projects/$(claude_key "$ROOT_TMP/d19-worktree")" \
+    "$(printf '%s' "$OUT" | jq -r '.after_report | "\(.memory.dir) \(.sessions.dir)"')"
+
+  local long longkey
+  long="$(new_repo "$(printf 'l%.0s' $(seq 1 210))")"
+  mkdir -p "$long/.harness/sessions"
+  write_report "$long/.harness/sessions/alice-2026-05-03T090000.md" 2026-05-03T090000Z "Long"
+  longkey="$(claude_key "$long")"
+  mkdir -p "$CLAUDE_CONFIG_DIR/projects/${longkey:0:200}-abc123/memory"
+  recall_in "$long"
+  assert_eq "a key past 200 characters is found by its prefix" "read $CLAUDE_CONFIG_DIR/projects/${longkey:0:200}-abc123/memory" \
+    "$(printf '%s' "$OUT" | jq -r '.after_report.memory | "\(.state) \(.dir)"')"
+  mkdir -p "$CLAUDE_CONFIG_DIR/projects/${longkey:0:200}-def456/memory"
+  recall_in "$long"
+  assert_eq "two folders with that prefix leave it unresolved" "unresolved null" \
+    "$(printf '%s' "$OUT" | jq -r '.after_report.memory | "\(.state) \(.dir)"')"
+
+  export CLAUDE_CONFIG_DIR="$ROOT_TMP/d19-empty"
+  recall_in "$r"
+  assert_eq "without memory or sessions, both are missing and the lookup still answers" "0 missing missing 2" \
+    "$(printf '%s' "$OUT" | jq -r '"\(.after_report.memory.state) \(.after_report.sessions.state) \(.sessions | length)"' | sed "s/^/$RC /")"
+  check "the lookup changed no file of the project" '[[ -z "$(cd "$r" && git status --porcelain --untracked-files=no)" ]]'
 }
 
 test_C_CHECK() {
@@ -1213,7 +1356,8 @@ test_A05() {
     a="$(cd "$r" && bash "$RECALL" "$@" 2>&1)" || ra=$?
     b="$(cd "$r" && python3 -I "$CODEX_RECALL" "$@" 2>&1)" || rb=$?
     if [[ $kind == json ]]; then
-      a="$(printf '%s\n' "$a" | sed '/^Only /d' | jq -S .)"; b="$(printf '%s\n' "$b" | sed '/^Only /d' | jq -S .)"
+      # after_report lists Claude Code's memories and sessions; the Codex reader has none to list.
+      a="$(printf '%s\n' "$a" | sed '/^Only /d' | jq -S 'del(.after_report?)')"; b="$(printf '%s\n' "$b" | sed '/^Only /d' | jq -S .)"
     fi
     compared=$((compared + 1))
     if [[ "$a" != "$b" || $ra -ne $rb ]]; then
@@ -1502,7 +1646,7 @@ test_HOOK() {
   check "the Codex hook keeps its detection marker" 'grep -q "^# codex-git-plugin: pre-commit" "$codex_hook"'
 }
 
-ALL_TESTS="D01 D02 D03 D04 D05 D06 D07 D08 D09 D10 D11 D12 D13 D14 D15 D16 D17 D18 C_CHECK EXAMPLES INJECTION A01 A02 A03_A04 A05 A06_A08 A07_A12 A11 SENSITIVE REPO_STATE HOOK"
+ALL_TESTS="D01 D02 D03 D04 D05 D06 D07 D08 D09 D10 D11 D12 D13 D14 D15 D16 D17 D18 D19 C_CHECK EXAMPLES INJECTION A01 A02 A03_A04 A05 A06_A08 A07_A12 A11 SENSITIVE REPO_STATE HOOK"
 SELECTED="${*:-$ALL_TESTS}"
 
 for id in $SELECTED; do

@@ -83,11 +83,11 @@
       "id": "C17",
       "setup_note": "Three fictitious reports with four §6.1/§6.2 items that the repository shows are not done, spread across them, and one §6.3 suspected defect whose trigger the code shows but whose failure nothing current confirms.",
       "prompt": "/recall",
-      "expected_output": "The assistant checks the items, then asks once with AskUserQuestion: three candidates, In progress before Agreed and newer report first, plus 'None — just reviewing'; the fourth §6.1/§6.2 item and the Not confirmed defect, with the check it starts with, are named in the question text.",
+      "expected_output": "The assistant checks the items, then asks once with AskUserQuestion: the Not confirmed defect first, as an option of its own with the check it starts with, then two of the four §6.1/§6.2 items, In progress before Agreed and newer report first, plus 'None — just reviewing'; the other two §6.1/§6.2 items are named in the question text.",
       "expectations": [
         "Exactly one AskUserQuestion call, with at most three candidate options and a 'None — just reviewing' option",
-        "The fourth §6.1/§6.2 candidate is named in the question text",
-        "The §6.3 defect is shown as Not confirmed with the check that would settle it, and is named as a candidate in the question text, after the Still pending items",
+        "The §6.3 defect is one of the options, shown as Not confirmed with the check that would settle it, and is not folded into another item's option",
+        "The two §6.1/§6.2 candidates left out of the options are named in the question text",
         "No work starts before the answer"
       ]
     },
@@ -146,6 +146,29 @@
         "The empty-page defect is Still a defect, citing the recorded failing test and the unchanged src/pager.py",
         "The loop is Not confirmed and names the check that would settle it",
         "Neither item is described as verified or tested in this run"
+      ]
+    },
+    {
+      "id": "C23",
+      "setup_note": "Two fictitious reports. The newest lists in §6.2 'Step 8: local rehearsal' and in §6.3 'The old container may still run when the new one starts, on another Compose version' (suspected; measured only with the local Compose). A memory of the project, changed after the newest report and listed in after_report.memory.files, records that the Compose stop order was checked in the Compose source from 2.0.0 to 5.7.0 and does not depend on the version, and that step 7 is done 'without a commit'; git shows step 7 committed after the report.",
+      "prompt": "/recall",
+      "expected_output": "The assistant Reads the listed memory before classifying. The stop-order defect stays Not confirmed: its line attributes the source check to the memory by file and line and names that check, done again, as what settles it, and it is offered as an option of its own. Step 7 is shown as committed, from git; the memory's 'without a commit' is not repeated as the current state.",
+      "expectations": [
+        "Reads the memory file listed in after_report before giving any item a state",
+        "The stop-order defect is Not confirmed, citing the memory's file and line for the recorded source check, and is never shown as Resolved or under Not problems",
+        "The defect is one of the AskUserQuestion options, not folded into step 8",
+        "Step 7's state comes from the commit in git, not from the memory"
+      ]
+    },
+    {
+      "id": "C24",
+      "setup_note": "Three fictitious reports, none with open items. after_report.sessions.items lists one session in which the user wrote after the newest report, under two ids with the same start (a resumed session), and after_report.memory.files is empty.",
+      "prompt": "/recall",
+      "expected_output": "Besides the report lines, one line says that the user worked in one session after the newest report, when it was last active, and that what it did after the report is only in the memories, the commits and the files.",
+      "expectations": [
+        "One line names the session after the newest report and when it was last active",
+        "The two ids are counted as one session",
+        "Nothing is claimed about what that session did"
       ]
     }
   ]

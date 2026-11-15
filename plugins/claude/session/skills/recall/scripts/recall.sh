@@ -33,6 +33,23 @@
 #   "empty": true means the report says `none` in all three subsections. A
 #   missing, truncated or unreadable §6 is "incomplete", never "empty".
 #
+# after_report (3.3.0; resume and the form without a subcommand): what no
+# report records, because it came after the report resumed or the newest of
+# the reports read (lib/after-report.sh):
+#   { "report": str, "since": "YYYY-MM-DDTHH:MM:SSZ",
+#     "memory": { "state": "read" | "missing" | "unreadable" | "unresolved",
+#                 "dir", "source", "reason",
+#                 "files": [{ "path", "name", "description", "modified" }] },
+#     "sessions": { "after": <newest report in the directory>, "since",
+#                   "state": <same values>, "dir", "current",
+#                   "items": [{ "started", "last_active", "prompts_after",
+#                               "ids": [str] }] } }
+#   or { "error": str } when it could not be computed. sessions holds the
+#   sessions in which the user wrote after the newest report in the directory;
+#   $RECALL_CURRENT_SESSION, which the skill sets to the session's id, keeps
+#   that session (and the file it was resumed from) out. The Codex reader has
+#   no such block: the readers agree on everything else.
+#
 # Exit codes: 0 success (including "no sessions" notices), 1 error, 2 usage
 # error or ambiguous reference. With --args-stdin, the form the skill uses, the
 # exit code is always 0: Claude Code aborts a skill whose !-command exits
@@ -44,6 +61,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib/sessions.sh
 source "${SCRIPT_DIR}/lib/sessions.sh"
+# shellcheck source=lib/after-report.sh
+source "${SCRIPT_DIR}/lib/after-report.sh"
 REPORT_JQ="${SCRIPT_DIR}/lib/report.jq"
 
 NO_SESSIONS='No sessions found in .harness/sessions/'
@@ -122,6 +141,20 @@ run_report_jq() {
     --arg available "${AVAILABLE:-}" \
     "$@" \
     ${INPUT_FILES[@]+"${INPUT_FILES[@]}"} </dev/null
+}
+
+# Add after_report to the JSON object on stdin. Args: the report that sets the
+# moment for the memories, the newest report in the directory, which sets it
+# for the sessions. A failure here never fails the lookup: after_report says so
+# instead, with the cause.
+with_after_report() {
+  local report="$1" newest="$2" after="" rc=0
+  after="$(after_report_json "$report" "$newest" "${SESSIONS_DIR%/.harness/sessions}" "${RECALL_CURRENT_SESSION:-}" 2>&1 </dev/null)" || rc=$?
+  if [[ $rc -ne 0 ]] || ! printf '%s' "$after" | jq -e 'type == "object"' >/dev/null 2>&1; then
+    after="$(jq -n -c --arg cause "$(printf '%s' "$after" | head -c 300)" \
+      '{error: ("the memories and sessions after the report could not be listed" + (if $cause == "" then "" else ": " + $cause end))}')"
+  fi
+  jq --argjson after "$after" '. + {after_report: $after}'
 }
 
 # Split one argument string into words without evaluating anything: no
@@ -415,7 +448,8 @@ cmd_resume() {
   EMPTY_IDS=""
   UNREADABLE_IDS=""
   run_report_jq resume --arg limit "" --arg item "$item" \
-    --arg f_user "" --arg f_branch "" --arg f_status "" --arg f_since "" --arg f_until "" --arg criteria ""
+    --arg f_user "" --arg f_branch "" --arg f_status "" --arg f_since "" --arg f_until "" --arg criteria "" \
+    | with_after_report "$file" "${SESSION_FILES[0]}"
 }
 
 # ---------------------------------------------------------------------------
@@ -526,6 +560,7 @@ cmd_recent() {
   load_or_notice || rc=$?
   [[ $rc -eq 10 ]] && return 0
   [[ $rc -ne 0 ]] && return 1
+  local newest="${SESSION_FILES[0]}"
 
   if [[ -n "$user" ]]; then
     keep_user "$user"
@@ -541,7 +576,8 @@ cmd_recent() {
   fi
   prepare_inputs
   run_report_jq recent --arg limit "$RECENT_COUNT" --arg item "" \
-    --arg f_user "$user" --arg f_branch "" --arg f_status "" --arg f_since "" --arg f_until "" --arg criteria ""
+    --arg f_user "$user" --arg f_branch "" --arg f_status "" --arg f_since "" --arg f_until "" --arg criteria "" \
+    | with_after_report "${SESSION_FILES[0]}" "$newest"
 }
 
 # ---------------------------------------------------------------------------
