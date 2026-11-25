@@ -1,7 +1,7 @@
 {
   "name": "session",
-  "version": "0.3.0",
-  "description": "Session handoff reports and recall helpers for Codex. Writes reports under the project root .harness/sessions directory, shared with the Claude Code session plugin and in the same format, and retrieves prior work from either tool through list, filter, grep, resume and last workflows.",
+  "version": "0.4.0",
+  "description": "Write and validate session handoff reports in the project root .harness/sessions directory, shared with Claude Code. Recall reports from either tool and check for Codex activity after the newest report.",
   "author": {
     "name": "pragmabits",
     "email": "leonardoleoncio96@gmail.com",

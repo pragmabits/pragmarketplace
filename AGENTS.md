@@ -29,7 +29,7 @@ Do not use shell redirection, `tee`, `sed -i`, ad hoc scripts, formatters, code 
 
 - `.claude-plugin/marketplace.json`: central Claude plugin registry and published version source of truth.
 - `plugins/claude/<plugin>/.claude-plugin/plugin.json`: per-plugin Claude manifest.
-- `plugins/codex/<plugin>/.codex-plugin/plugin.json`: per-plugin Codex manifest. Current Codex plugins: `git` `0.2.1` and `session` `0.3.0`.
+- `plugins/codex/<plugin>/.codex-plugin/plugin.json`: per-plugin Codex manifest. Current Codex plugins: `git` `0.3.0` and `session` `0.4.0`.
 - `.agents/plugins/marketplace.json`: Codex marketplace metadata for repo-local Codex plugins.
 - `.harness/sessions/`: session handoff reports, shared by the Claude Code and Codex `session` plugins. This belongs to the user project, not to Claude, Codex, `.agents`, or any plugin runtime.
 - `.codex/config.toml`: project-local Codex configuration and filesystem permission profile.
