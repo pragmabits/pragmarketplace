@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import runpy
 import shutil
 import subprocess
 import sys
@@ -23,6 +24,7 @@ from pathlib import Path
 PLUGIN = Path(__file__).resolve().parent.parent
 RECALL = PLUGIN / "scripts" / "session_recall.py"
 REPORT = PLUGIN / "scripts" / "session_report.py"
+HISTORY = PLUGIN / "scripts" / "session_history.py"
 
 HEADER = """# Session Report: {title}
 
@@ -131,8 +133,9 @@ class SessionTests(unittest.TestCase):
         return subprocess.run(["git", *args], cwd=self.repo, env=self.env, check=True, text=True,
                               stdout=subprocess.PIPE).stdout
 
-    def run_script(self, script: Path, *args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
-        return subprocess.run([sys.executable, "-I", str(script), *args], cwd=self.repo, env=env or self.env,
+    def run_script(self, script: Path, *args: str, env: dict[str, str] | None = None,
+                   cwd: Path | None = None) -> subprocess.CompletedProcess:
+        return subprocess.run([sys.executable, "-B", "-I", str(script), *args], cwd=cwd or self.repo, env=env or self.env,
                               text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
     def recall(self, *args: str) -> subprocess.CompletedProcess:
@@ -153,7 +156,7 @@ class SessionTests(unittest.TestCase):
         (self.repo / ".sessions").mkdir()
         (self.repo / ".sessions" / "a-2026-05-01T100000.md").write_text(report("2026-05-01T100000"))
         before = self.tree()
-        for args in (["list"], ["filter", "status:achieved"], ["grep", "x"], ["resume"], ["last", "2"]):
+        for args in ([], ["list"], ["filter", "status:achieved"], ["grep", "x"], ["resume"], ["last", "2"]):
             result = self.recall(*args)
             self.assertEqual(result.returncode, 0, result.stdout)
             self.assertIn("No sessions found in .harness/sessions/ (the directory does not exist)", result.stdout)
@@ -216,6 +219,91 @@ class SessionTests(unittest.TestCase):
         future = json.loads(self.recall("resume", "c-").stdout)["origin"]
         self.assertEqual((future["harness"], future["model"]["state"], future["agent"]), ("next-tool", "confirmed", None))
 
+    def test_recent_returns_three_report_views_and_filters_by_git_user(self) -> None:
+        for user, date in (("test-user", "01"), ("someone-else", "02"), ("test-user", "03"), ("someone-else", "04")):
+            stamp = f"2026-05-{date}T100000"
+            self.write(f"{user}-{stamp}.md", report(stamp, pending=PENDING_ITEMS))
+        data = json.loads(self.recall().stdout)
+        self.assertEqual((data["requested"], data["available"]), (3, 4))
+        self.assertEqual([s["session_id"] for s in data["sessions"]], [
+            "someone-else-2026-05-04T100000", "test-user-2026-05-03T100000", "someone-else-2026-05-02T100000",
+        ])
+        self.assertEqual(data["sessions"][0]["subsections"]["known_issues"][0]["cells"][1], "confirmed")
+        self.assertEqual(json.loads(self.recall("--me").stdout)["available"], 2)
+        self.assertEqual(json.loads(self.recall("--user", "Someone Else").stdout)["user"], "someone-else")
+        self.assertEqual(self.recall("--me", "--user", "me").returncode, 2)
+
+    def test_history_matches_worktrees_and_excludes_current_thread(self) -> None:
+        module = runpy.run_path(str(HISTORY))
+        namespace = module["read_activity"].__globals__
+        namespace["rpc"] = lambda *_: {}
+        namespace["project_worktrees"] = lambda: ["/project", "/worktree"]
+        root = {"cwd": "/project", "updatedAt": 102, "id": "current"}
+        related = {"cwd": "/worktree", "updatedAt": 103, "id": "next"}
+        unrelated = {"cwd": "/different", "updatedAt": 105, "id": "ignore"}
+
+        def pages(_, method, params):
+            if method == "thread/list":
+                return iter([] if params["archived"] else [unrelated, related, root])
+            self.assertEqual(params["threadId"], "next")
+            return iter([{"startedAt": 99, "completedAt": 103, "items": [
+                {"id": "before", "type": "userMessage", "startedAtMs": 99000},
+                {"id": "after", "type": "userMessage", "startedAtMs": 102000, "content": ["private text"]},
+                {"id": "tool", "type": "commandExecution", "startedAtMs": 102500},
+            ]}])
+
+        namespace["pages"] = pages
+        result = module["read_activity"](None, 100, "current")
+        self.assertEqual(result["state"], "read")
+        self.assertEqual([(item["ids"], item["prompts_after"]) for item in result["items"]], [(["next"], 1)])
+        self.assertNotIn("private text", json.dumps(result))
+
+    def test_recall_keeps_reports_when_the_app_server_is_unavailable(self) -> None:
+        stamp = "2026-05-06T100000"
+        self.write(f"test-user-{stamp}.md", report(stamp, pending=PENDING_ITEMS))
+        binaries = self.tmp / "bin"
+        binaries.mkdir()
+        (binaries / "git").symlink_to(shutil.which("git"))
+        result = self.run_script(RECALL, "--after-report", env={**self.env, "PATH": str(binaries)})
+        self.assertEqual(result.returncode, 0, result.stdout)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["sessions"][0]["pending_state"], "items")
+        self.assertEqual(data["after_report"]["sessions"]["state"], "unavailable")
+
+    def test_recall_reports_local_profile_database_failure_without_leaking_diagnostics(self) -> None:
+        stamp = "2026-05-06T100000"
+        self.write(f"test-user-{stamp}.md", report(stamp, pending=PENDING_ITEMS))
+        binaries = self.tmp / "bin"
+        binaries.mkdir()
+        (binaries / "git").symlink_to(shutil.which("git"))
+        codex = binaries / "codex"
+        codex.write_text(
+            "#!/bin/sh\n"
+            "printf '%s\\n' 'failed to initialize sqlite state runtime at /private/example: "
+            "unable to open database file' >&2\n"
+            "exit 1\n"
+        )
+        codex.chmod(0o755)
+        result = self.run_script(RECALL, "--after-report", env={**self.env, "PATH": str(binaries)})
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertEqual(json.loads(result.stdout)["after_report"]["sessions"]["reason"], "local-profile-access")
+        self.assertNotIn("/private/example", result.stdout)
+
+    def test_updated_thread_without_turns_keeps_history_partial(self) -> None:
+        module = runpy.run_path(str(HISTORY))
+        namespace = module["read_activity"].__globals__
+        namespace["rpc"] = lambda *_: {}
+        namespace["project_worktrees"] = lambda: ["/project"]
+
+        def pages(_, method, params):
+            if method == "thread/list" and not params["archived"]:
+                yield {"cwd": "/project", "updatedAt": 102, "id": "later"}
+
+        namespace["pages"] = pages
+        result = module["read_activity"](None, 100, "current")
+        self.assertEqual(result["state"], "partial")
+        self.assertEqual(result["items"], [])
+
     # --- prepare ----------------------------------------------------------
 
     def test_prepare(self) -> None:
@@ -242,6 +330,70 @@ class SessionTests(unittest.TestCase):
         data = json.loads(self.run_script(REPORT, "prepare").stdout)
         self.assertRegex(data["session_id"], r"-\d+$")
         self.assertFalse(Path(data["output_path"]).exists())
+
+    def valid_report(self, pending: str = PENDING_NONE) -> Path:
+        stamp = "2026-05-06T100000"
+        headings = "".join(f"## {number}. Section\n\nnone\n\n" for number in range(1, 6))
+        text = report(stamp, pending=headings + pending)
+        return self.write(f"test-user-{stamp}.md", text)
+
+    def test_report_checker_rejects_sensitive_or_incoherent_content_without_echoing(self) -> None:
+        path = self.valid_report(PENDING_ITEMS)
+        self.assertEqual(self.run_script(REPORT, "check", str(path)).returncode, 0)
+        value = "example_" + "invalid"
+        original = path.read_text().replace("100000Z", "100001Z").replace("| confirmed |", "| hypothesis |")
+        path.write_text(original + f"\nservice_token={value}\n")
+        result = self.run_script(REPORT, "check", str(path))
+        self.assertEqual(result.returncode, 3, result.stdout)
+        for category in ("sensitive:", "coherence:", "structure:"):
+            self.assertIn(category, result.stdout)
+        self.assertNotIn(value, result.stdout)
+
+    def test_report_commit_from_subdirectory_is_isolated_and_idempotent(self) -> None:
+        path = self.valid_report()
+        nested = self.repo / "subdir"
+        nested.mkdir()
+        same_name = nested / path.relative_to(self.repo)
+        same_name.parent.mkdir(parents=True)
+        same_name.write_text("unrelated namesake\n")
+        (self.repo / "base.txt").write_text("selected by user\n")
+        self.git("add", "--", "base.txt")
+        planned = self.run_script(REPORT, "plan-commit", str(path), cwd=nested)
+        self.assertEqual(planned.returncode, 0, planned.stdout)
+        plan = json.loads(planned.stdout)
+        self.assertEqual(plan["result"], "ready")
+        self.assertEqual(plan["path"], path.relative_to(self.repo).as_posix())
+        self.git("add", "--", plan["path"])
+        arguments = [plan[key] for key in ("path", "head", "blob", "other_index")]
+        staged = self.run_script(REPORT, "check-staged", *arguments)
+        self.assertEqual(staged.returncode, 0, staged.stdout)
+        self.git("commit", "--only", "-m", plan["message"], "--", plan["path"])
+        verified = json.loads(self.run_script(REPORT, "verify-commit", *arguments).stdout)
+        self.assertEqual(verified["result"], "committed", verified)
+        self.assertEqual(self.git("diff", "--cached", "--name-only").splitlines(), ["base.txt"])
+        repeat = json.loads(self.run_script(REPORT, "plan-commit", str(path)).stdout)
+        self.assertEqual(repeat["result"], "already-committed")
+
+    def test_report_hook_rejection_preserves_other_staging(self) -> None:
+        path = self.valid_report()
+        (self.repo / "base.txt").write_text("existing staging\n")
+        self.git("add", "--", "base.txt")
+        hook = self.repo / ".git" / "hooks" / "commit-msg"
+        hook.write_text("#!/bin/sh\nexit 1\n")
+        hook.chmod(0o755)
+        plan = json.loads(self.run_script(REPORT, "plan-commit", str(path)).stdout)
+        self.git("add", "--", plan["path"])
+        arguments = [plan[key] for key in ("path", "head", "blob", "other_index")]
+        attempt = subprocess.run(["git", "commit", "--only", "-m", plan["message"], "--", plan["path"]],
+                                 cwd=self.repo, env=self.env, capture_output=True)
+        self.assertNotEqual(attempt.returncode, 0)
+        state = json.loads(self.run_script(REPORT, "verify-commit", *arguments).stdout)
+        self.assertEqual(state["result"], "no-commit")
+        self.assertTrue(state["other_index_preserved"])
+        self.assertEqual(state["staged_blob"], plan["blob"])
+        self.git("rm", "--cached", "--", plan["path"])
+        self.assertEqual(self.git("diff", "--cached", "--name-only").splitlines(), ["base.txt"])
+        self.assertTrue(path.exists())
 
 
 if __name__ == "__main__":

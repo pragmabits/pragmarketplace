@@ -1,6 +1,6 @@
 ---
 name: recall
-description: Look up, search and resume prior session reports in .harness/sessions — written by Codex or by another tool that follows the same report contract — via list, filter, grep, last and resume. Use when the user wants to find a past session, read back what recent reports recorded, or pick up pending work from one; to resume a specific item, pass `resume [<session-id>] --item <text>`. Reports are dated records, so resume checks the current state before offering an item as work still to do.
+description: Look up and resume reports in .harness/sessions. With no subcommand, consolidate pending work from the three newest reports, optionally limited by --me or --user. Use list, filter, grep, last, or resume for explicit lookups. Check the current project before offering a recorded item as open.
 ---
 
 # Session Recall
@@ -14,11 +14,12 @@ A report is evidence of what was recorded on its date, not the current state. No
 Run from the project, with the path resolved relative to this skill, passing each argument as its own word:
 
 ```bash
-python3 <plugin-root>/scripts/session_recall.py list [--limit N]
-python3 <plugin-root>/scripts/session_recall.py filter <key:value>... [--limit N]
-python3 <plugin-root>/scripts/session_recall.py grep <pattern> [--limit N]
-python3 <plugin-root>/scripts/session_recall.py resume [<session-id>] [--item <text>]
-python3 <plugin-root>/scripts/session_recall.py last [<n>]
+python3 -B -I <plugin-root>/scripts/session_recall.py --after-report [--me | --user <name>]
+python3 -B -I <plugin-root>/scripts/session_recall.py list [--limit N]
+python3 -B -I <plugin-root>/scripts/session_recall.py filter <key:value>... [--limit N]
+python3 -B -I <plugin-root>/scripts/session_recall.py grep <pattern> [--limit N]
+python3 -B -I <plugin-root>/scripts/session_recall.py --after-report resume [<session-id>] [--item <text>]
+python3 -B -I <plugin-root>/scripts/session_recall.py last [<n>]
 ```
 
 Filter keys (ANDed): `user:`, `status:` (`achieved`, `partial`, `abandoned`, `redirected`), `since:YYYY-MM-DD`, `until:YYYY-MM-DD`, and `branch:` for older reports that still carry a Branch field. `grep` is literal and case-insensitive; prefix `re:` for a regular expression.
@@ -41,7 +42,8 @@ The summary (120 characters at most) says what the report records about its goal
 
 ### resume
 
-The output is JSON for one report:
+The output is JSON for one report. Apply the activity reporting rules below
+for all pending states:
 
 - `pending_state: "none"` (with `empty: true`): the report states nothing was pending. Say so and stop unless the user asked for more.
 - `pending_state: "incomplete"`: the pending items could not be fully read; `incomplete_reasons` and `subsection_states` say why. Never say the session has no pending items.
@@ -51,9 +53,57 @@ For `items` and `incomplete`:
 
 1. **Sort and check.** Sort the §6.3 items (*What a pending item is*, below), then check the items within *What a check can and cannot settle*. Start from the JSON; read the file only for an item whose context is missing there. With a long list, check the items tied to what the user wants to resume, and present the rest explicitly as historical and unchecked.
 2. **Show the result**: session, timestamp, title, the recorded goal and status, then the items under **In progress**, **Agreed, not started** and **Known defects**, each with its state and either its evidence or, for Not confirmed, the check that would settle it; then **Closed since recorded** (one line each, with the evidence) and **Not problems** (one line each, with what the item is).
-3. **Continue, stop or ask.** If the user already named the item (`requested_item` carries it with `--item`), continue with it after the check, without asking which item. If the user only wanted to see the list, stop. Otherwise, when items are open (Still pending, Still a defect or Not confirmed), ask once, with the candidates in this order: In progress, then Known defects, then Agreed, not started, first those Still pending or Still a defect and then those Not confirmed; each option gives enough context to decide and, for a Not confirmed item, the check it starts with, plus an option to just review. A single candidate is asked about too: never start an item the user did not choose.
+3. **Continue, stop or ask.** If the user already named the item (`requested_item` carries it with `--item`), continue with it after the check. If the user only wanted to see the list, stop. Otherwise follow the choice rules below.
 
 A defect offered as an option is not authorization to fix it; the user's choice is. Continuing with a Not confirmed item starts with the check its state names. Work after the lookup depends on the user's current request.
+
+### With no subcommand
+
+Use this form when the user wants to pick up recent work without naming a report.
+The JSON contains the three newest reports, each in the same shape as resume
+with a malformed flag. Use --me when asked for the current Git user's work
+and --user <name> for another user's. By default the reports can be anyone's.
+
+1. Gather all pending items from the reports. If a newer report carries an
+   item over, present it once with the newer report. If a newer report says
+   the item was closed, find its evidence in the project before marking it
+   closed. Check all remaining items under the same read-only rules as resume.
+2. Identify the reports and their goals and states. Mention skipped empty,
+   unreadable, malformed or incomplete reports. Show the checked items with
+   their evidence and source report. When no open items remain, say what the
+   readable reports show, keeping any limits on coverage visible.
+3. Present the activity since the latest report and use the choice rules below
+   when open items remain.
+
+### Activity after the latest report
+
+Resume and the form without a subcommand request after_report from the local
+Codex App Server. State read means the list was read. State partial means
+some prompt timestamps or conversations could not be confirmed, or the
+current conversation might be included. State unavailable means the history
+could not be queried. If the reason is local-profile-access and the current
+request covers local history, retry the same lookup once through the client's
+approval mechanism for that command. The request covers only the current
+project and its worktrees. If the client declines or the lookup still fails,
+continue with the reports. Mention partial or unavailable coverage even if the
+report has no pending items. When sessions.items is nonempty, say how many
+conversations had user activity after the latest report and when the latest
+activity was. This activity flags a gap in the reports. Verify claims about
+the project using its commits and files.
+
+### Choosing an item
+
+If the user named the goal or item in their request, proceed with it after
+the check. If they wanted only to review, stop after presenting the results.
+Otherwise offer Known defects first, then In progress, then Agreed, not
+started. Within each group, offer Still a defect or Still pending before
+Not confirmed, and prefer the more recent report. Offer each defect separately.
+Use Codex's structured question tool when available to offer up to three
+items and a just-review option. For each candidate include its checked state
+and, for Not confirmed, the check that would settle it. Name any other open
+items so the user can choose one by name. If the structured tool is
+unavailable, present the candidates and await the user's selection. Even a
+single candidate requires a choice before starting.
 
 ### What a check can and cannot settle
 

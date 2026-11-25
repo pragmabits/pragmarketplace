@@ -18,12 +18,15 @@ It is shared with the Claude Code plugin and any other tool that follows the sam
 
 ## Skills
 
-- `report`: writes a report for the current session when the user explicitly asks for a report file. It does not commit.
-- `recall`: `list`, `filter`, `grep`, `last` and `resume` over `.harness/sessions/`. Read-only.
+- `report` writes and validates a handoff. An explicit `$report` requests an isolated commit. Add `--no-commit` to keep only the file. A request in words writes only the file unless it also asks for the commit.
+- `recall` combines the three newest reports by default. Use `--me` or `--user <name>` to select the report author, or use one of the five explicit subcommands.
 
 ```text
 $report
+$report --no-commit
 $report --lang pt-BR codex git plugin port
+$recall
+$recall --me
 $recall list --limit 10
 $recall filter status:partial since:2026-10-01
 $recall grep "marketplace"
@@ -34,7 +37,9 @@ $recall last 3
 ## Scripts
 
 ```bash
-python3 plugins/codex/session/scripts/session_report.py prepare [--lang xx-YY] [title hint]
+python3 -B -I plugins/codex/session/scripts/session_report.py prepare [--lang xx-YY] [title hint]
+python3 -B -I plugins/codex/session/scripts/session_report.py check <report-path>
+python3 plugins/codex/session/scripts/session_recall.py --after-report [--me | --user <name>]
 python3 plugins/codex/session/scripts/session_recall.py list [--limit N]
 python3 plugins/codex/session/scripts/session_recall.py filter <key:value>... [--limit N]
 python3 plugins/codex/session/scripts/session_recall.py grep <pattern> [--limit N]
@@ -44,13 +49,21 @@ python3 plugins/codex/session/scripts/session_recall.py last [<n>]
 
 `prepare` prints JSON: the output path (one clock read for the header and the filename; a taken name gets `-2`, `-3`, ..., including names written by the other tool), the git user, HEAD as observed (not the session's base), the working tree as context only, and the authorship lines. It no longer reports a branch or the commits of the last day: neither is evidence of what the session did.
 
-`session_recall.py` follows the shared contract the same way the Claude plugin's reader does; on the same reports both give identical output (checked by `plugins/claude/session/tests/run.sh`, case A05). `resume` and `last` print JSON with an explicit `pending_state` (`items`, `none` — all three subsections say `none` —, or `incomplete`, with reasons); `empty: true` appears only for `none`.
+The two readers agree on the common lookup fields tested by the Claude
+session suite's A05 case. `resume` and `last` print an explicit
+`pending_state` of `items`, `none`, or `incomplete` with reasons.
+`--after-report` asks the local Codex App Server for later user activity in
+the repository and its worktrees. It returns dates and counts. When the
+history is unavailable or incomplete, recall still returns the reports and
+describes the gap. The ordinary CLI lookups use only the report files.
+If the sandbox prevents the App Server from opening the local profile
+database, the skill can retry that lookup through Codex's per-command approval.
 
 ## Report contract
 
 The format is the Claude Code plugin's: fixed anchors (`Session contract`, `## 1.` to `## 6.`, `### 6.1` to `### 6.3`), `none` for empty sections, `\|` as a literal pipe in table cells, no Branch field. The full template and writing rules are in `skills/report/SKILL.md`; `plugins/claude/session/README.md` describes the fields.
 
-§6.3 is *Known defects*: only something in the project that fails or gives a wrong result, or is suspected to, with Status exactly `confirmed` (the failure was observed) or `suspected` (a symptom or a trigger in the project, plus the check that would settle it). A check the session's own work still needs is a §6.1 item; proposals, questions and accepted choices go to §4; the repository's state, notes, scenarios nothing triggers and problems outside the project are not pending items. Older reports carry the heading *Known issues and hypotheses* and mixed content; `resume` sorts their §6.3 items before checking them, and states in its skill what a read-only check can and cannot settle. This plugin has no report checker, so the Status rule lives only in the skill here; the Claude Code plugin's `check-report.sh` enforces it there.
+§6.3 is *Known defects*. Record project failures or suspected failures with Status `confirmed` or `suspected`. A check the session's own work still needs goes in §6.1. Proposals, questions and accepted choices go in §4. Older reports may carry the heading *Known issues and hypotheses*. Recall reads and sorts those items, and the checker applies the current contract to new reports.
 
 ### Authorship fields
 

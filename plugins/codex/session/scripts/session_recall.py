@@ -27,8 +27,9 @@ from typing import Any
 SESSIONS_REL = Path(".harness") / "sessions"
 NO_SESSIONS = "No sessions found in .harness/sessions/"
 USAGE = (
-    "Usage: session_recall.py <list [--limit N] | filter <key:value>... [--limit N] | "
-    "grep <pattern> [--limit N] | resume [<session-id>] [--item <text>] | last [<n>]>"
+    "Usage: session_recall.py [--after-report] [--me | --user <name>] | "
+    "list [--limit N] | filter <key:value>... [--limit N] | "
+    "grep <pattern> [--limit N] | resume [<session-id>] [--item <text>] | last [<n>]"
 )
 NAME_RE = re.compile(r"^(?:(?P<user>.*)-)?(?P<ts>\d{4}-\d{2}-\d{2}T\d{6})(?:-(?P<n>\d+))?$")
 STATUS_WORDS = ("achieved", "partial", "abandoned", "redirected")
@@ -74,6 +75,7 @@ def load_session_files() -> list[Path] | None:
         match = NAME_RE.match(path.stem)
         if match:
             keyed.append((match.group("ts"), int(match.group("n") or 1), path))
+    keyed.sort(key=lambda item: item[2].name)
     keyed.sort(key=lambda item: (item[0], item[1]), reverse=True)
     return [path for _, _, path in keyed]
 
@@ -550,7 +552,44 @@ def resolve_id(ref: str, paths: list[Path]) -> Path:
     return matches[0]
 
 
-def cmd_resume(args: list[str]) -> int:
+def resume_view(report: dict[str, Any], item: str = "") -> dict[str, Any]:
+    pending = report["pending"]
+    payload = {key: report[key] for key in (
+        "session_id", "title", "file_path", "timestamp", "goal", "goal_status",
+        "status_note", "direction_changes", "origin",
+    )}
+    payload["pending_state"] = pending["state"]
+    if item:
+        payload["requested_item"] = item
+    if pending["state"] == "none":
+        payload["empty"] = True
+    if pending.get("reasons"):
+        payload["incomplete_reasons"] = pending["reasons"]
+    if pending["subsections"]:
+        payload["subsections"] = {k: v.get("items", []) for k, v in pending["subsections"].items()}
+        payload["subsection_states"] = {
+            k: {key: value for key, value in state.items() if key != "items"}
+            for k, state in pending["subsections"].items()
+        }
+    payload["decisions"] = report["decisions"]
+    return payload
+
+
+def emit_recall(payload: dict[str, Any], report: Path, newest: Path, include_history: bool) -> None:
+    if include_history:
+        try:
+            result = subprocess.run(
+                [sys.executable, "-I", str(Path(__file__).with_name("session_history.py")),
+                 report.stem, newest.stem], cwd=project_root(), capture_output=True,
+                text=True, timeout=15, check=True,
+            )
+            payload["after_report"] = json.loads(result.stdout)
+        except (ValueError, OSError, subprocess.SubprocessError):
+            payload["after_report"] = {"sessions": {"state": "unavailable"}}
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+
+
+def cmd_resume(args: list[str], include_history: bool = False) -> int:
     ref, item, has_item, index = None, "", False, 0
     while index < len(args):
         arg = args[index]
@@ -575,32 +614,51 @@ def cmd_resume(args: list[str]) -> int:
         raise RecallError(f"error: cannot read session report {path.stem}")
     if path.stat().st_size == 0:
         raise RecallError(f"error: session report {path.stem} is empty")
-    report = parse_report(path)
-    pending = report["pending"]
-    payload: dict[str, Any] = {
-        "session_id": report["session_id"],
-        "title": report["title"],
-        "file_path": report["file_path"],
-        "timestamp": report["timestamp"],
-        "goal": report["goal"],
-        "goal_status": report["goal_status"],
-        "status_note": report["status_note"],
-        "direction_changes": report["direction_changes"],
-        "origin": report["origin"],
-        "pending_state": pending["state"],
-    }
-    if item:
-        payload["requested_item"] = item
-    if pending["state"] == "none":
-        payload["empty"] = True
-    if pending.get("reasons"):
-        payload["incomplete_reasons"] = pending["reasons"]
-    if pending["subsections"]:
-        payload["subsections"] = {k: v.get("items", []) for k, v in pending["subsections"].items()}
-        payload["subsection_states"] = {k: {kk: vv for kk, vv in v.items() if kk != "items"}
-                                        for k, v in pending["subsections"].items()}
-    payload["decisions"] = report["decisions"]
-    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    emit_recall(resume_view(parse_report(path), item), path, paths[0], include_history)
+    return 0
+
+
+def recent_user(args: list[str]) -> str | None:
+    if not args:
+        return None
+    option = args[0]
+    if option == "--me" and len(args) == 1:
+        result = subprocess.run(["git", "config", "user.name"], cwd=project_root(),
+                                capture_output=True, text=True, check=False)
+        name = result.stdout if result.returncode == 0 else ""
+    elif option in {"-u", "--user"} and len(args) == 2 and args[1] and not args[1].startswith("-"):
+        name = args[1]
+    else:
+        raise RecallError("error: give --me or --user <name> once", 2)
+    user = re.sub(r"[^a-z0-9._-]", "", re.sub(r"\s+", "-", name.strip().lower()))
+    if option == "--me" and user in {"", "unknown"}:
+        raise RecallError("error: --me needs a usable git user.name; name the user with --user <name>")
+    if not user:
+        raise RecallError(f"error: {option} leaves no characters a report filename can hold", 2)
+    return user
+
+
+def cmd_recent(args: list[str], include_history: bool) -> int:
+    user = recent_user(args)
+    paths = loaded_or_notice()
+    if paths is None:
+        return 0
+    newest = paths[0]
+    if user:
+        paths = [path for path in paths if (NAME_RE.fullmatch(path.stem).group("user") or "").lower() == user]
+        if not paths:
+            print(f"No sessions match: user:{user}")
+            return 0
+    readable, empty, unreadable = split_inputs(paths[:3])
+    reports = [parse_report(path) for path in readable]
+    emit_recall({
+        "requested": 3,
+        "available": len(paths),
+        "user": user,
+        "sessions": [dict(resume_view(report), malformed=report["malformed"]) for report in reports],
+        "skipped_empty": ", ".join(empty),
+        "unreadable": ", ".join(unreadable),
+    }, paths[0], newest, include_history)
     return 0
 
 
@@ -631,15 +689,22 @@ def cmd_last(args: list[str]) -> int:
     return 0
 
 
-COMMANDS = {"list": cmd_list, "filter": cmd_filter, "grep": cmd_grep, "resume": cmd_resume, "last": cmd_last}
+COMMANDS = {"list": cmd_list, "filter": cmd_filter, "grep": cmd_grep, "last": cmd_last}
 
 
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
-    if not args or args[0] not in COMMANDS:
-        print(USAGE, file=sys.stderr)
-        return 2
+    include_history = bool(args and args[0] == "--after-report")
+    if include_history:
+        args.pop(0)
     try:
+        if not args or args[0] in {"--me", "--user", "-u"}:
+            return cmd_recent(args, include_history)
+        if args[0] == "resume":
+            return cmd_resume(args[1:], include_history)
+        if include_history or args[0] not in COMMANDS:
+            print(USAGE, file=sys.stderr)
+            return 2
         return COMMANDS[args[0]](args[1:])
     except RecallError as error:
         print(str(error), file=sys.stderr)

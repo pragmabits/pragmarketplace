@@ -1,6 +1,6 @@
 ---
 name: report
-description: Write a session handoff report file under .harness/sessions/ — the session contract, verified work, decisions with who made them, and pending items with their evidence — for a later session, in Codex or another tool, to check against the current state. Use only when the user explicitly asks for a session report file, e.g. "$report", "write the session report", "generate a session report", "gere o relatório da sessão". Not for "finish", "wrap up", "termine", "encerre" or a summary in the chat, which do not ask for a file.
+description: Write a session handoff report file under .harness/sessions/ — the session contract, verified work, decisions with who made them, and pending items with their evidence — for a later session, in Codex or another tool. Use only when the user explicitly asks for a report file, such as "$report", "write the session report" or "gere o relatório da sessão". An explicit $report invocation requests an isolated commit unless --no-commit is given. A request in words commits only if it also requests a commit.
 ---
 
 # Session Report
@@ -9,14 +9,18 @@ Write a handoff report of this session. The report is a dated record of what was
 
 Reports live in `<project-root>/.harness/sessions/`, shared by every tool that writes this format. Never write them anywhere else.
 
-This skill writes the file and does not commit it. Commit it only if the user asks, with the repository's own hooks and identity, staging only the report.
+- An explicit $report invocation requests an isolated commit, except with
+  --no-commit or an existing instruction from the user to leave it uncommitted.
+- A request in words to write a report asks only for the file unless it also
+  requests the commit. When the user asks for a chat summary, answer in chat.
+- The project's Codex approval policy governs Git commands in this flow.
 
 ## Prepare
 
 Run from the project, with the path resolved relative to this skill:
 
 ```bash
-python3 <plugin-root>/scripts/session_report.py prepare [--lang xx-YY] [title hint]
+python3 -B -I <plugin-root>/scripts/session_report.py prepare [--lang xx-YY] [title hint]
 ```
 
 It creates `.harness/sessions/` if needed and prints JSON. Use its values as facts:
@@ -177,6 +181,51 @@ Section numbers are fixed; do not renumber or drop a section.
 
 `\|` inside a table cell is a literal pipe. In the placeholders, `|` separates alternatives; pick one.
 
-## Finish
+## Validate and finish
 
-Tell the user in one or two lines where the report was written, relative to the project. Do not end by asking whether to commit.
+Review the draft for sensitive content before writing it. After writing, run
+the following command with the repository root as the tool's workdir:
+
+~~~bash
+python3 -B -I <plugin-root>/scripts/session_report.py check <report-path>
+~~~
+
+Fix findings in the report and rerun the check. Remove any flagged credential
+value or the whole line if needed. If other findings remain after two rounds,
+keep the file without a commit and tell the user which checks remain.
+
+When a commit was requested, run plan-commit in the same workdir with the report
+path. If the result is already-committed, report the commit and finish. If it is
+refused or check-failed, leave the report on disk and address the findings or
+report the blocker. For ready, use the returned path, message, head, blob and
+other_index values.
+
+1. If already_staged is false, run a standalone Git call with the root as its workdir.
+
+   ~~~bash
+   git add -- <path>
+   ~~~
+
+2. Run session_report.py check-staged <path> <head> <blob> <other_index> in
+   the root with the same Python flags. Commit only when it returns ready-to-commit.
+
+   ~~~bash
+   git commit --only -m "<message>" -- <path>
+   ~~~
+
+3. Run session_report.py verify-commit <path> <head> <blob> <other_index> in
+   the root even when Git failed. If it returns committed, report the hash. If it
+   returns committed-unverified, report the hash and the failed checks. Do not
+   attempt another commit. If verification itself fails, report the result as
+   unverified and do not retry.
+
+4. If verification returns no-commit after an unsuccessful attempt and
+   already_staged was false, remove only the report's index entry with a separate
+   git rm --cached -- <path> call if staged_blob still equals the planned blob.
+   Verify that the entry is gone. If it changed or removal fails, leave it as
+   found and report the index state. Never remove a preexisting index entry or
+   change the user's other staged work.
+
+Use the repository's hooks, signing policy and identity. Summarize any Git or
+hook diagnostic without showing credential values. Finish with the relative
+report path and, if applicable, the outcome of the commit.
