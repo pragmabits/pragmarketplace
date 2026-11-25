@@ -7,6 +7,7 @@ import argparse
 import json
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -83,10 +84,42 @@ def ensure_executable(path: Path) -> None:
     path.chmod(mode | 0o755)
 
 
-def install_codex_rules(repo: Path, recorder: Recorder) -> None:
+def mutation_rules(template: str) -> str:
+    start = template.index('prefix_rule(\n    pattern = ["git", "add"]')
+    end = template.index('prefix_rule(\n    pattern = ["git", "reset"', start)
+    allowed = (
+        ("git", "add", "--"),
+        ("git", "commit", "-m"),
+        ("git", "commit", "--amend", "-m"),
+        ("git", "commit", "--no-edit"),
+        ("git", "commit", "--only", "-m"),
+    )
+    rules = "".join(
+        "prefix_rule(\n"
+        f"    pattern = {json.dumps(prefix)},\n"
+        '    decision = "allow",\n'
+        '    justification = "The user opted in to automatic Git operations for the commit workflow.",\n'
+        ")\n\n"
+        for prefix in allowed
+    )
+    return template[:start].replace(
+        "# inspection is allowed; staging and committing prompt unless the user changes\n# the policy locally.",
+        "# inspection is allowed. The user opted in to the Git command forms below.",
+    ) + rules + template[end:]
+
+
+def install_codex_rules(repo: Path, choice: str | None, recorder: Recorder) -> None:
     src = ASSETS / "rules" / "git-commit.rules"
     dst = repo / ".codex" / "rules" / "git-commit.rules"
-    write_text_if_changed(dst, read_text(src), recorder, str(dst.relative_to(repo)))
+    label = str(dst.relative_to(repo))
+    prompt = read_text(src)
+    automatic = mutation_rules(prompt)
+    existing = read_text(dst)
+    if dst.exists() and existing not in (prompt, automatic):
+        recorder.add("skipped", f"{label} has local changes; existing rules were preserved")
+        return
+    target = automatic if choice == "allow" or (choice is None and existing == automatic) else prompt
+    write_text_if_changed(dst, target, recorder, label)
 
 
 def install_codex_hook_script(repo: Path, recorder: Recorder) -> None:
@@ -141,44 +174,15 @@ def merge_hooks_json(repo: Path, recorder: Recorder) -> None:
         recorder.add("unchanged", str(dst.relative_to(repo)))
 
 
-def ensure_codex_hooks_feature(repo: Path, recorder: Recorder) -> None:
+def hooks_enabled(repo: Path) -> bool:
     path = repo / ".codex" / "config.toml"
-    original = read_text(path)
-    if not original.strip():
-        write_text_if_changed(path, "[features]\ncodex_hooks = true\n", recorder, str(path.relative_to(repo)))
-        return
-
-    lines = original.splitlines()
-    section_start = None
-    for index, line in enumerate(lines):
-        if line.strip() == "[features]":
-            section_start = index
-            break
-
-    if section_start is None:
-        updated = original.rstrip() + "\n\n[features]\ncodex_hooks = true\n"
-        write_text_if_changed(path, updated, recorder, str(path.relative_to(repo)))
-        return
-
-    section_end = len(lines)
-    for index in range(section_start + 1, len(lines)):
-        stripped = lines[index].strip()
-        if stripped.startswith("[") and stripped.endswith("]"):
-            section_end = index
-            break
-
-    for index in range(section_start + 1, section_end):
-        stripped = lines[index].strip()
-        if stripped.startswith("codex_hooks"):
-            if stripped == "codex_hooks = true":
-                recorder.add("unchanged", str(path.relative_to(repo)))
-                return
-            lines[index] = "codex_hooks = true"
-            write_text_if_changed(path, "\n".join(lines) + "\n", recorder, str(path.relative_to(repo)))
-            return
-
-    lines.insert(section_start + 1, "codex_hooks = true")
-    write_text_if_changed(path, "\n".join(lines) + "\n", recorder, str(path.relative_to(repo)))
+    try:
+        features = tomllib.loads(read_text(path)).get("features", {})
+    except tomllib.TOMLDecodeError as error:
+        raise SystemExit(f"error: invalid TOML in {path}: {error}") from error
+    if not isinstance(features, dict):
+        raise SystemExit(f"error: features in {path} must be a TOML table")
+    return features.get("hooks", features.get("codex_hooks", True)) is not False
 
 
 def install_git_hook(repo: Path, hook_name: str, force: bool, recorder: Recorder) -> None:
@@ -216,9 +220,8 @@ def show_plan(repo: Path, hooks: tuple[str, ...]) -> None:
     print("  .codex/rules/git-commit.rules")
     print("  .codex/hooks/git_command_policy.py")
     print("  .codex/hooks.json")
-    print("  .codex/config.toml ([features].codex_hooks = true)")
     for hook in hooks:
-        print(f"  .git/hooks/{hook}")
+        print(f"  {display_path(repo, git_path(repo, f'hooks/{hook}'))}")
 
 
 def check_install(repo: Path, hooks: tuple[str, ...]) -> int:
@@ -226,28 +229,43 @@ def check_install(repo: Path, hooks: tuple[str, ...]) -> int:
         repo / ".codex" / "rules" / "git-commit.rules",
         repo / ".codex" / "hooks" / "git_command_policy.py",
         repo / ".codex" / "hooks.json",
-        repo / ".codex" / "config.toml",
     ]
-    checks.extend(git_path(repo, f"hooks/{hook}") for hook in hooks)
+    git_hooks = [git_path(repo, f"hooks/{hook}") for hook in hooks]
+    checks.extend(git_hooks)
 
     missing = []
     for path in checks:
-        if path.exists():
+        if path.is_file() and (path not in git_hooks or bool(path.stat().st_mode & 0o111)):
             print(f"ok: {display_path(repo, path)}")
         else:
-            print(f"missing: {display_path(repo, path)}")
+            print(f"missing or inactive: {display_path(repo, path)}")
             missing.append(path)
-    return 1 if missing else 0
+    rules = read_text(checks[0]) if checks[0].is_file() else ""
+    default = read_text(ASSETS / "rules" / "git-commit.rules")
+    if rules == mutation_rules(default):
+        print("Git rules: workflow allow rules installed")
+    elif rules == default:
+        print("Git rules: prompts configured")
+    elif rules:
+        print("Git rules: locally edited")
+    enabled = hooks_enabled(repo)
+    print("Codex hooks: disabled in project configuration" if not enabled
+          else "Codex hooks: check trust and activation in the client")
+    return 1 if missing or not enabled else 0
 
 
-def apply_setup(repo: Path, hooks: tuple[str, ...], force: bool) -> None:
+def apply_setup(repo: Path, hooks: tuple[str, ...], force: bool, choice: str | None) -> None:
     recorder = Recorder()
-    install_codex_rules(repo, recorder)
+    enabled = hooks_enabled(repo)
+    if not enabled and choice == "allow":
+        raise SystemExit("error: project disables Codex hooks; keep prompts or enable hooks before opting in")
     install_codex_hook_script(repo, recorder)
     merge_hooks_json(repo, recorder)
-    ensure_codex_hooks_feature(repo, recorder)
+    if not enabled:
+        recorder.add("disabled", "Codex hooks are disabled in .codex/config.toml")
     for hook in hooks:
         install_git_hook(repo, hook, force, recorder)
+    install_codex_rules(repo, choice, recorder)
     recorder.print()
 
 
@@ -260,18 +278,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--all", action="store_true", help="Install all bundled native git hooks")
     parser.add_argument("--hooks", help="Comma-separated native git hooks to install")
     parser.add_argument("--force", action="store_true", help="Overwrite third-party git hooks")
+    parser.add_argument("--git-mutations", choices=("prompt", "allow"),
+                        help="Set the approval choice made in the Codex setup questionnaire")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    if args.git_mutations and not args.apply:
+        raise SystemExit("error: --git-mutations requires --apply")
     hooks = parse_hook_list(args.hooks, args.all)
     repo = run_git_root()
 
     if args.check:
         return check_install(repo, hooks)
     if args.apply:
-        apply_setup(repo, hooks, args.force)
+        apply_setup(repo, hooks, args.force, args.git_mutations)
         return 0
     show_plan(repo, hooks)
     return 0

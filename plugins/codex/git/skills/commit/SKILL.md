@@ -58,12 +58,12 @@ git diff HEAD
 git diff --cached --stat
 git diff --cached
 git log --oneline -10
-test -x .git/hooks/commit-msg
+git rev-parse --git-path hooks/commit-msg
 ```
 
 If the working tree and index are clean, report that there is nothing to commit and stop.
 
-If `.git/hooks/commit-msg` is missing or not executable, warn:
+From the root, run `test -x <resolved-path>` on the hook path Git returned. If it is missing or not executable, warn:
 
 ```text
 Commit message hooks are not installed. Run $commit-setup --apply to install them. Proceeding without hook validation.

@@ -56,7 +56,7 @@ def message_lines(path: Path) -> list[tuple[int, str]]:
     """The message's lines with their numbers in the file: above the scissors
     line, without comment lines."""
     kept = []
-    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    lines = path.read_bytes().decode("utf-8", errors="replace").split("\n")
     for number, line in enumerate(lines, start=1):
         if SCISSORS_RE.match(line):
             break
@@ -74,7 +74,7 @@ def valid_description_char(char: str) -> bool:
 
 def valid_start(char: str) -> bool:
     category = unicodedata.category(char)
-    return char.isdigit() or char.islower() or category == "Lo"
+    return category in {"Ll", "Lo"} or category.startswith("N")
 
 
 def forbidden_body_char(char: str) -> bool:
@@ -117,7 +117,7 @@ def main(argv: list[str]) -> int:
                     "Claude Code' footer are not allowed. Remove the line and commit again"
                 )
 
-    lines = message.splitlines()
+    lines = message.rstrip("\n").split("\n")
     subject = lines[0] if lines else ""
     if should_skip(subject, directory):
         return 0

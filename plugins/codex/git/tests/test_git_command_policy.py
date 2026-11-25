@@ -23,6 +23,8 @@ from pathlib import Path
 
 PLUGIN = Path(__file__).resolve().parent.parent
 POLICY = PLUGIN / "scripts" / "git_command_policy.py"
+INSTALLER = PLUGIN / "scripts" / "install_hooks.py"
+HOOKS = PLUGIN / "assets" / "git-hooks"
 
 
 class PolicyTests(unittest.TestCase):
@@ -81,6 +83,7 @@ class PolicyTests(unittest.TestCase):
                         "git rev-parse --show-toplevel --show-prefix"):
             with self.subTest(command=command):
                 self.assertIsNone(self.decide(command))
+        self.assertIsNone(self.decide("git status --short", cwd=self.repo / "web"))
 
     def test_permission_request_gets_its_own_shape(self) -> None:
         decision = self.decide("cd web && git status", event="PermissionRequest")
@@ -90,6 +93,54 @@ class PolicyTests(unittest.TestCase):
         self.assert_denied("git -C web status", "run git from the repository root")
         self.assert_denied("git add -p", "Interactive patch staging is blocked")
         self.assert_denied("git commit --no-verify -m 'fix: x'", "Bypassing git hooks is blocked")
+
+    def run_plugin(self, script: Path, *args: str) -> subprocess.CompletedProcess:
+        return subprocess.run([sys.executable, "-B", "-I", str(script), *args],
+                              env=self.env, cwd=self.repo, text=True, capture_output=True)
+
+    def test_setup_checks_custom_hook_path_and_preserves_approval_choice(self) -> None:
+        subprocess.run(["git", "config", "core.hooksPath", "custom-hooks"],
+                       env=self.env, cwd=self.repo, check=True)
+        self.assertEqual(self.run_plugin(INSTALLER, "--apply", "--all", "--git-mutations", "allow").returncode, 0)
+        self.assertEqual(self.run_plugin(INSTALLER, "--check", "--all").returncode, 0)
+        self.assertFalse((self.repo / ".codex" / "config.toml").exists())
+        self.assertTrue(os.access(self.repo / "custom-hooks" / "commit-msg", os.X_OK))
+        policy = self.repo / ".codex" / "rules" / "git-commit.rules"
+        automatic = policy.read_text()
+        self.assertIn('pattern = ["git", "add", "--"]', automatic)
+        self.assertEqual(self.run_plugin(INSTALLER, "--apply").returncode, 0)
+        self.assertEqual(policy.read_text(), automatic)
+        self.assertEqual(self.run_plugin(INSTALLER, "--apply", "--git-mutations", "prompt").returncode, 0)
+        self.assertEqual(policy.read_text(), (PLUGIN / "assets" / "rules" / "git-commit.rules").read_text())
+
+    def test_setup_preserves_disabled_hooks_and_custom_rules(self) -> None:
+        config = self.repo / ".codex" / "config.toml"
+        config.parent.mkdir()
+        config.write_text("[features]\nhooks = false\n")
+        policy = config.parent / "rules" / "git-commit.rules"
+        policy.parent.mkdir()
+        policy.write_text("# custom rules\n")
+        self.assertNotEqual(self.run_plugin(INSTALLER, "--apply", "--git-mutations", "allow").returncode, 0)
+        result = self.run_plugin(INSTALLER, "--apply")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("disabled", result.stdout)
+        self.assertEqual(config.read_text(), "[features]\nhooks = false\n")
+        self.assertEqual(policy.read_text(), "# custom rules\n")
+
+    def test_native_hooks_accept_unicode_number_and_use_reference_size_and_draft(self) -> None:
+        message = self.tmp / "message"
+        message.write_text("docs: ⅓ dos exemplos\n", encoding="utf-8")
+        self.assertEqual(self.run_plugin(HOOKS / "commit-msg", str(message)).returncode, 0)
+        message.write_text("docs: exemplos\n\nline\vvalue\n")
+        self.assertNotEqual(self.run_plugin(HOOKS / "commit-msg", str(message)).returncode, 0)
+        path = self.repo / "tsconfig.json"
+        path.write_bytes(b"a" * (1024 * 1024 + 1) + b"\n")
+        subprocess.run(["git", "add", "--", path.name], env=self.env, cwd=self.repo, check=True)
+        self.assertEqual(self.run_plugin(HOOKS / "prepare-commit-msg", str(message)).returncode, 0)
+        self.assertEqual(message.read_text().splitlines()[0], "chore: ")
+        self.assertEqual(self.run_plugin(HOOKS / "pre-commit").returncode, 0)
+        path.write_bytes(b"a" * (1025 * 1024))
+        self.assertNotEqual(self.run_plugin(HOOKS / "pre-commit").returncode, 0)
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 
-MAX_BYTES = 1024 * 1024
+MAX_FILE_SIZE_KB = 1024
 BLOCKED_FILE_RE = re.compile(r"(\.(pyc|pyo|swp|swo|DS_Store)$|^\.env($|\.(?!.*example)))")
 SECRET_RES = [
     re.compile(pattern, re.IGNORECASE)
@@ -38,32 +38,32 @@ MARKER_RE = re.compile("|".join(MARKER_PHRASES), re.I)
 # (.harness/sessions/<user>-<YYYY-MM-DDTHHMMSS>[-N].md) record conversations, so
 # a quoted no-commit phrase is content there, not a marker. They skip the
 # marker check only; the other checks still apply to them.
-SESSION_REPORT_RE = re.compile(r"^\.harness/sessions/([^/]*-)?\d{4}-\d{2}-\d{2}T\d{6}(-\d+)?\.md$")
+SESSION_REPORT_RE = re.compile(r"^\.harness/sessions/([^/]*-)?\d{4}-\d{2}-\d{2}T\d{6}(-\d+)?\.md$", re.ASCII)
 
 
-def git_output(*args: str) -> str:
+def git_output(*args: str) -> bytes:
     result = subprocess.run(
         ["git", *args],
-        text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
     )
     if result.returncode != 0:
-        return ""
+        return b""
     return result.stdout
 
 
 def staged_files() -> list[str]:
-    output = git_output("diff", "--cached", "--name-only", "--diff-filter=ACM")
-    return [line for line in output.splitlines() if line]
+    output = git_output("diff", "--cached", "--name-only", "-z", "--diff-filter=ACM")
+    return [os.fsdecode(path) for path in output.split(b"\0") if path]
 
 
 def staged_diff(path: str) -> str:
     """Lines the staged change adds. Removed and context lines are left out, so
     that removing a leaked secret or an old marker, or editing next to one, passes."""
     added, in_hunk = [], False
-    for line in git_output("diff", "--cached", "-U0", "--", path).splitlines():
+    diff = git_output("--literal-pathspecs", "diff", "--cached", "--no-ext-diff", "--no-textconv", "-U0", "--", path)
+    for line in diff.decode("utf-8", errors="replace").split("\n"):
         if line.startswith("@@"):
             in_hunk = True
         elif in_hunk and line.startswith("+"):
@@ -77,9 +77,10 @@ def main() -> int:
         path = Path(file_name)
         if BLOCKED_FILE_RE.search(file_name):
             errors.append(f"blocklisted file type: {file_name}")
-        if path.is_file() and path.stat().st_size > MAX_BYTES:
+        if path.is_file():
             size_kb = path.stat().st_size // 1024
-            errors.append(f"file too large ({size_kb}KB > 1024KB): {file_name}")
+            if size_kb > MAX_FILE_SIZE_KB:
+                errors.append(f"file too large ({size_kb}KB > {MAX_FILE_SIZE_KB}KB): {file_name}")
 
         diff = staged_diff(file_name)
         if not diff:
